@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mando House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --red:#C0392B;--rl:#FADBD8;--rm:#E74C3C;
+  --gold:#9A7B00;--gl:#FEF9E7;--gm:#E6C200;
+  --ink:#1A1A1A;--ink2:#3A3A3A;--ink3:#7A7A7A;--ink4:#C8C8C8;
+  --bg:#F7F6F2;--bg2:#EFEDE7;--bg3:#E3E0D8;
+  --green:#1A7A40;--greenl:#EAFAF1;
+  --blue:#174F85;--bluel:#EBF3FF;
+  --orange:#B84A10;--orangel:#FEF0E7;
+  --card:#FFF;--font:'IBM Plex Sans Thai',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ── LOGIN ── */
+#login-screen{display:none;position:fixed;inset:0;background:var(--ink);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+#login-screen.show{display:flex}
+.login-box{background:var(--card);border-radius:12px;padding:36px 40px;width:360px;max-width:92vw}
+.login-logo{font-size:22px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+.login-logo span{color:var(--gm)}
+.login-sub{font-size:13px;color:var(--ink3);margin-bottom:24px}
+.login-err{background:var(--rl);color:var(--red);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:12px;display:none}
+.login-err.show{display:block}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--ink);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px}
+.logo span{color:var(--gm)}
+.nav{display:flex;gap:2px}
+.nb{background:transparent;border:none;padding:6px 13px;border-radius:5px;color:rgba(255,255,255,.55);font-family:var(--font);font-size:13px;cursor:pointer;transition:.15s}
+.nb:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nb.on{color:#fff;background:rgba(255,255,255,.15)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.role-pill{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;border:none;font-family:var(--font)}
+.rp-admin{background:var(--gm);color:var(--ink)}
+.rp-parent{background:#3498DB;color:#fff}
+.logout-btn{background:transparent;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.7);border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:var(--font);transition:.15s}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+
+/* ── TOAST ── */
+#toast{position:fixed;top:62px;right:20px;z-index:999;background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;max-width:340px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:none;align-items:center;gap:8px;transition:.3s}
+#toast.show{display:flex}
+#toast i{font-size:16px;color:var(--gm);flex-shrink:0}
+
+/* ── LAYOUT ── */
+.main{padding:24px;max-width:1120px;margin:0 auto}
+.page{display:none}.page.on{display:block}
+.pg-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.pg-title{font-size:18px;font-weight:600}
+.pg-sub{font-size:12px;color:var(--ink3);margin-top:2px}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat{background:var(--card);border:.5px solid var(--ink4);border-radius:8px;padding:16px}
+.stat-lbl{font-size:11px;font-weight:500;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.stat-val{font-size:26px;font-weight:600;font-family:var(--mono)}
+.stat-foot{font-size:11px;color:var(--ink3);margin-top:3px}
+.stat.danger{border-color:var(--red);background:var(--rl)}.stat.danger .stat-val{color:var(--red)}
+.stat.warn{border-color:var(--orange);background:var(--orangel)}.stat.warn .stat-val{color:var(--orange)}
+
+/* ── CARD ── */
+.card{background:var(--card);border:.5px solid var(--ink4);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.card-head{padding:12px 18px;border-bottom:.5px solid var(--ink4);display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg2)}
+.card-title{font-size:13px;font-weight:600}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.05em;text-transform:uppercase;padding:10px 16px;text-align:left;background:var(--bg2);border-bottom:.5px solid var(--ink4)}
+.tbl td{padding:11px 16px;border-bottom:.5px solid var(--bg3);font-size:13px;vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--bg)}
+.no-data{padding:32px;text-align:center;color:var(--ink3);font-size:13px}
+
+/* ── FORMS ── */
+.inp{width:100%;padding:8px 12px;border:.5px solid var(--ink4);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--ink);background:var(--bg);outline:none}
+.inp:focus{border-color:var(--ink2)}
+textarea.inp{resize:vertical;min-height:76px}
+.sel{padding:7px 10px;border:.5px solid var(--ink4);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--ink);background:var(--bg);outline:none;cursor:pointer}
+.form-row{margin-bottom:14px}
+.form-lbl{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:5px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg);border:.5px solid var(--ink4);border-radius:6px;padding:6px 12px;min-width:200px}
+.search-wrap i{font-size:15px;color:var(--ink3)}
+.search-wrap input{border:none;background:transparent;font-family:var(--font);font-size:13px;color:var(--ink);outline:none;width:100%}
+.divider{height:.5px;background:var(--ink4);margin:16px 0}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:6px;border:.5px solid var(--ink4);background:transparent;font-family:var(--font);font-size:13px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap}
+.btn:hover{background:var(--bg2)}.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}.btn-primary:hover{background:var(--ink2)}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}.btn-success:hover{opacity:.88}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{padding:5px 8px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+.bg-green{background:var(--greenl);color:var(--green)}.bg-orange{background:var(--orangel);color:var(--orange)}
+.bg-red{background:var(--rl);color:var(--red)}.bg-blue{background:var(--bluel);color:var(--blue)}
+.bg-gold{background:var(--gl);color:var(--gold)}.bg-gray{background:var(--bg3);color:var(--ink3)}
+
+/* ── PROGRESS ── */
+.prog{display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;min-width:60px}
+.prog-fill{height:100%;border-radius:3px;background:var(--green)}
+.prog-fill.warn{background:var(--orange)}.prog-fill.crit{background:var(--red)}
+.prog-num{font-size:11px;font-family:var(--mono);color:var(--ink3);min-width:30px;text-align:right}
+
+/* ── AVATAR ── */
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.av-gold{background:var(--gl);color:var(--gold)}.av-blue{background:var(--bluel);color:var(--blue)}
+.av-green{background:var(--greenl);color:var(--green)}.av-red{background:var(--rl);color:var(--red)}
+.av-gray{background:var(--bg3);color:var(--ink3)}
+.name-cell{display:flex;align-items:center;gap:10px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:10px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.modal-head{padding:18px 22px 14px;border-bottom:.5px solid var(--ink4);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1}
+.modal-head h3{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:20px;line-height:1}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:.5px solid var(--ink4);display:flex;gap:8px;justify-content:flex-end;background:var(--bg)}
+
+/* ── TWO COL ── */
+.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+
+/* ── TIMELINE ── */
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:.5px solid var(--bg3)}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--green);margin-top:4px;flex-shrink:0}
+.tl-dot.miss{background:var(--red)}
+
+/* ── REVIEWS ── */
+.rev-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
+.rev-card{background:var(--card);border:.5px solid var(--ink4);border-radius:8px;padding:15px}
+.stars{display:flex;gap:2px;margin:5px 0}
+.son{color:var(--gm);font-size:14px}.soff{color:var(--ink4);font-size:14px}
+
+/* ── STAR INPUT ── */
+.star-inp{display:flex;gap:4px}
+.star-inp span{font-size:22px;cursor:pointer;color:var(--ink4);transition:.1s;user-select:none}
+.star-inp span.lit{color:var(--gm)}
+
+/* ── COURSES ── */
+.course-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.course-card{background:var(--card);border:.5px solid var(--ink4);border-radius:8px;overflow:hidden}
+.course-top{padding:15px;border-bottom:.5px solid var(--bg3)}
+.course-icon{width:36px;height:36px;border-radius:8px;background:var(--gl);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.course-icon i{font-size:20px;color:var(--gold)}
+.course-bot{padding:12px 15px;display:flex;align-items:center;justify-content:space-between}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;background:var(--bg2);padding:3px;border-radius:6px;margin-bottom:16px;width:fit-content}
+.tab-btn{padding:5px 14px;border-radius:4px;border:none;background:transparent;font-family:var(--font);font-size:12px;color:var(--ink3);cursor:pointer;transition:.15s}
+.tab-btn.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* ── PARENT ── */
+.hero{background:var(--ink);border-radius:10px;padding:22px;margin-bottom:18px;color:#fff;display:flex;gap:16px;align-items:flex-start}
+.hero-av{width:52px;height:52px;border-radius:50%;background:var(--gm);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--ink);flex-shrink:0}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.hstat{text-align:center;background:rgba(255,255,255,.08);border-radius:7px;padding:10px 8px}
+.hstat-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--gm)}
+.hstat-lbl{font-size:10px;color:rgba(255,255,255,.55);margin-top:2px}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px}
+.cal-day{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--mono);color:var(--ink3)}
+.cal-hdr{color:var(--ink3);font-size:10px;font-weight:600}
+.cal-p{background:var(--green);color:#fff}.cal-a{background:var(--rl);border:.5px solid var(--red);color:var(--red)}.cal-e{background:var(--bg3)}
+
+/* ── INFO ── */
+.info-row{display:flex;gap:8px;margin-bottom:8px}
+.info-lbl{font-size:12px;color:var(--ink3);min-width:110px;flex-shrink:0;padding-top:1px}
+.info-val{font-size:13px;font-weight:500}
+
+/* ── LOADING ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:fixed;inset:0;background:rgba(247,246,242,.8);z-index:80;display:none;align-items:center;justify-content:center}
+.loading-overlay.show{display:flex}
+
+@media(max-width:720px){
+  .stats{grid-template-columns:1fr 1fr}
+  .two-col{grid-template-columns:1fr}
+  .course-grid{grid-template-columns:1fr}
+  .rev-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .nav-btn{font-size:12px;padding:5px 8px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading"><div class="spinner" style="width:32px;height:32px;border-color:rgba(26,26,26,.2);border-top-color:var(--ink)"></div></div>
+
+<!-- TOAST -->
+<div id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
+
+<!-- LOGIN -->
+<div id="login-screen" class="show">
+  <div class="login-box">
+    <div class="login-logo">Mando<span>House</span></div>
+    <div class="login-sub">สถาบันสอนภาษาจีน — เข้าสู่ระบบ</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="form-row"><label class="form-lbl">ชื่อผู้ใช้</label><input class="inp" id="l-user" placeholder="username" autocomplete="username"></div>
+    <div class="form-row"><label class="form-lbl">รหัสผ่าน</label>
+      <div style="position:relative">
+        <input class="inp" id="l-pass" type="password" placeholder="password" autocomplete="current-password" style="padding-right:38px">
+        <button onclick="togglePw()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3)"><i class="ti ti-eye" id="pw-eye"></i></button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()" style="width:100%;justify-content:center;margin-top:4px">เข้าสู่ระบบ</button>
+    <div style="margin-top:14px;padding:10px 12px;background:var(--bg2);border-radius:6px;font-size:11px;color:var(--ink3);line-height:1.8">
+      <strong style="color:var(--ink2)">บัญชีทดสอบ</strong><br>
+      Admin: <code style="font-family:var(--mono)">admin / admin1234</code><br>
+      ผู้ปกครอง: <code style="font-family:var(--mono)">parent_min / parent1234</code>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="logo"><i class="ti ti-school" style="font-size:18px;color:var(--gm)"></i>Mando<span>House</span></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="topbar-right">
+    <span class="role-pill" id="role-pill"></span>
+    <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout" style="font-size:12px"></i> ออก</button>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div id="pg-dashboard" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">ภาพรวมสถาบัน</div><div class="pg-sub" id="today-lbl"></div></div>
+      <button class="btn btn-primary" onclick="openModal('mo-checkin')"><i class="ti ti-login"></i>บันทึกเข้าเรียน</button>
+    </div>
+    <div class="stats" id="dash-stats"></div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">เข้า-ออกเรียนวันนี้</span></div>
+          <table class="tbl"><thead><tr><th>นักเรียน</th><th>เข้า</th><th>ออก</th><th>สถานะ</th></tr></thead>
+          <tbody id="today-tbl"></tbody></table>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head"><span class="card-title"><i class="ti ti-alert-triangle" style="color:var(--red);margin-right:4px"></i>ใกล้หมดคอร์ส</span></div>
+          <div id="dash-alerts" style="padding:0 16px 10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">บทเรียนล่าสุด</span></div>
+          <div id="dash-timeline" style="padding:0 16px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="pg-students" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">ข้อมูลนักเรียน</div><div class="pg-sub" id="stu-count"></div></div>
+      <button class="btn btn-primary" onclick="openModal('mo-add-student')"><i class="ti ti-plus"></i>เพิ่มนักเรียน</button>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="ค้นหา..." oninput="filterStudents(this.value)"></div>
+        <select class="sel" id="course-filter" onchange="filterStudents('')"><option value="">คอร์สทั้งหมด</option></select>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>นักเรียน</th><th>คอร์ส</th><th>เรียนแล้ว</th><th>คงเหลือ</th><th>ความคืบหน้า</th><th>ผู้ปกครอง</th><th></th></tr></thead>
+        <tbody id="students-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pg-checkin" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">บันทึกเข้า-ออกเรียน</div><div class="pg-sub">ประวัติทั้งหมด</div></div>
+      <button class="btn btn-primary" onclick="openModal('mo-checkin')"><i class="ti ti-plus"></i>บันทึกใหม่</button>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="ค้นหา..." oninput="loadCheckins(this.value)"></div>
+        <div style="display:flex;gap:8px">
+          <input type="date" class="inp" style="width:auto" id="ci-date-filter" onchange="loadCheckins('')">
+          <button class="btn btn-sm" onclick="document.getElementById('ci-date-filter').value='';loadCheckins('')">ล้าง</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>นักเรียน</th><th>ครู</th><th>วันที่</th><th>เข้า</th><th>ออก</th><th>สถานะ</th><th>หมายเหตุ</th><th></th></tr></thead>
+        <tbody id="checkin-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pg-reviews" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">รีวิวบทเรียน</div><div class="pg-sub">บันทึกหลังการสอน</div></div>
+      <button class="btn btn-primary" id="btn-add-review" onclick="openModal('mo-review')"><i class="ti ti-pencil"></i>เขียนรีวิวใหม่</button>
+    </div>
+    <div class="rev-grid" id="rev-grid"></div>
+  </div>
+</div>
+
+<div id="pg-courses" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">คอร์สและราคา</div></div>
+      <button class="btn btn-primary" id="btn-add-course" onclick="openModal('mo-add-course')"><i class="ti ti-plus"></i>เพิ่มคอร์ส</button>
+    </div>
+    <div class="course-grid" id="course-grid"></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">ตารางเปรียบเทียบ</span></div>
+      <table class="tbl">
+        <thead><tr><th>ชื่อคอร์ส</th><th>ระดับ</th><th>ครั้ง</th><th>ราคา</th><th>ราคา/ครั้ง</th><th>สำหรับ</th><th></th></tr></thead>
+        <tbody id="course-tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pg-alerts" class="page">
+  <div class="main">
+    <div class="pg-head"><div><div class="pg-title">ระบบแจ้งเตือน</div><div class="pg-sub">นักเรียนใกล้หมดคอร์ส</div></div></div>
+    <div class="stats" style="grid-template-columns:repeat(3,1fr)" id="alert-stats"></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">รายการที่ต้องดำเนินการ</span></div>
+      <table class="tbl">
+        <thead><tr><th>นักเรียน</th><th>คอร์ส</th><th>เรียนแล้ว</th><th>คงเหลือ</th><th>ระดับ</th><th>ผู้ปกครอง</th><th></th></tr></thead>
+        <tbody id="alert-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pg-parent" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">มุมมองผู้ปกครอง</div></div>
+      <select class="sel" id="parent-sel" onchange="loadParentView(this.value)" style="display:none"></select>
+    </div>
+    <div id="parent-content"></div>
+  </div>
+</div>
+
+<div id="pg-users" class="page">
+  <div class="main">
+    <div class="pg-head">
+      <div><div class="pg-title">จัดการบัญชีผู้ใช้</div><div class="pg-sub">Admin และ ผู้ปกครอง</div></div>
+      <button class="btn btn-primary" onclick="openModal('mo-add-user')"><i class="ti ti-plus"></i>เพิ่มบัญชี</button>
+    </div>
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Username</th><th>ชื่อ</th><th>สิทธิ์</th><th>นักเรียน (parent)</th><th>สร้างเมื่อ</th><th></th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pg-settings" class="page">
+  <div class="main">
+    <div class="pg-head"><div class="pg-title">ตั้งค่า</div></div>
+    <div class="two-col" style="grid-template-columns:1fr 1fr">
+      <div class="card">
+        <div class="card-head"><span class="card-title"><i class="ti ti-chalkboard" style="margin-right:6px;color:var(--green)"></i>จัดการครู</span>
+          <button class="btn btn-sm btn-primary" onclick="openModal('mo-teacher')"><i class="ti ti-plus"></i>เพิ่มครู</button>
+        </div>
+        <div id="teacher-list-pg" style="padding:4px 0"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title"><i class="ti ti-lock" style="margin-right:6px;color:var(--blue)"></i>เปลี่ยนรหัสผ่าน</span></div>
+        <div class="modal-body" style="padding:16px 18px">
+          <div class="form-row"><label class="form-lbl">รหัสผ่านปัจจุบัน</label><input type="password" class="inp" id="pw-cur"></div>
+          <div class="form-row"><label class="form-lbl">รหัสผ่านใหม่ (≥6 ตัว)</label><input type="password" class="inp" id="pw-new"></div>
+          <div class="form-row"><label class="form-lbl">ยืนยันรหัสผ่านใหม่</label><input type="password" class="inp" id="pw-cfm"></div>
+          <button class="btn btn-primary" onclick="changePw()" style="width:100%;justify-content:center">บันทึกรหัสผ่าน</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODALS ── -->
+<div class="overlay" id="mo-checkin">
+  <div class="modal">
+    <div class="modal-head"><h3><i class="ti ti-login" style="color:var(--green)"></i>บันทึกเข้า-ออกเรียน</h3><button class="modal-close" onclick="closeModal('mo-checkin')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">นักเรียน *</label><select class="inp" id="ci-student"></select></div>
+        <div class="form-row"><label class="form-lbl">ครูผู้สอน *</label><select class="inp" id="ci-teacher"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">วันที่ *</label><input type="date" class="inp" id="ci-date"></div>
+        <div class="form-row"><label class="form-lbl">สถานะ *</label>
+          <select class="inp" id="ci-status" onchange="toggleTimeFields()">
+            <option value="present">มาเรียน</option><option value="absent">ขาดเรียน</option>
+            <option value="late">มาสาย</option><option value="makeup">เรียนชดเชย</option>
+          </select>
+        </div>
+      </div>
+      <div id="ci-time-fields" class="form-grid">
+        <div class="form-row"><label class="form-lbl">เวลาเข้า</label><input type="time" class="inp" id="ci-in" value="09:00"></div>
+        <div class="form-row"><label class="form-lbl">เวลาออก</label><input type="time" class="inp" id="ci-out" value="10:30"></div>
+      </div>
+      <div class="form-row"><label class="form-lbl">หมายเหตุ</label><textarea class="inp" id="ci-note"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-checkin')">ยกเลิก</button><button class="btn btn-primary" onclick="saveCheckin()"><i class="ti ti-check"></i>บันทึก</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-review">
+  <div class="modal">
+    <div class="modal-head"><h3><i class="ti ti-pencil" style="color:var(--blue)"></i>บันทึกรีวิวบทเรียน</h3><button class="modal-close" onclick="closeModal('mo-review')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">นักเรียน *</label><select class="inp" id="rv-student"></select></div>
+        <div class="form-row"><label class="form-lbl">ครูผู้สอน *</label><select class="inp" id="rv-teacher"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">วันที่ *</label><input type="date" class="inp" id="rv-date"></div>
+        <div class="form-row"><label class="form-lbl">หัวข้อ *</label><input type="text" class="inp" id="rv-topic" placeholder="เช่น Tone 1-4"></div>
+      </div>
+      <div class="form-row"><label class="form-lbl">คะแนนความตั้งใจ *</label>
+        <div class="star-inp" id="rv-stars">
+          <span onclick="setStar(1)">★</span><span onclick="setStar(2)">★</span><span onclick="setStar(3)">★</span><span onclick="setStar(4)">★</span><span onclick="setStar(5)">★</span>
+        </div><input type="hidden" id="rv-rating" value="0">
+      </div>
+      <div class="form-row"><label class="form-lbl">บันทึกสำหรับผู้ปกครอง * <span style="color:var(--green);font-size:11px">(ผู้ปกครองเห็นได้)</span></label><textarea class="inp" id="rv-pub" style="min-height:90px" placeholder="พัฒนาการ สิ่งที่ทำได้ดี และสิ่งที่ควรฝึกที่บ้าน..."></textarea></div>
+      <div class="form-row"><label class="form-lbl">บันทึกภายใน <span style="color:var(--ink3);font-size:11px">(เฉพาะครู)</span></label><textarea class="inp" id="rv-priv" placeholder="หมายเหตุส่วนตัว..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-review')">ยกเลิก</button><button class="btn btn-primary" onclick="saveReview()"><i class="ti ti-check"></i>บันทึก</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-add-student">
+  <div class="modal">
+    <div class="modal-head"><h3><i class="ti ti-user-plus" style="color:var(--green)"></i>เพิ่มนักเรียน</h3><button class="modal-close" onclick="closeModal('mo-add-student')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ชื่อ-นามสกุล *</label><input type="text" class="inp" id="st-name"></div>
+        <div class="form-row"><label class="form-lbl">ชื่อเล่น *</label><input type="text" class="inp" id="st-nick"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">อายุ</label><input type="number" class="inp" id="st-age" min="1" max="99"></div>
+        <div class="form-row"><label class="form-lbl">วันเกิด</label><input type="date" class="inp" id="st-dob"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">คอร์ส *</label><select class="inp" id="st-course"></select></div>
+        <div class="form-row"><label class="form-lbl">วันที่เริ่มเรียน *</label><input type="date" class="inp" id="st-start"></div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">ข้อมูลผู้ปกครอง</div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ชื่อผู้ปกครอง *</label><input type="text" class="inp" id="st-parent"></div>
+        <div class="form-row"><label class="form-lbl">เบอร์โทร *</label><input type="tel" class="inp" id="st-phone"></div>
+      </div>
+      <div class="form-row"><label class="form-lbl">LINE ID</label><input type="text" class="inp" id="st-line" placeholder="@lineId"></div>
+      <div class="form-row"><label class="form-lbl">หมายเหตุ</label><textarea class="inp" id="st-note"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-add-student')">ยกเลิก</button><button class="btn btn-primary" onclick="saveStudent()"><i class="ti ti-plus"></i>เพิ่ม</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-edit-student">
+  <div class="modal">
+    <div class="modal-head"><h3><i class="ti ti-edit" style="color:var(--blue)"></i>แก้ไขนักเรียน</h3><button class="modal-close" onclick="closeModal('mo-edit-student')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="es-id">
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ชื่อ-นามสกุล *</label><input type="text" class="inp" id="es-name"></div>
+        <div class="form-row"><label class="form-lbl">ชื่อเล่น *</label><input type="text" class="inp" id="es-nick"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">อายุ</label><input type="number" class="inp" id="es-age" min="1" max="99"></div>
+        <div class="form-row"><label class="form-lbl">วันเกิด</label><input type="date" class="inp" id="es-dob"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">คอร์ส *</label><select class="inp" id="es-course"></select></div>
+        <div class="form-row"><label class="form-lbl">วันที่เริ่ม</label><input type="date" class="inp" id="es-start"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ผู้ปกครอง *</label><input type="text" class="inp" id="es-parent"></div>
+        <div class="form-row"><label class="form-lbl">เบอร์โทร *</label><input type="tel" class="inp" id="es-phone"></div>
+      </div>
+      <div class="form-row"><label class="form-lbl">LINE</label><input type="text" class="inp" id="es-line"></div>
+      <div class="form-row"><label class="form-lbl">หมายเหตุ</label><textarea class="inp" id="es-note"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-edit-student')">ยกเลิก</button><button class="btn btn-primary" onclick="updateStudent()"><i class="ti ti-check"></i>บันทึก</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-add-course">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><h3><i class="ti ti-book" style="color:var(--gold)"></i>เพิ่ม/แก้ไขคอร์ส</h3><button class="modal-close" onclick="closeModal('mo-add-course')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="co-id">
+      <div class="form-row"><label class="form-lbl">ชื่อคอร์ส *</label><input type="text" class="inp" id="co-name"></div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ระดับ *</label>
+          <select class="inp" id="co-level"><option>เริ่มต้น</option><option>พื้นฐาน</option><option>กลาง</option><option>สูง</option><option>เข้มข้น</option><option>ทุกระดับ</option></select>
+        </div>
+        <div class="form-row"><label class="form-lbl">เหมาะสำหรับ *</label><input type="text" class="inp" id="co-age" placeholder="เช่น 4–10 ปี"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">จำนวนครั้ง *</label><input type="number" class="inp" id="co-lessons" min="1"></div>
+        <div class="form-row"><label class="form-lbl">ราคา (บาท) *</label><input type="number" class="inp" id="co-price" min="0"></div>
+      </div>
+      <div class="form-row"><label class="form-lbl">คำอธิบาย</label><textarea class="inp" id="co-desc"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-add-course')">ยกเลิก</button><button class="btn btn-primary" onclick="saveCourse()"><i class="ti ti-check"></i>บันทึก</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-teacher">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h3><i class="ti ti-chalkboard" style="color:var(--green)"></i>จัดการครู</h3><button class="modal-close" onclick="closeModal('mo-teacher')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div id="teacher-list-mo" style="margin-bottom:16px"></div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">ชื่อ-นามสกุล *</label><input type="text" class="inp" id="tc-name"></div>
+        <div class="form-row"><label class="form-lbl">ชื่อเล่น *</label><input type="text" class="inp" id="tc-nick" placeholder="ครูแนน"></div>
+      </div>
+      <button class="btn btn-success" onclick="saveTeacher()" style="width:100%;justify-content:center"><i class="ti ti-plus"></i>เพิ่มครู</button>
+    </div>
+    <div class="modal-foot"><button class="btn btn-primary" onclick="closeModal('mo-teacher')">เสร็จ</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-add-user">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head"><h3><i class="ti ti-user-plus" style="color:var(--blue)"></i>เพิ่มบัญชีผู้ใช้</h3><button class="modal-close" onclick="closeModal('mo-add-user')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">Username *</label><input type="text" class="inp" id="u-user"></div>
+        <div class="form-row"><label class="form-lbl">ชื่อ</label><input type="text" class="inp" id="u-name"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label class="form-lbl">รหัสผ่าน * (≥6)</label><input type="password" class="inp" id="u-pass"></div>
+        <div class="form-row"><label class="form-lbl">สิทธิ์ *</label>
+          <select class="inp" id="u-role" onchange="toggleStudentField()">
+            <option value="admin">Admin (ผู้ดูแล/ครู)</option>
+            <option value="parent">Parent (ผู้ปกครอง)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="u-student-row" style="display:none">
+        <label class="form-lbl">นักเรียนที่เป็นผู้ปกครอง *</label>
+        <select class="inp" id="u-student"></select>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mo-add-user')">ยกเลิก</button><button class="btn btn-primary" onclick="saveUser()"><i class="ti ti-check"></i>เพิ่ม</button></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let STATE = {
+  user: null,       // { role, name, student_id }
+  students: [],
+  teachers: [],
+  courses: [],
+  checkins: [],
+  reviews: [],
+  currentPage: '',
+};
+
+// ═══════════════════════════════════════
+//  API HELPER
+// ═══════════════════════════════════════
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api' + path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+  return data;
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.querySelector('i').className = type === 'err' ? 'ti ti-alert-circle' : 'ti ti-check';
+  t.style.background = type === 'err' ? 'var(--red)' : 'var(--ink)';
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function loading(on) { document.getElementById('loading').classList.toggle('show', on); }
+
+// ═══════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════
+function togglePw() {
+  const i = document.getElementById('l-pass');
+  const eye = document.getElementById('pw-eye');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  eye.className = i.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+}
+
+async function doLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn');
+  err.classList.remove('show');
+  if (!username || !password) { err.textContent = 'กรุณากรอก username และ password'; err.classList.add('show'); return; }
+  btn.innerHTML = '<div class="spinner"></div> กำลังเข้าสู่ระบบ...';
+  btn.disabled = true;
+  try {
+    const data = await api('POST', '/auth/login', { username, password });
+    STATE.user = { role: data.role, name: data.name, student_id: data.student_id };
+    initApp();
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+    btn.innerHTML = 'เข้าสู่ระบบ';
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').classList.contains('show')) doLogin();
+});
+
+async function doLogout() {
+  await api('POST', '/auth/logout').catch(() => {});
+  STATE.user = null;
+  document.getElementById('login-screen').classList.add('show');
+  document.getElementById('topbar').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.getElementById('l-pass').value = '';
+  document.getElementById('login-btn').innerHTML = 'เข้าสู่ระบบ';
+  document.getElementById('login-btn').disabled = false;
+}
+
+async function checkSession() {
+  try {
+    const me = await api('GET', '/auth/me');
+    if (me && me.role) { STATE.user = { role: me.role, name: me.name, student_id: me.student_id }; initApp(); }
+    else document.getElementById('login-screen').classList.add('show');
+  } catch { document.getElementById('login-screen').classList.add('show'); }
+}
+
+// ═══════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════
+function initApp() {
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('topbar').style.display = 'flex';
+  const { role, name } = STATE.user;
+  const pill = document.getElementById('role-pill');
+  pill.textContent = role === 'admin' ? '👤 ผู้ดูแล' : '👨‍👩‍👧 ผู้ปกครอง';
+  pill.className = 'role-pill ' + (role === 'admin' ? 'rp-admin' : 'rp-parent');
+
+  const nav = document.getElementById('nav');
+  const adminPages = [
+    { id:'dashboard', label:'ภาพรวม' },
+    { id:'students',  label:'นักเรียน' },
+    { id:'checkin',   label:'เข้า-ออกเรียน' },
+    { id:'reviews',   label:'รีวิวบทเรียน' },
+    { id:'courses',   label:'คอร์ส & ราคา' },
+    { id:'alerts',    label:'แจ้งเตือน' },
+    { id:'users',     label:'บัญชีผู้ใช้' },
+    { id:'settings',  label:'ตั้งค่า' },
+  ];
+  const parentPages = [
+    { id:'parent',  label:'ข้อมูลลูก' },
+    { id:'reviews', label:'รีวิวบทเรียน' },
+    { id:'courses', label:'คอร์ส & ราคา' },
+    { id:'settings',label:'ตั้งค่า' },
+  ];
+  const pages = role === 'admin' ? adminPages : parentPages;
+  nav.innerHTML = pages.map(p => `<button class="nb" data-page="${p.id}" onclick="goPage('${p.id}')">${p.label}</button>`).join('');
+
+  // hide admin-only elements
+  document.getElementById('btn-add-review').style.display = role === 'admin' ? '' : 'none';
+  document.getElementById('btn-add-course').style.display = role === 'admin' ? '' : 'none';
+
+  goPage(role === 'admin' ? 'dashboard' : 'parent');
+}
+
+function goPage(name) {
+  STATE.currentPage = name;
+  document.querySelectorAll('.nb').forEach(b => b.classList.toggle('on', b.dataset.page === name));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  const pg = document.getElementById('pg-' + name);
+  if (pg) pg.classList.add('on');
+  renderPage(name);
+}
+
+async function renderPage(name) {
+  loading(true);
+  try {
+    if (name === 'dashboard') await renderDashboard();
+    else if (name === 'students') await renderStudents();
+    else if (name === 'checkin') await loadCheckins();
+    else if (name === 'reviews') await loadReviews();
+    else if (name === 'courses') await renderCourses();
+    else if (name === 'alerts') await renderAlerts();
+    else if (name === 'parent') await renderParent();
+    else if (name === 'users') await renderUsers();
+    else if (name === 'settings') await renderSettings();
+  } catch (e) { toast(e.message, 'err'); }
+  loading(false);
+}
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+const avCols = ['av-gold','av-blue','av-green','av-red','av-gray'];
+function avColor(id) { const h = (id||'').split('').reduce((a,c) => a+c.charCodeAt(0), 0); return avCols[h % avCols.length]; }
+function initials(name) { if (!name) return '?'; const p = name.trim().split(' '); return p.length >= 2 ? p[0][0] + '.' + (p[1][0]||'') : name.slice(0, 2); }
+function starsHtml(n) { return Array.from({length:5}, (_,i) => `<span class="${i<n?'son':'soff'}">★</span>`).join(''); }
+function fmt(d) {
+  if (!d) return '—';
+  const p = d.slice(0, 10).split('-');
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${+p[2]} ${months[+p[1]-1]} ${+p[0]+543}`;
+}
+function thaiToday() {
+  const d = new Date(), days = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'], months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  return `วัน${days[d.getDay()]}ที่ ${d.getDate()} ${months[d.getMonth()]} พ.ศ. ${d.getFullYear()+543}`;
+}
+const progCls = left => left <= 2 ? 'crit' : left <= 5 ? 'warn' : '';
+const badgeCls = left => left <= 2 ? 'bg-red' : left <= 5 ? 'bg-orange' : 'bg-green';
+const statusMap = { present:['bg-green','มาเรียน'], absent:['bg-red','ขาดเรียน'], late:['bg-orange','มาสาย'], makeup:['bg-blue','ชดเชย'] };
+const courseIcons = ['ti-star','ti-certificate','ti-certificate-2','ti-briefcase','ti-sun','ti-user-star','ti-book'];
+
+// ═══════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════
+function openModal(id) {
+  populateSelects();
+  document.getElementById(id).classList.add('show');
+  const today = new Date().toISOString().slice(0, 10);
+  ['ci-date','rv-date'].forEach(fid => { const el = document.getElementById(fid); if (el && !el.value) el.value = today; });
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); }));
+
+function populateSelects() {
+  const stuOpts = STATE.students.map(s => `<option value="${s.id}">${s.nick || s.name}</option>`).join('');
+  const tchrOpts = STATE.teachers.map(t => `<option value="${t.id}">${t.nick || t.name}</option>`).join('');
+  const courseOpts = STATE.courses.map(c => `<option value="${c.id}">${c.name} (${c.lessons}ครั้ง · ฿${c.price.toLocaleString()})</option>`).join('');
+  ['ci-student','rv-student','u-student'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = stuOpts; });
+  ['ci-teacher','rv-teacher'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = tchrOpts; });
+  ['st-course','es-course'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = courseOpts; });
+
+  // Course filter
+  const cf = document.getElementById('course-filter');
+  if (cf) { const cur = cf.value; cf.innerHTML = '<option value="">คอร์สทั้งหมด</option>' + STATE.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join(''); cf.value = cur; }
+}
+
+// ═══════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════
+async function renderDashboard() {
+  const [dash, todayCi, recentRevs, alertData] = await Promise.all([
+    api('GET', '/dashboard'),
+    api('GET', `/checkins?date=${new Date().toISOString().slice(0,10)}`),
+    api('GET', '/reviews'),
+    api('GET', '/alerts'),
+  ]);
+  await loadBaseData();
+
+  document.getElementById('today-lbl').textContent = thaiToday();
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat"><div class="stat-lbl">นักเรียนทั้งหมด</div><div class="stat-val">${dash.totalStudents}</div><div class="stat-foot">Active คอร์ส</div></div>
+    <div class="stat"><div class="stat-lbl">เรียนวันนี้</div><div class="stat-val">${dash.todayPresent}</div><div class="stat-foot">จาก ${dash.todayRecords} ที่บันทึก</div></div>
+    <div class="stat ${dash.critCount > 0 ? 'danger' : ''}"><div class="stat-lbl">ใกล้หมดคอร์ส</div><div class="stat-val">${dash.critCount}</div><div class="stat-foot">≤5 ครั้งที่เหลือ</div></div>
+    <div class="stat"><div class="stat-lbl">ครูในระบบ</div><div class="stat-val">${dash.totalTeachers}</div><div class="stat-foot">${dash.totalCourses} คอร์ส</div></div>`;
+
+  const tbody = document.getElementById('today-tbl');
+  if (!todayCi.length) { tbody.innerHTML = `<tr><td colspan="4" class="no-data">ยังไม่มีบันทึกวันนี้</td></tr>`; }
+  else tbody.innerHTML = todayCi.map(c => {
+    const ini = initials(c.student_nick || c.student_name);
+    const col = avColor(c.student_id);
+    const [bc, lbl] = statusMap[c.status] || ['bg-gray','—'];
+    return `<tr><td><div class="name-cell"><div class="av ${col}">${ini}</div>${c.student_nick || c.student_name}</div></td>
+      <td style="font-family:var(--mono);font-size:12px">${c.time_in || '—'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.time_out || '—'}</td>
+      <td><span class="badge ${bc}">${lbl}</span></td></tr>`;
+  }).join('');
+
+  const alertsEl = document.getElementById('dash-alerts');
+  const crit = alertData.filter(s => s.lessons_left <= 5).slice(0, 4);
+  alertsEl.innerHTML = crit.length === 0 ? `<div class="no-data">ไม่มีนักเรียนใกล้หมดคอร์ส 🎉</div>` :
+    crit.map(s => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--bg3)">
+      <i class="ti ${s.lessons_left <= 2 ? 'ti-alert-triangle' : 'ti-clock-alert'}" style="color:${s.lessons_left <= 2 ? 'var(--red)' : 'var(--orange)'}"></i>
+      <div><div style="font-size:13px;font-weight:500">${s.nick || s.name} — เหลือ ${s.lessons_left} ครั้ง</div><div style="font-size:11px;color:var(--ink3)">${s.course_name || ''}</div></div>
+    </div>`).join('');
+
+  const tlEl = document.getElementById('dash-timeline');
+  const recent = recentRevs.slice(0, 5);
+  tlEl.innerHTML = recent.length === 0 ? `<div class="no-data">ยังไม่มีรีวิว</div>` :
+    recent.map(r => `<div class="tl-item"><div class="tl-dot"></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${r.student_nick || '?'} — ${r.topic}</div><div style="font-size:11px;color:var(--ink3)">${r.teacher_nick || '?'} · ${fmt(r.date)}</div></div>
+      <div style="font-size:12px">${starsHtml(r.rating)}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  LOAD BASE DATA
+// ═══════════════════════════════════════
+async function loadBaseData() {
+  const [students, teachers, courses] = await Promise.all([api('GET','/students'), api('GET','/teachers'), api('GET','/courses')]);
+  STATE.students = students; STATE.teachers = teachers; STATE.courses = courses;
+  populateSelects();
+}
+
+// ═══════════════════════════════════════
+//  STUDENTS
+// ═══════════════════════════════════════
+async function renderStudents() {
+  await loadBaseData();
+  renderStudentsTable();
+}
+
+function filterStudents(search) {
+  const cf = document.getElementById('course-filter')?.value || '';
+  renderStudentsTable(search, cf);
+}
+
+function renderStudentsTable(search = '', courseFilter = '') {
+  let list = STATE.students;
+  if (search) list = list.filter(s => (s.name + s.nick + s.parent).toLowerCase().includes(search.toLowerCase()));
+  if (courseFilter) list = list.filter(s => s.course_id === courseFilter);
+  document.getElementById('stu-count').textContent = `${list.length} คน`;
+  const tbody = document.getElementById('students-body');
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="7" class="no-data">ไม่พบนักเรียน</td></tr>`; return; }
+  tbody.innerHTML = list.map(s => {
+    const pct = s.course_lessons ? Math.round(s.lessons_done / s.course_lessons * 100) : 0;
+    const left = s.lessons_left;
+    const ini = initials(s.nick || s.name);
+    const col = avColor(s.id);
+    return `<tr>
+      <td><div class="name-cell"><div class="av ${col}">${ini}</div><div><div style="font-weight:500">${s.nick || s.name}</div><div style="font-size:11px;color:var(--ink3)">${s.name}</div></div></div></td>
+      <td>${s.course_name ? `<span class="badge bg-blue">${s.course_name}</span>` : '—'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${s.lessons_done}/${s.course_lessons || 0}</td>
+      <td><span class="badge ${badgeCls(left)}">${left} ครั้ง</span></td>
+      <td><div class="prog"><div class="prog-bar"><div class="prog-fill ${progCls(left)}" style="width:${pct}%"></div></div><span class="prog-num">${pct}%</span></div></td>
+      <td style="font-size:12px;color:var(--ink3)">${s.parent}<br><span style="font-family:var(--mono)">${s.phone}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-icon btn-sm" title="มุมมองผู้ปกครอง" onclick="goParentOf('${s.id}')"><i class="ti ti-eye"></i></button>
+        <button class="btn btn-icon btn-sm" onclick="editStudentModal('${s.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-icon btn-sm" onclick="delStudent('${s.id}','${s.nick||s.name}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+async function saveStudent() {
+  const body = { name:$v('st-name'), nick:$v('st-nick'), age:$v('st-age')||null, dob:$v('st-dob')||null, course_id:$v('st-course'), start_date:$v('st-start'), parent:$v('st-parent'), phone:$v('st-phone'), line_id:$v('st-line'), note:$v('st-note') };
+  try { await api('POST','/students',body); closeModal('mo-add-student'); clearFields(['st-name','st-nick','st-age','st-dob','st-parent','st-phone','st-line','st-note']); toast('เพิ่มนักเรียนใหม่แล้ว 🎉'); await renderStudents(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+function editStudentModal(id) {
+  const s = STATE.students.find(x => x.id === id);
+  if (!s) return;
+  ['es-id','es-name','es-nick','es-age','es-dob','es-parent','es-phone','es-line','es-note','es-start'].forEach(fid => {
+    const el = document.getElementById(fid);
+    if (!el) return;
+    const key = fid.replace('es-','').replace('-','_');
+    const map = { id:'id', name:'name', nick:'nick', age:'age', dob:'dob', parent:'parent', phone:'phone', line:'line_id', note:'note', start:'start_date' };
+    el.value = s[map[key.replace('es-','')] || key] || '';
+  });
+  openModal('mo-edit-student');
+  setTimeout(() => { document.getElementById('es-course').value = s.course_id || ''; }, 50);
+}
+
+async function updateStudent() {
+  const id = $v('es-id');
+  const body = { name:$v('es-name'), nick:$v('es-nick'), age:$v('es-age')||null, dob:$v('es-dob')||null, course_id:$v('es-course'), start_date:$v('es-start'), parent:$v('es-parent'), phone:$v('es-phone'), line_id:$v('es-line'), note:$v('es-note') };
+  try { await api('PUT',`/students/${id}`,body); closeModal('mo-edit-student'); toast('อัปเดตข้อมูลแล้ว'); await renderStudents(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function delStudent(id, name) {
+  if (!confirm(`ลบนักเรียน "${name}" และข้อมูลทั้งหมด?`)) return;
+  try { await api('DELETE',`/students/${id}`); toast('ลบนักเรียนแล้ว'); await renderStudents(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  CHECK-INS
+// ═══════════════════════════════════════
+function toggleTimeFields() {
+  document.getElementById('ci-time-fields').style.display = $v('ci-status') === 'absent' ? 'none' : 'grid';
+}
+
+async function saveCheckin() {
+  const body = { student_id:$v('ci-student'), teacher_id:$v('ci-teacher'), date:$v('ci-date'), time_in:$v('ci-in'), time_out:$v('ci-out'), status:$v('ci-status'), note:$v('ci-note') };
+  try { await api('POST','/checkins',body); closeModal('mo-checkin'); toast('บันทึกการเข้าเรียนแล้ว'); await loadCheckins(); if (STATE.currentPage === 'dashboard') await renderDashboard(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function loadCheckins(search = '') {
+  if (!STATE.students.length) await loadBaseData();
+  const dateFilter = document.getElementById('ci-date-filter')?.value || '';
+  let url = '/checkins';
+  if (dateFilter) url += `?date=${dateFilter}`;
+  const data = await api('GET', url);
+  STATE.checkins = data;
+  let list = data;
+  if (search) list = list.filter(c => (c.student_nick + c.student_name).toLowerCase().includes(search.toLowerCase()));
+  const tbody = document.getElementById('checkin-body');
+  if (!tbody) return;
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="8" class="no-data">ไม่พบรายการ</td></tr>`; return; }
+  tbody.innerHTML = list.map(c => {
+    const ini = initials(c.student_nick || c.student_name);
+    const col = avColor(c.student_id);
+    const [bc, lbl] = statusMap[c.status] || ['bg-gray','—'];
+    return `<tr>
+      <td><div class="name-cell"><div class="av ${col}">${ini}</div>${c.student_nick || c.student_name}</div></td>
+      <td style="font-size:12px;color:var(--ink3)">${c.teacher_nick || '—'}</td>
+      <td style="font-size:12px">${fmt(c.date)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.time_in || '—'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${c.time_out || '—'}</td>
+      <td><span class="badge ${bc}">${lbl}</span></td>
+      <td style="font-size:12px;color:var(--ink3)">${c.note || '—'}</td>
+      <td><button class="btn btn-icon btn-sm" onclick="delCheckin('${c.id}')"><i class="ti ti-trash" style="color:var(--red)"></i></button></td></tr>`;
+  }).join('');
+}
+
+async function delCheckin(id) {
+  if (!confirm('ลบรายการนี้?')) return;
+  try { await api('DELETE',`/checkins/${id}`); toast('ลบรายการแล้ว'); await loadCheckins(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  REVIEWS
+// ═══════════════════════════════════════
+let curRating = 0;
+function setStar(n) {
+  curRating = n;
+  document.getElementById('rv-rating').value = n;
+  document.querySelectorAll('#rv-stars span').forEach((s, i) => s.classList.toggle('lit', i < n));
+}
+
+async function saveReview() {
+  const body = { student_id:$v('rv-student'), teacher_id:$v('rv-teacher'), date:$v('rv-date'), topic:$v('rv-topic'), rating:+$v('rv-rating'), public_note:$v('rv-pub'), private_note:$v('rv-priv') };
+  try { await api('POST','/reviews',body); closeModal('mo-review'); setStar(0); clearFields(['rv-topic','rv-pub','rv-priv']); toast('บันทึกรีวิวแล้ว'); await loadReviews(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function loadReviews() {
+  if (!STATE.students.length) await loadBaseData();
+  const data = await api('GET', '/reviews');
+  STATE.reviews = data;
+  const isAdmin = STATE.user.role === 'admin';
+  const grid = document.getElementById('rev-grid');
+  if (!grid) return;
+  if (!data.length) { grid.innerHTML = `<div class="no-data" style="grid-column:span 2">ยังไม่มีรีวิว</div>`; return; }
+  grid.innerHTML = data.map(r => `<div class="rev-card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <div><div style="font-size:13px;font-weight:600">${r.teacher_nick || '?'}</div><div style="font-size:11px;color:var(--ink3)">${fmt(r.date)} · ${r.student_nick || '?'}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="stars">${starsHtml(r.rating)}</div>
+        ${isAdmin ? `<button class="btn btn-icon btn-sm" onclick="delReview('${r.id}')"><i class="ti ti-trash" style="color:var(--red);font-size:12px"></i></button>` : ''}
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--ink2);line-height:1.6">${r.public_note || ''}</div>
+    ${r.private_note && isAdmin ? `<div style="margin-top:6px;padding:6px 8px;background:var(--bg2);border-radius:5px;font-size:12px;font-style:italic;color:var(--ink3)"><i class="ti ti-lock" style="font-size:11px"></i> ${r.private_note}</div>` : ''}
+    <div style="font-size:11px;color:var(--ink3);margin-top:6px"><i class="ti ti-tag" style="font-size:11px"></i> ${r.topic}</div>
+  </div>`).join('');
+}
+
+async function delReview(id) {
+  if (!confirm('ลบรีวิวนี้?')) return;
+  try { await api('DELETE',`/reviews/${id}`); toast('ลบรีวิวแล้ว'); await loadReviews(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  COURSES
+// ═══════════════════════════════════════
+async function renderCourses() {
+  await loadBaseData();
+  const isAdmin = STATE.user.role === 'admin';
+  const courses = STATE.courses;
+  const grid = document.getElementById('course-grid');
+  const tbody = document.getElementById('course-tbl-body');
+  if (!grid) return;
+  grid.innerHTML = courses.map((c, i) => `<div class="course-card">
+    <div class="course-top">
+      <div class="course-icon"><i class="ti ${courseIcons[i % courseIcons.length]}"></i></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:3px">${c.name}</div>
+      <div style="font-size:12px;color:var(--ink3);line-height:1.5">${c.desc || '—'}</div>
+    </div>
+    <div class="course-bot">
+      <div><div style="font-size:16px;font-weight:600;font-family:var(--mono)">฿${c.price.toLocaleString()}</div><div style="font-size:11px;color:var(--ink3)">${c.lessons} ครั้ง · ${c.age}</div></div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <span class="badge bg-gold">${c.level}</span>
+        ${isAdmin ? `<button class="btn btn-icon btn-sm" onclick="editCourseModal('${c.id}')"><i class="ti ti-edit"></i></button>` : ''}
+      </div>
+    </div>
+  </div>`).join('');
+
+  if (tbody) tbody.innerHTML = courses.map(c => `<tr>
+    <td style="font-weight:500">${c.name}</td>
+    <td><span class="badge bg-gold">${c.level}</span></td>
+    <td style="font-family:var(--mono)">${c.lessons} ครั้ง</td>
+    <td style="font-family:var(--mono)">฿${c.price.toLocaleString()}</td>
+    <td style="font-family:var(--mono);color:var(--ink3)">฿${Math.round(c.price/c.lessons).toLocaleString()}</td>
+    <td>${c.age}</td>
+    <td>${isAdmin ? `<div style="display:flex;gap:4px">
+      <button class="btn btn-icon btn-sm" onclick="editCourseModal('${c.id}')"><i class="ti ti-edit"></i></button>
+      <button class="btn btn-icon btn-sm" onclick="delCourse('${c.id}','${c.name}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+    </div>` : '—'}</td></tr>`).join('');
+}
+
+function editCourseModal(id) {
+  const c = STATE.courses.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('co-id').value = id;
+  document.getElementById('co-name').value = c.name;
+  document.getElementById('co-level').value = c.level;
+  document.getElementById('co-age').value = c.age;
+  document.getElementById('co-lessons').value = c.lessons;
+  document.getElementById('co-price').value = c.price;
+  document.getElementById('co-desc').value = c.desc || '';
+  openModal('mo-add-course');
+}
+
+async function saveCourse() {
+  const id = $v('co-id');
+  const body = { name:$v('co-name'), level:$v('co-level'), age:$v('co-age'), lessons:+$v('co-lessons'), price:+$v('co-price'), desc:$v('co-desc') };
+  try {
+    if (id) await api('PUT',`/courses/${id}`,body);
+    else await api('POST','/courses',body);
+    document.getElementById('co-id').value = '';
+    clearFields(['co-name','co-age','co-lessons','co-price','co-desc']);
+    closeModal('mo-add-course');
+    toast(id ? 'อัปเดตคอร์สแล้ว' : 'เพิ่มคอร์สใหม่แล้ว');
+    await renderCourses();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function delCourse(id, name) {
+  if (!confirm(`ลบคอร์ส "${name}"?`)) return;
+  try { await api('DELETE',`/courses/${id}`); toast('ลบคอร์สแล้ว'); await renderCourses(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════
+async function renderAlerts() {
+  const data = await api('GET', '/alerts');
+  const crit = data.filter(s => s.lessons_left <= 2);
+  const urg  = data.filter(s => s.lessons_left > 2 && s.lessons_left <= 5);
+  const watch = data.filter(s => s.lessons_left > 5 && s.lessons_left <= 10);
+  document.getElementById('alert-stats').innerHTML = `
+    <div class="stat danger"><div class="stat-lbl">วิกฤต (≤2 ครั้ง)</div><div class="stat-val">${crit.length}</div><div class="stat-foot">แจ้งทันที</div></div>
+    <div class="stat warn"><div class="stat-lbl">เร่งด่วน (3–5 ครั้ง)</div><div class="stat-val">${urg.length}</div><div class="stat-foot">แจ้งสัปดาห์นี้</div></div>
+    <div class="stat"><div class="stat-lbl">เฝ้าระวัง (6–10 ครั้ง)</div><div class="stat-val">${watch.length}</div><div class="stat-foot">แจ้งเดือนนี้</div></div>`;
+  const tbody = document.getElementById('alert-body');
+  if (!data.length) { tbody.innerHTML = `<tr><td colspan="7" class="no-data">ไม่มีนักเรียนที่ต้องแจ้งเตือน 🎉</td></tr>`; return; }
+  tbody.innerHTML = data.map(s => {
+    const left = s.lessons_left;
+    const [bc, lvl] = left <= 2 ? ['bg-red','วิกฤต'] : left <= 5 ? ['bg-orange','เร่งด่วน'] : ['bg-blue','เฝ้าระวัง'];
+    const ini = initials(s.nick || s.name);
+    const col = avColor(s.id);
+    return `<tr>
+      <td><div class="name-cell"><div class="av ${col}">${ini}</div>${s.nick || s.name}</div></td>
+      <td>${s.course_name ? `<span class="badge bg-blue">${s.course_name}</span>` : '—'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${s.lessons_done}/${s.course_lessons || 0}</td>
+      <td style="font-family:var(--mono);font-weight:600;color:${left<=2?'var(--red)':'var(--orange)'}">${left} ครั้ง</td>
+      <td><span class="badge ${bc}">${lvl}</span></td>
+      <td style="font-size:12px;color:var(--ink3)">${s.parent}<br><span style="font-family:var(--mono)">${s.phone}</span></td>
+      <td><button class="btn btn-sm" onclick="copyNotif('${s.id}')"><i class="ti ti-copy"></i>คัดลอกข้อความ</button></td></tr>`;
+  }).join('');
+}
+
+function copyNotif(id) {
+  const s = STATE.students.find(x => x.id === id) || {};
+  const c = STATE.courses.find(x => x.id === s.course_id) || {};
+  const text = `เรียน ${s.parent || 'คุณผู้ปกครอง'}\n\nน้อง${s.nick || s.name} มีคาบเรียนในคอร์ส "${c.name || ''}" เหลืออีกเพียงไม่กี่ครั้งแล้ว กรุณาติดต่อสถาบัน Mando House เพื่อต่อคอร์สได้เลยนะคะ\n\nขอบคุณค่ะ 🙏`;
+  navigator.clipboard.writeText(text).then(() => toast('คัดลอกข้อความแล้ว — วางใน LINE ได้เลย'));
+}
+
+// ═══════════════════════════════════════
+//  PARENT VIEW
+// ═══════════════════════════════════════
+async function renderParent() {
+  await loadBaseData();
+  const isAdmin = STATE.user.role === 'admin';
+  const sel = document.getElementById('parent-sel');
+  sel.style.display = isAdmin ? '' : 'none';
+  if (isAdmin) {
+    sel.innerHTML = '<option value="">— เลือกนักเรียน —</option>' + STATE.students.map(s => `<option value="${s.id}">${s.nick || s.name}</option>`).join('');
+    if (!sel.value && STATE.students.length) sel.value = STATE.students[0].id;
+  }
+  const targetId = isAdmin ? (sel.value || STATE.students[0]?.id) : STATE.user.student_id;
+  if (targetId) await loadParentView(targetId);
+  else document.getElementById('parent-content').innerHTML = `<div class="no-data" style="padding:40px">ไม่พบข้อมูลนักเรียน</div>`;
+}
+
+async function loadParentView(studentId) {
+  if (!studentId) return;
+  const [s, checkins, reviews] = await Promise.all([
+    api('GET', `/students/${studentId}`),
+    api('GET', `/checkins?student_id=${studentId}`),
+    api('GET', `/reviews?student_id=${studentId}`),
+  ]);
+  const left = s.lessons_left, pct = s.course_lessons ? Math.round(s.lessons_done / s.course_lessons * 100) : 0;
+  const ini = initials(s.nick || s.name);
+  const present = checkins.filter(c => c.status === 'present').length;
+  const attRate = checkins.length ? Math.round(present / checkins.length * 100) : 0;
+
+  document.getElementById('parent-content').innerHTML = `
+  <div class="hero">
+    <div class="hero-av">${ini}</div>
+    <div style="flex:1">
+      <div style="font-size:17px;font-weight:600">${s.nick || s.name}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px">${s.course_name || '—'} · เริ่มเรียน ${fmt(s.start_date)}</div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="hstat-val">${s.lessons_done}</div><div class="hstat-lbl">ครั้งที่เรียนแล้ว</div></div>
+        <div class="hstat"><div class="hstat-val" style="color:${left<=3?'#FF6B6B':'var(--gm)'}">${left}</div><div class="hstat-lbl">ครั้งที่เหลือ</div></div>
+        <div class="hstat"><div class="hstat-val">${attRate}%</div><div class="hstat-lbl">อัตราเข้าเรียน</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:12px">บันทึกจากครูผู้สอน</div>
+      ${reviews.length === 0 ? `<div class="no-data">ยังไม่มีรีวิว</div>` : reviews.map(r => `
+      <div class="rev-card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <div><div style="font-size:13px;font-weight:600">${r.teacher_nick || '?'}</div><div style="font-size:11px;color:var(--ink3)">${fmt(r.date)}</div></div>
+          <div class="stars">${starsHtml(r.rating)}</div>
+        </div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6">${r.public_note || ''}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:6px"><i class="ti ti-tag" style="font-size:11px"></i> ${r.topic}</div>
+      </div>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:12px">ปฏิทินเดือนนี้</div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        ${renderCal(checkins)}
+        <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3);justify-content:center">
+          <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>มาเรียน</div>
+          <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--rl);border:.5px solid var(--red)"></div>ขาด</div>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:10px">ข้อมูลคอร์ส</div>
+      <div style="background:var(--bg2);border-radius:8px;padding:14px">
+        <div class="info-row"><span class="info-lbl">คอร์ส</span><span class="info-val">${s.course_name || '—'}</span></div>
+        <div class="info-row"><span class="info-lbl">ราคา</span><span class="info-val" style="font-family:var(--mono)">฿${(s.course_price||0).toLocaleString()}</span></div>
+        <div class="info-row"><span class="info-lbl">เรียนแล้ว</span><span class="info-val" style="font-family:var(--mono)">${s.lessons_done}/${s.course_lessons || 0} ครั้ง</span></div>
+        <div class="info-row"><span class="info-lbl">คงเหลือ</span><span class="info-val" style="color:${left<=2?'var(--red)':'var(--ink)'}">
+          ${left} ครั้ง ${left<=3?'⚠️':''}</span></div>
+        <div style="margin:10px 0 4px"><div class="prog"><div class="prog-bar"><div class="prog-fill ${progCls(left)}" style="width:${pct}%"></div></div><span class="prog-num">${pct}%</span></div></div>
+        ${left <= 5 ? `<div style="margin-top:10px;padding:10px;background:var(--rl);border-radius:6px;font-size:12px;color:var(--red);font-weight:500">⚠️ เหลืออีก ${left} ครั้งก็จะหมดคอร์ส กรุณาติดต่อสถาบันเพื่อต่อคอร์ส</div>` : ''}
+        <div style="margin-top:12px"><div class="info-row"><span class="info-lbl">ผู้ปกครอง</span><span class="info-val">${s.parent}</span></div>
+        <div class="info-row"><span class="info-lbl">ติดต่อ</span><span class="info-val" style="font-family:var(--mono)">${s.phone}</span></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCal(checkins) {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  const firstDay = new Date(y, m, 1).getDay(), daysInMonth = new Date(y, m+1, 0).getDate();
+  const pDates = new Set(checkins.filter(c => c.status === 'present').map(c => c.date.slice(0,10)));
+  const aDates = new Set(checkins.filter(c => c.status === 'absent').map(c => c.date.slice(0,10)));
+  const pad = (firstDay + 6) % 7;
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let h = `<div style="font-size:12px;color:var(--ink3);text-align:center;margin-bottom:8px">${months[m]} ${y+543}</div>`;
+  h += `<div class="cal-grid">`;
+  ['จ','อ','พ','พฤ','ศ','ส','อา'].forEach(d => h += `<div class="cal-day cal-hdr">${d}</div>`);
+  for (let i = 0; i < pad; i++) h += `<div class="cal-day"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cls = pDates.has(ds) ? 'cal-p' : aDates.has(ds) ? 'cal-a' : 'cal-e';
+    h += `<div class="cal-day ${cls}">${d}</div>`;
+  }
+  return h + '</div>';
+}
+
+function goParentOf(id) { goPage('parent'); setTimeout(() => { const sel = document.getElementById('parent-sel'); if (sel) { sel.value = id; loadParentView(id); } }, 200); }
+
+// ═══════════════════════════════════════
+//  USERS
+// ═══════════════════════════════════════
+async function renderUsers() {
+  await loadBaseData();
+  const users = await api('GET', '/users');
+  const tbody = document.getElementById('users-body');
+  tbody.innerHTML = users.map(u => `<tr>
+    <td style="font-family:var(--mono);font-size:12px">${u.username}</td>
+    <td>${u.name || '—'}</td>
+    <td><span class="badge ${u.role==='admin'?'bg-gold':'bg-blue'}">${u.role==='admin'?'Admin':'ผู้ปกครอง'}</span></td>
+    <td style="font-size:12px;color:var(--ink3)">${u.role==='parent'?(STATE.students.find(s=>s.id===u.student_id)?.nick||u.student_id||'—'):'—'}</td>
+    <td style="font-size:12px;color:var(--ink3)">${fmt(u.created_at)}</td>
+    <td>${u.username!=='admin'?`<button class="btn btn-icon btn-sm" onclick="delUser('${u.id}','${u.username}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>`:'—'}</td></tr>`).join('');
+}
+
+function toggleStudentField() {
+  document.getElementById('u-student-row').style.display = $v('u-role') === 'parent' ? '' : 'none';
+}
+
+async function saveUser() {
+  const body = { username:$v('u-user'), password:$v('u-pass'), role:$v('u-role'), name:$v('u-name'), student_id:$v('u-student')||null };
+  try { await api('POST','/users',body); closeModal('mo-add-user'); toast('เพิ่มบัญชีแล้ว'); await renderUsers(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function delUser(id, username) {
+  if (!confirm(`ลบบัญชี "${username}"?`)) return;
+  try { await api('DELETE',`/users/${id}`); toast('ลบบัญชีแล้ว'); await renderUsers(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════
+async function renderSettings() {
+  await loadBaseData();
+  renderTeacherLists();
+}
+
+function renderTeacherLists() {
+  const html = STATE.teachers.length === 0 ? `<div class="no-data" style="padding:12px">ยังไม่มีครู</div>` :
+    STATE.teachers.map(t => `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:.5px solid var(--bg3)">
+      <div><div style="font-size:13px;font-weight:500">${t.nick || t.name}</div><div style="font-size:11px;color:var(--ink3)">${t.name}</div></div>
+      <button class="btn btn-icon btn-sm" onclick="delTeacher('${t.id}','${t.nick||t.name}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+    </div>`).join('');
+  ['teacher-list-pg','teacher-list-mo'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+}
+
+async function saveTeacher() {
+  const body = { name:$v('tc-name'), nick:$v('tc-nick') };
+  try { await api('POST','/teachers',body); clearFields(['tc-name','tc-nick']); toast('เพิ่มครูแล้ว'); STATE.teachers = await api('GET','/teachers'); renderTeacherLists(); populateSelects(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function delTeacher(id, name) {
+  if (!confirm(`ลบครู "${name}"?`)) return;
+  try { await api('DELETE',`/teachers/${id}`); toast('ลบครูแล้ว'); STATE.teachers = await api('GET','/teachers'); renderTeacherLists(); populateSelects(); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+async function changePw() {
+  const cur = $v('pw-cur'), next = $v('pw-new'), cfm = $v('pw-cfm');
+  if (!cur || !next) { toast('กรอกรหัสผ่านให้ครบ','err'); return; }
+  if (next !== cfm) { toast('รหัสผ่านใหม่ไม่ตรงกัน','err'); return; }
+  try { await api('PUT','/auth/password',{current:cur,next}); clearFields(['pw-cur','pw-new','pw-cfm']); toast('เปลี่ยนรหัสผ่านแล้ว'); }
+  catch(e) { toast(e.message,'err'); }
+}
+
+// ═══════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════
+function $v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function clearFields(ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+
+// ═══════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════
+checkSession();
+</script>
+</body>
+</html>
