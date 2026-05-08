@@ -2,7 +2,25 @@
   "name": "mandohouse",
   "version": "1.0.0",
   "description": "Mando House Language Institute Management System",
-  "main": "src/server.js",
+  {
+  "name": "mandohouse",
+  "version": "1.0.0",
+  "main": "mandohouse/src/server.js",
+  "scripts": {
+    "start": "node mandohouse/src/server.js",
+    "build": "echo build ok"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js"
