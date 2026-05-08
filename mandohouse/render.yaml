@@ -3,6 +3,7 @@ services:
     name: mandohouse
     env: node
     plan: free
+    rootDir: mandohouse
     buildCommand: npm install
     startCommand: npm start
     envVars:
