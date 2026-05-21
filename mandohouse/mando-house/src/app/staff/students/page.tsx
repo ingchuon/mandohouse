@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Student, Enrollment } from '@/types'
-import { formatDate, getInitials } from '@/lib/utils'
+import { getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 type StudentWithEnrollment = Student & {
@@ -13,9 +13,15 @@ type StudentWithEnrollment = Student & {
 export default function StudentsPage() {
   const supabase = createClient()
   const [students, setStudents] = useState<StudentWithEnrollment[]>([])
+  const [courses, setCourses] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showEnrollModal, setShowEnrollModal] = useState<StudentWithEnrollment | null>(null)
+  const [enrollForm, setEnrollForm] = useState({
+    course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: ''
+  })
+  const [enrollSaving, setEnrollSaving] = useState(false)
   const [form, setForm] = useState({
     full_name: '', nickname: '', date_of_birth: '',
     gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: ''
@@ -31,7 +37,12 @@ export default function StudentsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { loadStudents() }, [])
+  async function loadCourses() {
+    const { data } = await supabase.from('courses').select('id, name, price_per_course').eq('is_active', true)
+    setCourses(data ?? [])
+  }
+
+  useEffect(() => { loadStudents(); loadCourses() }, [])
 
   const filtered = students.filter(s =>
     s.full_name.includes(search) ||
@@ -47,6 +58,50 @@ export default function StudentsPage() {
     setShowForm(false)
     setForm({ full_name: '', nickname: '', date_of_birth: '', gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: '' })
     loadStudents()
+  }
+
+  async function handleEnroll(e: React.FormEvent) {
+    e.preventDefault()
+    if (!showEnrollModal) return
+    setEnrollSaving(true)
+
+    // 1. สร้าง enrollment
+    const { data: enroll, error: enrollError } = await supabase
+      .from('enrollments')
+      .insert([{
+        student_id: showEnrollModal.id,
+        course_id: enrollForm.course_id || null,
+        lessons_total: enrollForm.lessons_total,
+        lessons_used: 0,
+        status: 'active',
+        notes: enrollForm.notes || null,
+      }])
+      .select()
+      .single()
+
+    if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
+
+    // 2. สร้าง receipt ถ้ามีราคา
+    if (enrollForm.price > 0) {
+      await supabase.from('receipts').insert([{
+        student_id: showEnrollModal.id,
+        enrollment_id: enroll.id,
+        amount: enrollForm.price,
+        payment_method: enrollForm.payment_method,
+        issued_at: new Date().toISOString(),
+      }])
+    }
+
+    toast.success('ซื้อคอร์สเรียบร้อย 🎉')
+    setShowEnrollModal(null)
+    setEnrollForm({ course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: '' })
+    setEnrollSaving(false)
+    loadStudents()
+  }
+
+  function openEnrollModal(student: StudentWithEnrollment) {
+    setShowEnrollModal(student)
+    setEnrollForm({ course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: '' })
   }
 
   return (
@@ -83,6 +138,7 @@ export default function StudentsPage() {
                 <th>ความคืบหน้า</th>
                 <th>ผู้ปกครอง</th>
                 <th>สถานะ</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -152,16 +208,98 @@ export default function StudentsPage() {
                         <span className="badge badge-gray">ไม่มีคอร์ส</span>
                       )}
                     </td>
+                    <td>
+                      <button
+                        onClick={() => openEnrollModal(s)}
+                        className="btn-outline btn-sm"
+                      >
+                        ซื้อคอร์ส
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-gray-400 py-8">ไม่พบนักเรียน</td></tr>
+                <tr><td colSpan={7} className="text-center text-gray-400 py-8">ไม่พบนักเรียน</td></tr>
               )}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Enroll Modal */}
+      {showEnrollModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">ซื้อคอร์ส</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{showEnrollModal.nickname || showEnrollModal.full_name}</p>
+              </div>
+              <button onClick={() => setShowEnrollModal(null)} className="text-gray-400">✕</button>
+            </div>
+            <form onSubmit={handleEnroll} className="p-5 space-y-3.5">
+              <div>
+                <label className="label">คอร์ส</label>
+                <select
+                  className="input"
+                  value={enrollForm.course_id}
+                  onChange={e => {
+                    const course = courses.find(c => c.id === e.target.value)
+                    setEnrollForm({
+                      ...enrollForm,
+                      course_id: e.target.value,
+                      price: course?.price_per_course ?? 0
+                    })
+                  }}
+                >
+                  <option value="">— เลือกคอร์ส —</option>
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">จำนวนครั้ง</label>
+                <input
+                  type="number" min={1} className="input"
+                  value={enrollForm.lessons_total}
+                  onChange={e => setEnrollForm({ ...enrollForm, lessons_total: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="label">ราคา (บาท)</label>
+                <input
+                  type="number" min={0} className="input"
+                  value={enrollForm.price}
+                  onChange={e => setEnrollForm({ ...enrollForm, price: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="label">ช่องทางชำระ</label>
+                <select className="input" value={enrollForm.payment_method}
+                  onChange={e => setEnrollForm({ ...enrollForm, payment_method: e.target.value })}>
+                  <option value="transfer">โอนเงิน</option>
+                  <option value="cash">เงินสด</option>
+                  <option value="promptpay">พร้อมเพย์</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">หมายเหตุ</label>
+                <input className="input" placeholder="เช่น ต่อคอร์ส, โปรโมชัน..."
+                  value={enrollForm.notes}
+                  onChange={e => setEnrollForm({ ...enrollForm, notes: e.target.value })} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={enrollSaving} className="btn-brand flex-1 justify-center">
+                  {enrollSaving ? 'กำลังบันทึก...' : 'ยืนยันซื้อคอร์ส'}
+                </button>
+                <button type="button" onClick={() => setShowEnrollModal(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Student Modal */}
       {showForm && (
