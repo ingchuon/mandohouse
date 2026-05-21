@@ -19,7 +19,7 @@ export default function LoginPage() {
       return
     }
     await new Promise(r => setTimeout(r, 500))
-window.location.replace('/staff')
+window.location.href = '/staff'
   }
 
   return (
