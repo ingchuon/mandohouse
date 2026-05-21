@@ -19,7 +19,7 @@ export default function LoginPage() {
       return
     }
     await new Promise(r => setTimeout(r, 500))
-window.location.href = '/staff'
+window.location.assign('https://mandohouse.vercel.app/staff')
   }
 
   return (
