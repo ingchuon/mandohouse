@@ -38,7 +38,7 @@ export default function StudentsPage() {
   }
 
   async function loadCourses() {
-    const { data } = await supabase.from('courses').select('id, name, price_per_course').eq('is_active', true)
+    const { data } = await supabase.from('courses').select('id, name, price').eq('is_active', true)
     setCourses(data ?? [])
   }
 
@@ -65,7 +65,6 @@ export default function StudentsPage() {
     if (!showEnrollModal) return
     setEnrollSaving(true)
 
-    // 1. สร้าง enrollment
     const { data: enroll, error: enrollError } = await supabase
       .from('enrollments')
       .insert([{
@@ -81,7 +80,6 @@ export default function StudentsPage() {
 
     if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
 
-    // 2. สร้าง receipt ถ้ามีราคา
     if (enrollForm.price > 0) {
       await supabase.from('receipts').insert([{
         student_id: showEnrollModal.id,
@@ -209,10 +207,7 @@ export default function StudentsPage() {
                       )}
                     </td>
                     <td>
-                      <button
-                        onClick={() => openEnrollModal(s)}
-                        className="btn-outline btn-sm"
-                      >
+                      <button onClick={() => openEnrollModal(s)} className="btn-outline btn-sm">
                         ซื้อคอร์ส
                       </button>
                     </td>
@@ -249,7 +244,8 @@ export default function StudentsPage() {
                     setEnrollForm({
                       ...enrollForm,
                       course_id: e.target.value,
-                      price: course?.price_per_course ?? 0
+                      lessons_total: course?.total_lessons ?? 10,
+                      price: course?.price ?? 0
                     })
                   }}
                 >
