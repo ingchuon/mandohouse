@@ -26,11 +26,6 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === '/login' || pathname === '/') {
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'parent') {
-        return NextResponse.redirect(new URL('/parent', request.url))
-      }
       return NextResponse.redirect(new URL('/staff', request.url))
     }
     return supabaseResponse
@@ -38,17 +33,6 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (pathname.startsWith('/staff') || pathname.startsWith('/parent')) {
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    if (pathname.startsWith('/staff') && profile?.role === 'parent') {
-      return NextResponse.redirect(new URL('/parent', request.url))
-    }
-    if (pathname.startsWith('/parent') && profile?.role !== 'parent') {
-      return NextResponse.redirect(new URL('/staff', request.url))
-    }
   }
 
   return supabaseResponse
