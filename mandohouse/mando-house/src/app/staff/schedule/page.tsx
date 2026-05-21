@@ -11,12 +11,6 @@ const TIME_SLOTS = [
   '13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00',
 ]
 
-const PAYMENT_METHODS = [
-  { value: 'transfer', label: 'โอนเงิน' },
-  { value: 'cash',     label: 'เงินสด' },
-  { value: 'promptpay',label: 'พร้อมเพย์' },
-]
-
 type Room = { id: string; name: string; color: string; capacity: number; is_active: boolean }
 type Schedule = {
   id: string; course_id: string; room_id: string; teacher_id: string
@@ -36,7 +30,6 @@ export default function SchedulePage() {
   const [courses, setCourses] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<any[]>([])
-  const [viewMode, setViewMode] = useState<'room' | 'teacher'>('room')
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null)
@@ -75,7 +68,6 @@ export default function SchedulePage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Check conflict
   function hasConflict(roomId: string, day: number, start: string, end: string, excludeId?: string) {
     return schedules.some(s =>
       s.id !== excludeId &&
@@ -95,7 +87,6 @@ export default function SchedulePage() {
     if (hasConflict(form.room_id, form.day_of_week, form.start_time, form.end_time, editSchedule?.id)) {
       toast.error('ห้องนี้ถูกจองในช่วงเวลานั้นแล้ว'); setSaving(false); return
     }
-
     const payload = {
       course_id: form.course_id || null,
       room_id: form.room_id,
@@ -105,14 +96,12 @@ export default function SchedulePage() {
       end_time: form.end_time,
       notes: form.notes || null,
     }
-
     let error
     if (editSchedule) {
       ;({ error } = await supabase.from('class_schedules').update(payload).eq('id', editSchedule.id))
     } else {
       ;({ error } = await supabase.from('class_schedules').insert([payload]))
     }
-
     if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); setSaving(false); return }
     toast.success(editSchedule ? 'แก้ไขตารางแล้ว' : 'เพิ่มคลาสแล้ว')
     setShowForm(false); setEditSchedule(null)
@@ -141,7 +130,6 @@ export default function SchedulePage() {
     if (error) { toast.error('เพิ่มไม่สำเร็จ (อาจซ้ำ)'); return }
     toast.success('เพิ่มนักเรียนแล้ว')
     loadData()
-    // Re-open modal with fresh data
     const { data } = await supabase.from('class_schedules').select(`
       *, course:courses(name), teacher:profiles(full_name), room:rooms(name,color),
       schedule_students(student:students(nickname,full_name))
@@ -161,10 +149,10 @@ export default function SchedulePage() {
     if (data) setShowStudentModal(data)
   }
 
-  function openAdd(day?: number, roomId?: string) {
+  function openAdd(day?: number) {
     setEditSchedule(null)
     setForm({
-      course_id: '', room_id: roomId ?? (rooms[0]?.id ?? ''),
+      course_id: '', room_id: rooms[0]?.id ?? '',
       teacher_id: '', day_of_week: day ?? 1,
       start_time: '14:00', end_time: '15:00', notes: '',
     })
@@ -185,26 +173,7 @@ export default function SchedulePage() {
     setShowForm(true)
   }
 
-  // Filter by selected day
   const displayDays = selectedDay !== null ? [selectedDay] : [1,2,3,4,5,6,0]
-
-  // Get schedule for a room+day
-  function getSlots(roomId: string, day: number) {
-    return schedules
-      .filter(s => s.room_id === roomId && s.day_of_week === day)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
-  }
-
-  // Room busy percentage per day
-  function roomBusy(roomId: string, day: number) {
-    const slots = getSlots(roomId, day)
-    const mins = slots.reduce((acc, s) => {
-      const [sh, sm] = s.start_time.split(':').map(Number)
-      const [eh, em] = s.end_time.split(':').map(Number)
-      return acc + (eh * 60 + em) - (sh * 60 + sm)
-    }, 0)
-    return Math.round((mins / (12 * 60)) * 100) // 12 hr = full day
-  }
 
   if (loading) return <div className="p-6 text-gray-400 text-center py-20">กำลังโหลด...</div>
 
@@ -217,173 +186,87 @@ export default function SchedulePage() {
           <p className="text-sm text-gray-500 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Day filter */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             <button
               onClick={() => setSelectedDay(null)}
               className={`px-3 py-1.5 text-xs transition-colors ${selectedDay === null ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              ทั้งสัปดาห์
-            </button>
+            >ทั้งสัปดาห์</button>
             {[1,2,3,4,5,6,0].map(d => (
               <button
                 key={d}
                 onClick={() => setSelectedDay(selectedDay === d ? null : d)}
                 className={`px-3 py-1.5 text-xs transition-colors border-l border-gray-200 ${selectedDay === d ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                {DAYS_SHORT[d]}
-              </button>
+              >{DAYS_SHORT[d]}</button>
             ))}
           </div>
           <button onClick={() => openAdd()} className="btn-brand">+ เพิ่มคลาส</button>
         </div>
       </div>
 
-      {/* Room legend + availability */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
-        {rooms.map(room => {
-          const totalSlots = schedules.filter(s => s.room_id === room.id).length
-          const todayDay = new Date().getDay()
-          const todaySlots = getSlots(room.id, todayDay)
-          const busy = roomBusy(room.id, todayDay)
-          return (
-            <div key={room.id} className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: room.color }} />
-                <span className="font-semibold text-sm text-gray-900">{room.name}</span>
-                <span className="text-xs text-gray-400 ml-auto">จุ {room.capacity} คน</span>
-              </div>
-              <div className="text-xs text-gray-500 mb-2">
-                วันนี้: {todaySlots.length > 0 ? `${todaySlots.length} คลาส` : 'ว่าง'}
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${Math.min(busy,100)}%`, background: room.color }} />
-              </div>
-              <div className="text-[10px] text-gray-400 mt-1">{totalSlots} คลาส/สัปดาห์</div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Timetable grid */}
-      <div className="card overflow-hidden">
-        {displayDays.map(day => {
-          const daySchedules = schedules.filter(s => s.day_of_week === day)
-          if (!selectedDay && daySchedules.length === 0) return null
-          return (
-            <div key={day} className="border-b border-gray-50 last:border-0">
-              {/* Day header */}
-              <div className="flex items-center justify-between px-5 py-3 bg-gray-50/60 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm text-gray-700">{DAYS[day]}</span>
-                  <span className="badge badge-gray">{daySchedules.length} คลาส</span>
-                  {/* Room busy status */}
-                  <div className="flex gap-1.5 ml-2">
-                    {rooms.map(room => {
-                      const slots = getSlots(room.id, day)
-                      return (
-                        <div key={room.id} className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full" style={{ background: slots.length > 0 ? room.color : '#e5e7eb' }} />
-                          <span className="text-[10px] text-gray-400">{room.name.replace('ห้อง ', '')}</span>
-                        </div>
-                      )
-                    })}
+      {/* Timetable Grid */}
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[700px] border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="w-16 px-3 py-3 text-xs text-gray-400 font-medium border-b border-r border-gray-100">เวลา</th>
+              {displayDays.map(d => (
+                <th key={d} className={`px-3 py-3 text-xs font-medium border-b border-gray-100 text-center ${selectedDay === d ? 'bg-brand-50 text-brand-700' : 'text-gray-600'}`}>
+                  {DAYS[d]}
+                  <div className="text-[10px] font-normal text-gray-400 mt-0.5">
+                    {schedules.filter(s => s.day_of_week === d).length} คลาส
                   </div>
-                </div>
-                <button
-                  onClick={() => openAdd(day)}
-                  className="text-xs text-brand-600 hover:underline flex items-center gap-1"
-                >
-                  + เพิ่มคลาสวัน{DAYS[day]}
-                </button>
-              </div>
-
-              {/* Slots */}
-              {daySchedules.length === 0 ? (
-                <div className="px-5 py-4 text-sm text-gray-300 italic">ยังไม่มีคลาสวันนี้</div>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {daySchedules
-                    .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                    .map(s => {
-                      const studentCount = s.schedule_students?.length ?? 0
-                      const room = rooms.find(r => r.id === s.room_id)
-                      return (
-                        <div key={s.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                          {/* Time */}
-                          <div className="w-20 flex-shrink-0">
-                            <div className="text-sm font-semibold text-gray-800">
-                              {s.start_time.slice(0,5)}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              ถึง {s.end_time.slice(0,5)}
-                            </div>
-                          </div>
-
-                          {/* Room badge */}
-                          <div
-                            className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                            style={{ background: (room?.color ?? '#ccc') + '22', color: room?.color ?? '#666' }}
-                          >
-                            {room?.name ?? '?'}
-                          </div>
-
-                          {/* Course */}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-gray-900 truncate">
-                              {s.course?.name ?? 'ไม่ระบุวิชา'}
-                            </div>
-                            <div className="text-xs text-gray-400 mt-0.5">
-                              ครู: {s.teacher?.full_name ?? '—'}
-                            </div>
-                          </div>
-
-                          {/* Students */}
-                          <button
-                            onClick={() => setShowStudentModal(s)}
-                            className="flex items-center gap-1.5 flex-shrink-0"
-                          >
-                            <div className="flex -space-x-1">
-                              {(s.schedule_students ?? []).slice(0,4).map((ss, i) => (
-                                <div
-                                  key={i}
-                                  className="w-6 h-6 rounded-full bg-brand-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-brand-700"
-                                  title={ss.student?.nickname || ss.student?.full_name}
-                                >
-                                  {(ss.student?.nickname || ss.student?.full_name || '?').slice(0,1)}
-                                </div>
-                              ))}
-                              {studentCount > 4 && (
-                                <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] text-gray-500">
-                                  +{studentCount - 4}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {studentCount} / {room?.capacity ?? '?'} คน
-                            </span>
-                          </button>
-
-                          {/* Actions */}
-                          <div className="flex gap-1.5 flex-shrink-0">
-                            <button onClick={() => openEdit(s)} className="btn-outline btn-sm px-2.5">แก้ไข</button>
-                            <button onClick={() => deleteSchedule(s.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50 hover:border-red-200">✕</button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {TIME_SLOTS.slice(0, -1).map(time => (
+              <tr key={time} className="hover:bg-gray-50/50">
+                <td className="px-3 py-2 text-xs text-gray-400 border-r border-b border-gray-100 text-center align-top w-16">
+                  {time}
+                </td>
+                {displayDays.map(d => {
+                  const slot = schedules.find(s =>
+                    s.day_of_week === d && s.start_time.slice(0,5) === time
+                  )
+                  const room = rooms.find(r => r.id === slot?.room_id)
+                  return (
+                    <td key={d} className="border-b border-gray-100 p-1 align-top min-w-[120px]">
+                      {slot ? (
+                        <div
+                          className="rounded-lg p-2 cursor-pointer hover:opacity-80 transition h-full"
+                          style={{ background: (room?.color ?? '#ccc') + '22', borderLeft: `3px solid ${room?.color ?? '#ccc'}` }}
+                          onClick={() => setShowStudentModal(slot)}
+                        >
+                          <div className="font-semibold text-xs text-gray-800 truncate">{slot.course?.name ?? 'ไม่ระบุ'}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</div>
+                          <div className="text-[10px] text-gray-400">{room?.name}</div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] text-gray-400">{slot.schedule_students?.length ?? 0}/{room?.capacity ?? '?'} คน</span>
+                            <button
+                              onClick={e => { e.stopPropagation(); openEdit(slot) }}
+                              className="text-[10px] text-gray-400 hover:text-gray-600"
+                            >✎</button>
                           </div>
                         </div>
-                      )
-                    })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {displayDays.every(d => schedules.filter(s => s.day_of_week === d).length === 0) && (
-          <div className="text-center text-gray-300 py-16 text-sm">ยังไม่มีตารางสอน กด + เพิ่มคลาส</div>
-        )}
+                      ) : (
+                        <div
+                          className="h-10 rounded-lg border border-dashed border-gray-100 hover:border-brand-200 hover:bg-brand-50/30 cursor-pointer transition flex items-center justify-center"
+                          onClick={() => openAdd(d)}
+                        >
+                          <span className="text-[10px] text-gray-200 hover:text-brand-400">+</span>
+                        </div>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Add/Edit Schedule Modal */}
+      {/* Add/Edit Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
@@ -392,44 +275,27 @@ export default function SchedulePage() {
               <button onClick={() => setShowForm(false)} className="text-gray-400">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3.5">
-              {/* Day */}
               <div>
                 <label className="label">วัน *</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {[1,2,3,4,5,6,0].map(d => (
-                    <button
-                      type="button" key={d}
+                    <button type="button" key={d}
                       onClick={() => setForm({ ...form, day_of_week: d })}
-                      className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
-                        form.day_of_week === d
-                          ? 'bg-gray-900 text-white border-gray-900'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      {DAYS[d]}
-                    </button>
+                      className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${form.day_of_week === d ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                    >{DAYS[d]}</button>
                   ))}
                 </div>
               </div>
-
-              {/* Room */}
               <div>
                 <label className="label">ห้องเรียน *</label>
                 <div className="grid grid-cols-4 gap-2">
                   {rooms.map(room => {
                     const conflict = hasConflict(room.id, form.day_of_week, form.start_time, form.end_time, editSchedule?.id)
                     return (
-                      <button
-                        type="button" key={room.id}
+                      <button type="button" key={room.id}
                         onClick={() => !conflict && setForm({ ...form, room_id: room.id })}
                         disabled={conflict}
-                        className={`p-2 rounded-lg text-xs border text-center transition-all ${
-                          form.room_id === room.id
-                            ? 'border-current font-semibold'
-                            : conflict
-                              ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400'
-                              : 'border-gray-200 hover:border-gray-400'
-                        }`}
+                        className={`p-2 rounded-lg text-xs border text-center transition-all ${form.room_id === room.id ? 'border-current font-semibold' : conflict ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400' : 'border-gray-200 hover:border-gray-400'}`}
                         style={form.room_id === room.id ? { borderColor: room.color, color: room.color, background: room.color + '15' } : {}}
                       >
                         <div className="w-2 h-2 rounded-full mx-auto mb-1" style={{ background: room.color }} />
@@ -440,8 +306,6 @@ export default function SchedulePage() {
                   })}
                 </div>
               </div>
-
-              {/* Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">เริ่ม *</label>
@@ -456,8 +320,6 @@ export default function SchedulePage() {
                   </select>
                 </div>
               </div>
-
-              {/* Course + Teacher */}
               <div>
                 <label className="label">วิชา / คอร์ส</label>
                 <select className="input" value={form.course_id} onChange={e => setForm({ ...form, course_id: e.target.value })}>
@@ -472,12 +334,10 @@ export default function SchedulePage() {
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="label">หมายเหตุ</label>
                 <input className="input" placeholder="เช่น คลาสทดลองเรียน" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
               </div>
-
               <div className="flex gap-2 pt-1">
                 <button type="submit" disabled={saving || !form.room_id} className="btn-brand flex-1 justify-center">
                   {saving ? 'กำลังบันทึก...' : 'บันทึก'}
@@ -502,8 +362,6 @@ export default function SchedulePage() {
               </div>
               <button onClick={() => setShowStudentModal(null)} className="text-gray-400">✕</button>
             </div>
-
-            {/* Current students */}
             <div className="p-4 max-h-52 overflow-y-auto divide-y divide-gray-50">
               {(showStudentModal.schedule_students ?? []).length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">ยังไม่มีนักเรียน</p>
@@ -524,18 +382,13 @@ export default function SchedulePage() {
                       if (sid) removeStudent(showStudentModal.id, sid)
                     }}
                     className="text-red-400 hover:text-red-600 text-xs"
-                  >
-                    ลบ
-                  </button>
+                  >ลบ</button>
                 </div>
               ))}
             </div>
-
-            {/* Add student */}
             <div className="p-4 border-t border-gray-100">
               <label className="label">เพิ่มนักเรียน</label>
-              <select
-                className="input"
+              <select className="input"
                 onChange={e => { if (e.target.value) addStudent(showStudentModal.id, e.target.value) }}
                 defaultValue=""
               >
@@ -545,11 +398,8 @@ export default function SchedulePage() {
                     (ss.student?.nickname || ss.student?.full_name) === (s.nickname || s.full_name)
                   ))
                   .map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.nickname || s.full_name}
-                    </option>
-                  ))
-                }
+                    <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>
+                  ))}
               </select>
             </div>
           </div>
