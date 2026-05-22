@@ -48,7 +48,8 @@ const navItems = [
   {
     group: 'ทีมงาน',
     items: [
-      { href: '/staff/team', label: 'จัดการทีม', icon: '🎓' },
+      { href: '/staff/team',     label: 'จัดการทีม',     icon: '🎓' },
+      { href: '/staff/settings', label: 'ตั้งค่ายอดเงิน', icon: '⚙️' },
     ],
   },
 ]
