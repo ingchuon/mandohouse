@@ -1,5 +1,4 @@
 'use client'
-// src/app/staff/reviews/page.tsx
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -12,6 +11,7 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editReview, setEditReview] = useState<any>(null)
   const [rating, setRating] = useState(5)
   const [form, setForm] = useState({
     enrollment_id: '',
@@ -47,21 +47,58 @@ export default function ReviewsPage() {
     }))
   }
 
+  function openEdit(r: any) {
+    setEditReview(r)
+    setRating(r.rating ?? 5)
+    setForm({
+      enrollment_id: r.enrollment_id ?? '',
+      review_date: r.review_date ?? new Date().toISOString().split('T')[0],
+      content: r.content ?? '',
+      homework_given: r.homework_given ?? '',
+      skills_practiced: r.skills_practiced ?? [],
+      visible_to_parent: r.visible_to_parent ?? true,
+    })
+    setShowForm(true)
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const enroll = enrollments.find(en => en.id === form.enrollment_id)
-    if (!enroll) { toast.error('กรุณาเลือกนักเรียน'); return }
 
-    const { error } = await supabase.from('reviews').insert({
-      ...form,
-      rating,
-      student_id: enroll.student_id,
-    })
-    if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
-    toast.success('บันทึกรีวิวแล้ว')
+    if (editReview) {
+      const { error } = await supabase.from('reviews').update({
+        review_date: form.review_date,
+        content: form.content,
+        homework_given: form.homework_given || null,
+        skills_practiced: form.skills_practiced,
+        visible_to_parent: form.visible_to_parent,
+        rating,
+      }).eq('id', editReview.id)
+      if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
+      toast.success('แก้ไขรีวิวแล้ว')
+    } else {
+      const enroll = enrollments.find(en => en.id === form.enrollment_id)
+      if (!enroll) { toast.error('กรุณาเลือกนักเรียน'); return }
+      const { error } = await supabase.from('reviews').insert({
+        ...form,
+        rating,
+        student_id: enroll.student_id,
+      })
+      if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
+      toast.success('บันทึกรีวิวแล้ว')
+    }
+
     setShowForm(false)
+    setEditReview(null)
     setForm({ enrollment_id: '', review_date: new Date().toISOString().split('T')[0], content: '', homework_given: '', skills_practiced: [], visible_to_parent: true })
     setRating(5)
+    loadData()
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('ลบรีวิวนี้?')) return
+    const { error } = await supabase.from('reviews').delete().eq('id', id)
+    if (error) { toast.error('ลบไม่สำเร็จ'); return }
+    toast.success('ลบแล้ว')
     loadData()
   }
 
@@ -72,7 +109,7 @@ export default function ReviewsPage() {
           <h1 className="text-xl font-semibold">รีวิวหลังการสอน</h1>
           <p className="text-sm text-gray-500 mt-0.5">บันทึกพัฒนาการและประเมินผลนักเรียน</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-brand">+ เขียนรีวิว</button>
+        <button onClick={() => { setEditReview(null); setShowForm(true) }} className="btn-brand">+ เขียนรีวิว</button>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -84,21 +121,15 @@ export default function ReviewsPage() {
                   {(r.student?.nickname || r.student?.full_name || '?').slice(0, 2)}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">
-                    {r.student?.nickname || r.student?.full_name}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {formatDate(r.review_date)} · {r.teacher?.full_name || 'ครู'}
-                  </div>
+                  <div className="font-medium text-gray-900">{r.student?.nickname || r.student?.full_name}</div>
+                  <div className="text-xs text-gray-400">{formatDate(r.review_date)} · {r.teacher?.full_name || 'ครู'}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {r.visible_to_parent && (
-                  <span className="badge badge-blue text-[10px]">ผู้ปกครองเห็น</span>
-                )}
-                <div className="text-amber-400 text-sm">
-                  {'★'.repeat(r.rating ?? 0)}{'☆'.repeat(5 - (r.rating ?? 0))}
-                </div>
+                {r.visible_to_parent && <span className="badge badge-blue text-[10px]">ผู้ปกครองเห็น</span>}
+                <div className="text-amber-400 text-sm">{'★'.repeat(r.rating ?? 0)}{'☆'.repeat(5 - (r.rating ?? 0))}</div>
+                <button onClick={() => openEdit(r)} className="btn-outline btn-sm px-2">✎</button>
+                <button onClick={() => handleDelete(r.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
               </div>
             </div>
             <p className="text-sm text-gray-700 leading-relaxed mb-3">{r.content}</p>
@@ -126,22 +157,24 @@ export default function ReviewsPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="font-semibold">เขียนรีวิวหลังสอน</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400">✕</button>
+              <h2 className="font-semibold">{editReview ? 'แก้ไขรีวิว' : 'เขียนรีวิวหลังสอน'}</h2>
+              <button onClick={() => { setShowForm(false); setEditReview(null) }} className="text-gray-400">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-4">
-              <div>
-                <label className="label">นักเรียน *</label>
-                <select className="input" required value={form.enrollment_id}
-                  onChange={e => setForm({...form, enrollment_id: e.target.value})}>
-                  <option value="">— เลือกนักเรียน —</option>
-                  {enrollments.map(en => (
-                    <option key={en.id} value={en.id}>
-                      {en.student?.nickname || en.student?.full_name} – {en.course?.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!editReview && (
+                <div>
+                  <label className="label">นักเรียน *</label>
+                  <select className="input" required value={form.enrollment_id}
+                    onChange={e => setForm({...form, enrollment_id: e.target.value})}>
+                    <option value="">— เลือกนักเรียน —</option>
+                    {enrollments.map(en => (
+                      <option key={en.id} value={en.id}>
+                        {en.student?.nickname || en.student?.full_name} – {en.course?.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="label">วันที่สอน</label>
                 <input type="date" className="input" value={form.review_date}
@@ -170,8 +203,7 @@ export default function ReviewsPage() {
                 <label className="label">ทักษะที่ฝึก</label>
                 <div className="flex flex-wrap gap-2">
                   {SKILLS.map(s => (
-                    <button type="button" key={s}
-                      onClick={() => toggleSkill(s)}
+                    <button type="button" key={s} onClick={() => toggleSkill(s)}
                       className={`px-3 py-1 rounded-full text-xs border transition-colors ${
                         form.skills_practiced.includes(s)
                           ? 'bg-brand-500 text-white border-brand-500'
@@ -194,8 +226,10 @@ export default function ReviewsPage() {
                 <span className="text-gray-700">แสดงให้ผู้ปกครองเห็น</span>
               </label>
               <div className="flex gap-2 pt-1">
-                <button type="submit" className="btn-brand flex-1 justify-center">บันทึกรีวิว</button>
-                <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+                <button type="submit" className="btn-brand flex-1 justify-center">
+                  {editReview ? 'บันทึกการแก้ไข' : 'บันทึกรีวิว'}
+                </button>
+                <button type="button" onClick={() => { setShowForm(false); setEditReview(null) }} className="btn-outline flex-1 justify-center">ยกเลิก</button>
               </div>
             </form>
           </div>
