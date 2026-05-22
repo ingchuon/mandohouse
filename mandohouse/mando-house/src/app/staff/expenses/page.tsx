@@ -47,7 +47,6 @@ export default function ExpensesPage() {
     setCategories(cats ?? [])
     setReceipts(recs ?? [])
 
-    // Build 6-month summary
     const summary = buildMonthlySummary(recs ?? [], exp ? await getAllExpenses() : [])
     setMonthlySummary(summary)
     setLoading(false)
@@ -143,7 +142,6 @@ export default function ExpensesPage() {
     loadData()
   }
 
-  // Current month stats
   const totalExpense = expenses.reduce((s, e) => s + Number(e.amount), 0)
   const [firstOfMonth, lastOfMonth] = getMonthRange(filterMonth)
   const totalIncome = receipts
@@ -151,13 +149,11 @@ export default function ExpensesPage() {
     .reduce((s, r) => s + Number(r.amount), 0)
   const profit = totalIncome - totalExpense
 
-  // Category breakdown
   const catBreakdown = categories.map(cat => {
     const total = expenses.filter(e => e.category_id === cat.id).reduce((s, e) => s + Number(e.amount), 0)
     return { ...cat, total }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
-  // Bar chart max
   const maxBar = Math.max(...monthlySummary.map(m => Math.max(m.income, m.expense)), 1)
 
   const monthOptions = []
@@ -175,11 +171,7 @@ export default function ExpensesPage() {
           <p className="text-sm text-gray-500 mt-0.5">ติดตามค่าใช้จ่ายและกำไรขาดทุน</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            className="input w-auto text-sm"
-            value={filterMonth}
-            onChange={e => setFilterMonth(e.target.value)}
-          >
+          <select className="input w-auto text-sm" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
             {monthOptions.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
           <button onClick={() => { setEditExpense(null); resetForm(); setShowForm(true) }} className="btn-brand">
@@ -216,8 +208,12 @@ export default function ExpensesPage() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium text-gray-800">รายรับ-รายจ่าย 6 เดือน</h3>
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-400 inline-block"></span>รายได้</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-400 inline-block"></span>รายจ่าย</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-blue-400 inline-block"></span>รายได้
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-red-400 inline-block"></span>รายจ่าย
+            </span>
           </div>
         </div>
         <div className="flex items-end gap-3 h-36">
@@ -225,7 +221,7 @@ export default function ExpensesPage() {
             <div key={m.key} className="flex-1 flex flex-col items-center gap-1">
               <div className="w-full flex items-end gap-0.5 h-28">
                 <div
-                  className="flex-1 rounded-t-md bg-brand-400 transition-all"
+                  className="flex-1 rounded-t-md bg-blue-400 transition-all"
                   style={{ height: `${Math.round((m.income / maxBar) * 100)}%`, minHeight: m.income > 0 ? '4px' : '0' }}
                   title={`รายได้: ${formatThaiMoney(m.income)}`}
                 />
@@ -280,9 +276,7 @@ export default function ExpensesPage() {
                       ) : <span className="text-xs text-gray-300">—</span>}
                     </td>
                     <td>
-                      <span className="font-semibold text-sm text-red-600">
-                        -{formatThaiMoney(exp.amount)}
-                      </span>
+                      <span className="font-semibold text-sm text-red-600">-{formatThaiMoney(exp.amount)}</span>
                       <div className="text-[10px] text-gray-400">{PAYMENT_LABELS[exp.payment_method] ?? exp.payment_method}</div>
                     </td>
                     <td>
@@ -318,13 +312,7 @@ export default function ExpensesPage() {
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.round((cat.total / totalExpense) * 100)}%`,
-                          background: cat.color,
-                        }}
-                      />
+                      <div className="h-full rounded-full" style={{ width: `${Math.round((cat.total / totalExpense) * 100)}%`, background: cat.color }} />
                     </div>
                     <div className="text-[10px] text-gray-400 text-right mt-0.5">
                       {Math.round((cat.total / totalExpense) * 100)}%
@@ -335,7 +323,6 @@ export default function ExpensesPage() {
             )}
           </div>
 
-          {/* Recurring reminders */}
           {expenses.some(e => e.is_recurring) && (
             <div className="card p-4">
               <h3 className="font-medium text-gray-800 text-sm mb-3">🔄 รายจ่ายประจำ</h3>
@@ -368,14 +355,9 @@ export default function ExpensesPage() {
                 <label className="label">หมวดหมู่</label>
                 <div className="grid grid-cols-2 gap-2">
                   {categories.map(cat => (
-                    <button
-                      type="button" key={cat.id}
+                    <button type="button" key={cat.id}
                       onClick={() => setForm({ ...form, category_id: cat.id })}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg text-xs border text-left transition-all ${
-                        form.category_id === cat.id
-                          ? 'font-semibold border-current'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                      }`}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg text-xs border text-left transition-all ${form.category_id === cat.id ? 'font-semibold border-current' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
                       style={form.category_id === cat.id ? { borderColor: cat.color, color: cat.color, background: cat.color + '15' } : {}}
                     >
                       <span className="text-base">{cat.icon}</span>
@@ -384,13 +366,11 @@ export default function ExpensesPage() {
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="label">ชื่อรายจ่าย *</label>
                 <input className="input" required placeholder="เช่น ค่าเช่าห้องเดือนมิถุนายน"
                   value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">จำนวนเงิน (฿) *</label>
@@ -403,30 +383,23 @@ export default function ExpensesPage() {
                     onChange={e => setForm({ ...form, expense_date: e.target.value })} />
                 </div>
               </div>
-
               <div>
                 <label className="label">ชำระโดย</label>
                 <div className="flex gap-2">
                   {Object.entries(PAYMENT_LABELS).map(([v, l]) => (
                     <button type="button" key={v}
                       onClick={() => setForm({ ...form, payment_method: v })}
-                      className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
-                        form.payment_method === v
-                          ? 'bg-gray-900 text-white border-gray-900'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}>
+                      className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${form.payment_method === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                       {l}
                     </button>
                   ))}
                 </div>
               </div>
-
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={form.is_recurring}
                   onChange={e => setForm({ ...form, is_recurring: e.target.checked })} />
                 <span className="text-sm text-gray-700">🔄 รายจ่ายประจำทุกเดือน</span>
               </label>
-
               {form.is_recurring && (
                 <div>
                   <label className="label">จ่ายทุกวันที่</label>
@@ -434,13 +407,11 @@ export default function ExpensesPage() {
                     value={form.recurring_day} onChange={e => setForm({ ...form, recurring_day: e.target.value })} />
                 </div>
               )}
-
               <div>
                 <label className="label">หมายเหตุ</label>
                 <textarea className="input min-h-[60px] resize-none" placeholder="รายละเอียดเพิ่มเติม..."
                   value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
               </div>
-
               <div className="flex gap-2 pt-1">
                 <button type="submit" disabled={saving} className="btn-brand flex-1 justify-center">
                   {saving ? 'กำลังบันทึก...' : 'บันทึก'}
