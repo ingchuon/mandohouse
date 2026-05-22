@@ -19,7 +19,7 @@ export default function ReceiptsPage() {
   async function loadData() {
     const [{ data: r }, { data: e }] = await Promise.all([
       supabase.from('receipts')
-        .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name))')
+        .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name, price, total_lessons))')
         .order('created_at', { ascending: false }).limit(20),
       supabase.from('enrollments')
         .select('*, student:students(full_name, nickname), course:courses(name, price, total_lessons)')
@@ -46,15 +46,15 @@ export default function ReceiptsPage() {
     const items = [{
       description: en.course?.name,
       quantity: en.lessons_total,
-      unit_price: en.course?.price / en.lessons_total,
-      total: en.course?.price,
+      unit_price: en.course?.price && en.lessons_total ? en.course.price / en.lessons_total : 0,
+      total: en.course?.price ?? 0,
     }]
 
     const { error } = await supabase.from('receipts').insert({
       enrollment_id: en.id,
       student_id: en.student_id,
       issued_at: form.issued_at,
-      amount: en.course?.price,
+      amount: en.course?.price ?? 0,
       payment_method: form.payment_method,
       items,
       notes: form.notes,
@@ -70,6 +70,16 @@ export default function ReceiptsPage() {
   function printReceipt(r: any) {
     const win = window.open('', '_blank')
     if (!win) return
+
+    // fallback ถ้าไม่มี items ให้ดึงจาก enrollment
+    const courseName = r.enrollment?.course?.name ?? '—'
+    const lessons = r.enrollment?.lessons_total ?? 0
+    const items = (r.items && r.items.length > 0)
+      ? r.items
+      : courseName !== '—'
+        ? [{ description: courseName, quantity: lessons, total: r.amount }]
+        : []
+
     const html = `<!DOCTYPE html><html><head>
       <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number}</title>
       <style>
@@ -90,10 +100,13 @@ export default function ReceiptsPage() {
       <div class="row"><span>นักเรียน</span><span>${r.student?.nickname || r.student?.full_name}</span></div>
       <div class="row"><span>ผู้ปกครอง</span><span>${r.student?.parent_name || '—'}</span></div>
       <hr class="divider">
-      ${(r.items || []).map((it: any) => `
-        <div class="row"><span>${it.description}</span><span></span></div>
-        <div class="row" style="color:#666;font-size:13px"><span>จำนวน ${it.quantity} ครั้ง</span><span>${formatThaiMoney(it.total)}</span></div>
-      `).join('')}
+      ${items.length > 0 ? items.map((it: any) => `
+        <div class="row"><span>${it.description ?? '—'}</span><span></span></div>
+        <div class="row" style="color:#666;font-size:13px">
+          <span>จำนวน ${it.quantity ?? 0} ครั้ง</span>
+          <span>${formatThaiMoney(it.total ?? 0)}</span>
+        </div>
+      `).join('') : `<div class="row"><span style="color:#999">ไม่มีข้อมูลคอร์ส</span></div>`}
       <div class="row total"><span>รวมทั้งสิ้น</span><span>${formatThaiMoney(r.amount)}</span></div>
       <div class="row"><span>ชำระโดย</span><span>${{ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' }[r.payment_method as string] || r.payment_method}</span></div>
       <div class="footer">ขอบคุณที่ไว้วางใจ Mando House 🙏</div>
@@ -123,7 +136,9 @@ export default function ReceiptsPage() {
               <tr key={r.id} className="table-row-hover">
                 <td className="font-mono text-xs text-gray-600">{r.receipt_number}</td>
                 <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name}</td>
-                <td className="text-sm text-gray-500">{r.enrollment?.course?.name}</td>
+                <td className="text-sm text-gray-500">
+                  {r.enrollment?.course?.name ?? (r.items?.[0]?.description ?? '—')}
+                </td>
                 <td className="text-sm">{formatDate(r.issued_at)}</td>
                 <td className="font-semibold text-brand-600">{formatThaiMoney(r.amount)}</td>
                 <td>
@@ -204,12 +219,12 @@ export default function ReceiptsPage() {
                     </div>
                     <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
                       <div className="flex justify-between"><span className="text-gray-500">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">คอร์ส</span><span>{preview.course?.name}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-500">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
                     </div>
                     <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200">
                       <span>รวม</span>
-                      <span className="text-brand-600">{formatThaiMoney(preview.course?.price)}</span>
+                      <span className="text-brand-600">{formatThaiMoney(preview.course?.price ?? 0)}</span>
                     </div>
                   </div>
                 ) : (
