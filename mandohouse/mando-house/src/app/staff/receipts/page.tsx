@@ -9,24 +9,30 @@ export default function ReceiptsPage() {
   const supabase = createClient()
   const [receipts, setReceipts] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<any[]>([])
+  const [students, setStudents] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editReceipt, setEditReceipt] = useState<any>(null)
   const [form, setForm] = useState({
     enrollment_id: '', payment_method: 'transfer', notes: '',
     issued_at: new Date().toISOString().split('T')[0],
+    amount: 0, student_id: '',
   })
   const [preview, setPreview] = useState<any>(null)
 
   async function loadData() {
-    const [{ data: r }, { data: e }] = await Promise.all([
+    const [{ data: r }, { data: e }, { data: s }] = await Promise.all([
       supabase.from('receipts')
         .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name, price, total_lessons))')
-        .order('created_at', { ascending: false }).limit(20),
+        .order('issued_at', { ascending: false })
+        .limit(50),
       supabase.from('enrollments')
         .select('*, student:students(full_name, nickname), course:courses(name, price, total_lessons)')
-        .eq('status', 'active'),
+        .in('status', ['active', 'completed']),
+      supabase.from('students').select('id, full_name, nickname').eq('is_active', true).order('nickname'),
     ])
     setReceipts(r ?? [])
     setEnrollments(e ?? [])
+    setStudents(s ?? [])
   }
 
   useEffect(() => { loadData() }, [])
@@ -35,43 +41,83 @@ export default function ReceiptsPage() {
     const en = enrollments.find(e => e.id === enrollmentId)
     if (!en) { setPreview(null); return }
     setPreview(en)
-    setForm(f => ({ ...f, enrollment_id: enrollmentId }))
+    setForm(f => ({
+      ...f,
+      enrollment_id: enrollmentId,
+      amount: en.course?.price ?? 0,
+      student_id: en.student_id,
+    }))
+  }
+
+  function openEdit(r: any) {
+    setEditReceipt(r)
+    setForm({
+      enrollment_id: r.enrollment_id ?? '',
+      payment_method: r.payment_method ?? 'transfer',
+      notes: r.notes ?? '',
+      issued_at: r.issued_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
+      amount: r.amount ?? 0,
+      student_id: r.student_id ?? '',
+    })
+    setShowForm(true)
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const en = enrollments.find(x => x.id === form.enrollment_id)
-    if (!en) { toast.error('กรุณาเลือกนักเรียน'); return }
 
-    const items = [{
-      description: en.course?.name,
-      quantity: en.lessons_total,
-      unit_price: en.course?.price && en.lessons_total ? en.course.price / en.lessons_total : 0,
-      total: en.course?.price ?? 0,
-    }]
+    if (editReceipt) {
+      // แก้ไข
+      const { error } = await supabase.from('receipts').update({
+        payment_method: form.payment_method,
+        notes: form.notes || null,
+        issued_at: form.issued_at,
+        amount: form.amount,
+      }).eq('id', editReceipt.id)
+      if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
+      toast.success('แก้ไขแล้ว')
+    } else {
+      // เพิ่มใหม่
+      const en = enrollments.find(x => x.id === form.enrollment_id)
+      if (!en) { toast.error('กรุณาเลือกนักเรียน'); return }
 
-    const { error } = await supabase.from('receipts').insert({
-      enrollment_id: en.id,
-      student_id: en.student_id,
-      issued_at: form.issued_at,
-      amount: en.course?.price ?? 0,
-      payment_method: form.payment_method,
-      items,
-      notes: form.notes,
-    })
+      const items = [{
+        description: en.course?.name,
+        quantity: en.lessons_total,
+        unit_price: en.course?.price && en.lessons_total ? en.course.price / en.lessons_total : 0,
+        total: en.course?.price ?? 0,
+      }]
 
-    if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
-    toast.success('ออกใบเสร็จแล้ว')
+      const { error } = await supabase.from('receipts').insert({
+        enrollment_id: en.id,
+        student_id: en.student_id,
+        issued_at: form.issued_at,
+        amount: en.course?.price ?? 0,
+        payment_method: form.payment_method,
+        items,
+        notes: form.notes || null,
+      })
+      if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
+      toast.success('ออกใบเสร็จแล้ว')
+    }
+
     setShowForm(false)
+    setEditReceipt(null)
     setPreview(null)
+    setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' })
+    loadData()
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('ลบใบเสร็จนี้?')) return
+    const { error } = await supabase.from('receipts').delete().eq('id', id)
+    if (error) { toast.error('ลบไม่สำเร็จ'); return }
+    toast.success('ลบแล้ว')
     loadData()
   }
 
   function printReceipt(r: any) {
     const win = window.open('', '_blank')
     if (!win) return
-
-    // fallback ถ้าไม่มี items ให้ดึงจาก enrollment
     const courseName = r.enrollment?.course?.name ?? '—'
     const lessons = r.enrollment?.lessons_total ?? 0
     const items = (r.items && r.items.length > 0)
@@ -95,9 +141,9 @@ export default function ReceiptsPage() {
       <div class="logo">曼 Mando House</div>
       <div class="sub">ใบเสร็จรับเงิน · Receipt</div>
       <hr class="divider">
-      <div class="row"><span>เลขที่</span><span>${r.receipt_number}</span></div>
+      <div class="row"><span>เลขที่</span><span>${r.receipt_number ?? '—'}</span></div>
       <div class="row"><span>วันที่</span><span>${formatDate(r.issued_at)}</span></div>
-      <div class="row"><span>นักเรียน</span><span>${r.student?.nickname || r.student?.full_name}</span></div>
+      <div class="row"><span>นักเรียน</span><span>${r.student?.nickname || r.student?.full_name || '—'}</span></div>
       <div class="row"><span>ผู้ปกครอง</span><span>${r.student?.parent_name || '—'}</span></div>
       <hr class="divider">
       ${items.length > 0 ? items.map((it: any) => `
@@ -109,6 +155,7 @@ export default function ReceiptsPage() {
       `).join('') : `<div class="row"><span style="color:#999">ไม่มีข้อมูลคอร์ส</span></div>`}
       <div class="row total"><span>รวมทั้งสิ้น</span><span>${formatThaiMoney(r.amount)}</span></div>
       <div class="row"><span>ชำระโดย</span><span>${{ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' }[r.payment_method as string] || r.payment_method}</span></div>
+      ${r.notes ? `<div class="row"><span>หมายเหตุ</span><span>${r.notes}</span></div>` : ''}
       <div class="footer">ขอบคุณที่ไว้วางใจ Mando House 🙏</div>
       </body></html>`
     win.document.write(html)
@@ -121,23 +168,33 @@ export default function ReceiptsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold">ใบเสร็จ</h1>
-          <p className="text-sm text-gray-500 mt-0.5">ออกและจัดการใบเสร็จรับเงิน</p>
+          <p className="text-sm text-gray-500 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-brand">+ ออกใบเสร็จ</button>
+        <button onClick={() => { setEditReceipt(null); setPreview(null); setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' }); setShowForm(true) }} className="btn-brand">
+          + ออกใบเสร็จ
+        </button>
       </div>
 
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr><th>เลขที่</th><th>นักเรียน</th><th>คอร์ส</th><th>วันที่</th><th>จำนวนเงิน</th><th>ชำระโดย</th><th></th></tr>
+            <tr>
+              <th>เลขที่</th>
+              <th>นักเรียน</th>
+              <th>คอร์ส / รายการ</th>
+              <th>วันที่</th>
+              <th>จำนวนเงิน</th>
+              <th>ชำระโดย</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {receipts.map(r => (
               <tr key={r.id} className="table-row-hover">
-                <td className="font-mono text-xs text-gray-600">{r.receipt_number}</td>
-                <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name}</td>
+                <td className="font-mono text-xs text-gray-600">{r.receipt_number ?? '—'}</td>
+                <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name || '—'}</td>
                 <td className="text-sm text-gray-500">
-                  {r.enrollment?.course?.name ?? (r.items?.[0]?.description ?? '—')}
+                  {r.enrollment?.course?.name ?? r.items?.[0]?.description ?? r.subject ?? '—'}
                 </td>
                 <td className="text-sm">{formatDate(r.issued_at)}</td>
                 <td className="font-semibold text-brand-600">{formatThaiMoney(r.amount)}</td>
@@ -147,9 +204,11 @@ export default function ReceiptsPage() {
                   </span>
                 </td>
                 <td>
-                  <button onClick={() => printReceipt(r)} className="btn-outline btn-sm">
-                    🖨 พิมพ์
-                  </button>
+                  <div className="flex gap-1">
+                    <button onClick={() => printReceipt(r)} className="btn-outline btn-sm px-2">🖨</button>
+                    <button onClick={() => openEdit(r)} className="btn-outline btn-sm px-2">✎</button>
+                    <button onClick={() => handleDelete(r.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -160,28 +219,37 @@ export default function ReceiptsPage() {
         </table>
       </div>
 
-      {/* Issue Receipt Modal */}
+      {/* Issue / Edit Receipt Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold">ออกใบเสร็จใหม่</h2>
-              <button onClick={() => { setShowForm(false); setPreview(null) }} className="text-gray-400">✕</button>
+              <h2 className="font-semibold">{editReceipt ? 'แก้ไขใบเสร็จ' : 'ออกใบเสร็จใหม่'}</h2>
+              <button onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="text-gray-400">✕</button>
             </div>
-            <div className="grid grid-cols-2 divide-x divide-gray-100">
+            <div className={editReceipt ? '' : 'grid grid-cols-2 divide-x divide-gray-100'}>
               <form onSubmit={handleSave} className="p-5 space-y-4">
-                <div>
-                  <label className="label">นักเรียน *</label>
-                  <select className="input" required value={form.enrollment_id}
-                    onChange={e => updatePreview(e.target.value)}>
-                    <option value="">— เลือกนักเรียน —</option>
-                    {enrollments.map(en => (
-                      <option key={en.id} value={en.id}>
-                        {en.student?.nickname || en.student?.full_name} – {en.course?.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!editReceipt && (
+                  <div>
+                    <label className="label">นักเรียน *</label>
+                    <select className="input" required value={form.enrollment_id}
+                      onChange={e => updatePreview(e.target.value)}>
+                      <option value="">— เลือกนักเรียน —</option>
+                      {enrollments.map(en => (
+                        <option key={en.id} value={en.id}>
+                          {en.student?.nickname || en.student?.full_name} – {en.course?.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {editReceipt && (
+                  <div>
+                    <label className="label">จำนวนเงิน (บาท)</label>
+                    <input type="number" min={0} className="input" value={form.amount}
+                      onChange={e => setForm({...form, amount: Number(e.target.value)})} />
+                  </div>
+                )}
                 <div>
                   <label className="label">วันที่ออกใบเสร็จ</label>
                   <input type="date" className="input" value={form.issued_at}
@@ -202,37 +270,40 @@ export default function ReceiptsPage() {
                     onChange={e => setForm({...form, notes: e.target.value})} />
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button type="submit" className="btn-brand flex-1 justify-center">ออกใบเสร็จ</button>
-                  <button type="button" onClick={() => { setShowForm(false); setPreview(null) }} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+                  <button type="submit" className="btn-brand flex-1 justify-center">
+                    {editReceipt ? 'บันทึก' : 'ออกใบเสร็จ'}
+                  </button>
+                  <button type="button" onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="btn-outline flex-1 justify-center">ยกเลิก</button>
                 </div>
               </form>
 
-              {/* Preview */}
-              <div className="p-5">
-                <p className="text-xs text-gray-400 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
-                {preview ? (
-                  <div className="border border-gray-100 rounded-xl p-5 font-mono text-sm">
-                    <div className="text-center mb-4">
-                      <div className="text-lg font-bold">曼 Mando House</div>
-                      <div className="text-xs text-gray-500">ใบเสร็จรับเงิน</div>
-                      <div className="text-xs text-gray-400 mt-1">เลขที่: MH-{new Date().getFullYear()}-XXXX</div>
+              {/* Preview (เฉพาะตอนสร้างใหม่) */}
+              {!editReceipt && (
+                <div className="p-5">
+                  <p className="text-xs text-gray-400 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
+                  {preview ? (
+                    <div className="border border-gray-100 rounded-xl p-5 font-mono text-sm">
+                      <div className="text-center mb-4">
+                        <div className="text-lg font-bold">曼 Mando House</div>
+                        <div className="text-xs text-gray-500">ใบเสร็จรับเงิน</div>
+                      </div>
+                      <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
+                        <div className="flex justify-between"><span className="text-gray-500">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
+                      </div>
+                      <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200">
+                        <span>รวม</span>
+                        <span className="text-brand-600">{formatThaiMoney(preview.course?.price ?? 0)}</span>
+                      </div>
                     </div>
-                    <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
-                      <div className="flex justify-between"><span className="text-gray-500">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
+                  ) : (
+                    <div className="border border-dashed border-gray-200 rounded-xl h-40 flex items-center justify-center text-gray-300 text-sm">
+                      เลือกนักเรียนเพื่อดูตัวอย่าง
                     </div>
-                    <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200">
-                      <span>รวม</span>
-                      <span className="text-brand-600">{formatThaiMoney(preview.course?.price ?? 0)}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-dashed border-gray-200 rounded-xl h-40 flex items-center justify-center text-gray-300 text-sm">
-                    เลือกนักเรียนเพื่อดูตัวอย่าง
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
