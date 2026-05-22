@@ -13,7 +13,9 @@ export default function CheckinPage() {
   const [loading, setLoading] = useState(false)
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '' })
+  const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '', lesson_note: '' })
+  const [noteCheckin, setNoteCheckin] = useState<any>(null)
+  const [noteText, setNoteText] = useState('')
 
   useEffect(() => {
     loadData()
@@ -34,6 +36,17 @@ export default function CheckinPage() {
     setStudents(s ?? [])
     setEnrollments(e ?? [])
     setTodayCheckins(c ?? [])
+  }
+
+  async function getSessionCount(enrollmentId: string, currentCheckinId?: string) {
+    const { data } = await supabase
+      .from('checkins')
+      .select('id')
+      .eq('enrollment_id', enrollmentId)
+      .order('check_in_at', { ascending: true })
+    if (!data) return 1
+    const idx = data.findIndex(c => c.id === currentCheckinId)
+    return idx >= 0 ? idx + 1 : data.length
   }
 
   async function handleCheckin() {
@@ -78,6 +91,7 @@ export default function CheckinPage() {
     setEditForm({
       check_in_at: toLocal(c.check_in_at),
       check_out_at: c.check_out_at ? toLocal(c.check_out_at) : '',
+      lesson_note: c.lesson_note || '',
     })
   }
 
@@ -86,11 +100,38 @@ export default function CheckinPage() {
     const { error } = await supabase.from('checkins').update({
       check_in_at: new Date(editForm.check_in_at).toISOString(),
       check_out_at: editForm.check_out_at ? new Date(editForm.check_out_at).toISOString() : null,
+      lesson_note: editForm.lesson_note || null,
     }).eq('id', editCheckin.id)
     if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
     toast.success('แก้ไขแล้ว')
     setEditCheckin(null)
     loadData()
+  }
+
+  function openNote(c: any) {
+    setNoteCheckin(c)
+    setNoteText(c.lesson_note || '')
+  }
+
+  async function handleSaveNote() {
+    const { error } = await supabase.from('checkins')
+      .update({ lesson_note: noteText })
+      .eq('id', noteCheckin.id)
+    if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
+    toast.success('บันทึกบทเรียนแล้ว ✅')
+    setNoteCheckin(null)
+    loadData()
+  }
+
+  async function getEnrollmentSessionCount(enrollmentId: string, checkinId: string) {
+    const { data } = await supabase
+      .from('checkins')
+      .select('id')
+      .eq('enrollment_id', enrollmentId)
+      .order('check_in_at', { ascending: true })
+    if (!data) return { current: 1, total: 1 }
+    const idx = data.findIndex(c => c.id === checkinId)
+    return { current: idx + 1, total: data.length }
   }
 
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
@@ -141,35 +182,82 @@ export default function CheckinPage() {
               const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
 
               return (
-                <div key={c.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold flex-shrink-0">
-                    {name.slice(0, 2)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900">{name}</div>
-                    <div className="text-xs text-gray-400">{c.enrollment?.course?.name || 'ไม่มีคอร์ส'}</div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-sm">
-                      <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
-                      {outTime && <span className="text-gray-400"> → {fmt(outTime)}</span>}
+                <div key={c.id} className="px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold flex-shrink-0">
+                      {name.slice(0, 2)}
                     </div>
-                    {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900">{name}</div>
+                      <div className="text-xs text-gray-400">{c.enrollment?.course?.name || 'ไม่มีคอร์ส'}</div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm">
+                        <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
+                        {outTime && <span className="text-gray-400"> → {fmt(outTime)}</span>}
+                      </div>
+                      {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {!c.check_out_at && (
+                        <button onClick={() => handleCheckout(c.id)} className="btn-outline btn-sm">เช็กเอาท์</button>
+                      )}
+                      {c.check_out_at && <span className="badge badge-gray">ออกแล้ว</span>}
+                      <button
+                        onClick={() => openNote(c)}
+                        className={`btn-outline btn-sm px-2 ${c.lesson_note ? 'text-green-600' : 'text-gray-400'}`}
+                        title="บันทึกบทเรียน"
+                      >
+                        📝
+                      </button>
+                      <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
+                      <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    {!c.check_out_at && (
-                      <button onClick={() => handleCheckout(c.id)} className="btn-outline btn-sm">เช็กเอาท์</button>
-                    )}
-                    {c.check_out_at && <span className="badge badge-gray">ออกแล้ว</span>}
-                    <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
-                    <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
-                  </div>
+                  {/* แสดง lesson note ถ้ามี */}
+                  {c.lesson_note && (
+                    <div className="mt-2 ml-12 text-xs text-gray-500 bg-yellow-50 rounded-lg px-3 py-2 border border-yellow-100">
+                      📖 {c.lesson_note}
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
         </div>
       </div>
+
+      {/* Lesson Note Modal */}
+      {noteCheckin && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">📝 บันทึกบทเรียน</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {noteCheckin.student?.nickname || noteCheckin.student?.full_name} — {noteCheckin.enrollment?.course?.name || 'ไม่มีคอร์ส'}
+                </p>
+              </div>
+              <button onClick={() => setNoteCheckin(null)} className="text-gray-400">✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="label">เนื้อหาที่สอนวันนี้</label>
+                <textarea
+                  className="input min-h-[120px] resize-none"
+                  placeholder="เช่น บทที่ 3 คำศัพท์เรื่องครอบครัว, ฝึกอ่านประโยค..."
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={handleSaveNote} className="btn-brand flex-1 justify-center">บันทึก</button>
+                <button onClick={() => setNoteCheckin(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editCheckin && (
@@ -189,6 +277,15 @@ export default function CheckinPage() {
                 <label className="label">เวลาเช็กเอาท์ (ถ้ามี)</label>
                 <input type="datetime-local" className="input" value={editForm.check_out_at}
                   onChange={e => setEditForm({ ...editForm, check_out_at: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">บันทึกบทเรียน</label>
+                <textarea
+                  className="input min-h-[80px] resize-none"
+                  placeholder="เนื้อหาที่สอน..."
+                  value={editForm.lesson_note}
+                  onChange={e => setEditForm({ ...editForm, lesson_note: e.target.value })}
+                />
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
