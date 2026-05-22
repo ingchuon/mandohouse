@@ -66,6 +66,38 @@ export default function StudentsPage() {
     setDetailLoading(false)
   }
 
+  async function deleteEnrollment(enrollId: string) {
+    if (!confirm('ลบคอร์สนี้? ประวัติการเรียนที่เชื่อมกับคอร์สนี้จะถูกลบด้วย')) return
+    const { error } = await supabase.from('enrollments').delete().eq('id', enrollId)
+    if (error) { toast.error('ลบไม่สำเร็จ'); return }
+    toast.success('ลบคอร์สแล้ว')
+    // Refresh detail
+    if (detailStudent) {
+      const { data } = await supabase
+        .from('students')
+        .select(`*, enrollments(*, course:courses(name))`)
+        .eq('id', detailStudent.id)
+        .single()
+      if (data) setDetailStudent(data as StudentWithEnrollment)
+    }
+    loadStudents()
+  }
+
+  async function updateEnrollmentStatus(enrollId: string, status: string) {
+    const { error } = await supabase.from('enrollments').update({ status }).eq('id', enrollId)
+    if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
+    toast.success(status === 'active' ? 'เปิดใช้งานคอร์สแล้ว' : 'ปิดคอร์สแล้ว')
+    if (detailStudent) {
+      const { data } = await supabase
+        .from('students')
+        .select(`*, enrollments(*, course:courses(name))`)
+        .eq('id', detailStudent.id)
+        .single()
+      if (data) setDetailStudent(data as StudentWithEnrollment)
+    }
+    loadStudents()
+  }
+
   const filtered = students.filter(s =>
     s.full_name.includes(search) ||
     (s.nickname ?? '').includes(search) ||
@@ -283,10 +315,7 @@ export default function StudentsPage() {
                           {getInitials(s.nickname || s.full_name)}
                         </div>
                         <div>
-                          <button
-                            onClick={() => openDetail(s)}
-                            className="font-medium text-gray-900 text-sm hover:text-brand-600 hover:underline text-left"
-                          >
+                          <button onClick={() => openDetail(s)} className="font-medium text-gray-900 text-sm hover:text-brand-600 hover:underline text-left">
                             {s.nickname || s.full_name}
                           </button>
                           {s.nickname && <div className="text-xs text-gray-400">{s.full_name}</div>}
@@ -344,7 +373,6 @@ export default function StudentsPage() {
       {detailStudent && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
-            {/* Header */}
             <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-lg">
@@ -359,7 +387,6 @@ export default function StudentsPage() {
             </div>
 
             <div className="overflow-y-auto flex-1 p-5 space-y-5">
-              {/* ประวัติ */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-xl p-3">
                   <div className="text-xs text-gray-400 mb-2 font-medium">👤 ข้อมูลนักเรียน</div>
@@ -382,7 +409,7 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* คอร์สทั้งหมด */}
+              {/* คอร์สทั้งหมด + ปุ่มลบ */}
               <div>
                 <div className="text-xs text-gray-400 font-medium mb-2">📚 ประวัติคอร์ส</div>
                 <div className="space-y-2">
@@ -396,7 +423,18 @@ export default function StudentsPage() {
                       <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
-                          <span className={`badge ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{enroll.status}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateEnrollmentStatus(enroll.id, enroll.status === 'active' ? 'completed' : 'active')}
+                              className={`badge cursor-pointer hover:opacity-80 transition ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}
+                            >
+                              {enroll.status === 'active' ? 'active' : enroll.status}
+                            </button>
+                            <button
+                              onClick={() => deleteEnrollment(enroll.id)}
+                              className="text-red-400 hover:text-red-600 text-xs hover:bg-red-50 rounded px-1.5 py-0.5 transition"
+                            >🗑 ลบ</button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -413,11 +451,9 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* ประวัติเช็กอิน + บันทึก */}
+              {/* ประวัติเช็กอิน */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-gray-400 font-medium">🕐 ประวัติการเรียน ({detailCheckins.length} ครั้ง)</div>
-                </div>
+                <div className="text-xs text-gray-400 font-medium mb-2">🕐 ประวัติการเรียน ({detailCheckins.length} ครั้ง)</div>
                 {detailLoading ? (
                   <p className="text-sm text-gray-400">กำลังโหลด...</p>
                 ) : detailCheckins.length === 0 ? (
@@ -460,6 +496,10 @@ export default function StudentsPage() {
             </div>
 
             <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: '' }) }}
+                className="btn-outline flex-1 justify-center text-sm"
+              >+ ซื้อคอร์ส</button>
               <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
               <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
             </div>
