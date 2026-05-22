@@ -79,7 +79,7 @@ export default function ImportPage() {
 
       const { error } = await supabase.from('receipts').insert({
         student_id: studentId,
-        amount: amount,
+        amount: amount + bookFee,
         book_fee: bookFee || null,
         subject: subject || null,
         teacher_name: teacher || null,
