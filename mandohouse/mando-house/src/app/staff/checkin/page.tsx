@@ -1,8 +1,7 @@
 'use client'
-// src/app/staff/checkin/page.tsx
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Checkin, Student, Enrollment } from '@/types'
+import type { Student, Enrollment } from '@/types'
 import toast from 'react-hot-toast'
 
 export default function CheckinPage() {
@@ -13,6 +12,8 @@ export default function CheckinPage() {
   const [selectedStudent, setSelectedStudent] = useState('')
   const [loading, setLoading] = useState(false)
   const [now, setNow] = useState(new Date())
+  const [editCheckin, setEditCheckin] = useState<any>(null)
+  const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '' })
 
   useEffect(() => {
     loadData()
@@ -60,6 +61,38 @@ export default function CheckinPage() {
     loadData()
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm('ลบรายการนี้?')) return
+    const { error } = await supabase.from('checkins').delete().eq('id', id)
+    if (error) { toast.error('ลบไม่สำเร็จ'); return }
+    toast.success('ลบแล้ว')
+    loadData()
+  }
+
+  function openEdit(c: any) {
+    setEditCheckin(c)
+    const toLocal = (iso: string) => {
+      const d = new Date(iso)
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+    }
+    setEditForm({
+      check_in_at: toLocal(c.check_in_at),
+      check_out_at: c.check_out_at ? toLocal(c.check_out_at) : '',
+    })
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.from('checkins').update({
+      check_in_at: new Date(editForm.check_in_at).toISOString(),
+      check_out_at: editForm.check_out_at ? new Date(editForm.check_out_at).toISOString() : null,
+    }).eq('id', editCheckin.id)
+    if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
+    toast.success('แก้ไขแล้ว')
+    setEditCheckin(null)
+    loadData()
+  }
+
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
   return (
@@ -76,28 +109,16 @@ export default function CheckinPage() {
               <div className="text-3xl font-semibold text-brand-700">{fmt(now)}</div>
               <div className="text-xs text-brand-600 mt-1">เวลาปัจจุบัน</div>
             </div>
-
             <div>
               <label className="label">เลือกนักเรียน</label>
-              <select
-                className="input"
-                value={selectedStudent}
-                onChange={e => setSelectedStudent(e.target.value)}
-              >
+              <select className="input" value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)}>
                 <option value="">— เลือกนักเรียน —</option>
                 {students.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.nickname || s.full_name}
-                  </option>
+                  <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>
                 ))}
               </select>
             </div>
-
-            <button
-              onClick={handleCheckin}
-              disabled={loading || !selectedStudent}
-              className="btn-brand w-full justify-center py-2.5"
-            >
+            <button onClick={handleCheckin} disabled={loading || !selectedStudent} className="btn-brand w-full justify-center py-2.5">
               {loading ? 'กำลังบันทึก...' : '✓ เช็กอิน'}
             </button>
           </div>
@@ -117,9 +138,7 @@ export default function CheckinPage() {
               const name = c.student?.nickname || c.student?.full_name || '?'
               const inTime = new Date(c.check_in_at)
               const outTime = c.check_out_at ? new Date(c.check_out_at) : null
-              const duration = outTime
-                ? Math.round((outTime.getTime() - inTime.getTime()) / 60000)
-                : null
+              const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
 
               return (
                 <div key={c.id} className="flex items-center gap-3 px-5 py-3">
@@ -128,36 +147,57 @@ export default function CheckinPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-gray-900">{name}</div>
-                    <div className="text-xs text-gray-400">
-                      {c.enrollment?.course?.name || 'ไม่มีคอร์ส'}
-                    </div>
+                    <div className="text-xs text-gray-400">{c.enrollment?.course?.name || 'ไม่มีคอร์ส'}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="text-sm">
                       <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
                       {outTime && <span className="text-gray-400"> → {fmt(outTime)}</span>}
                     </div>
-                    {duration && (
-                      <div className="text-xs text-gray-400">{duration} นาที</div>
-                    )}
+                    {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
                   </div>
-                  {!c.check_out_at && (
-                    <button
-                      onClick={() => handleCheckout(c.id)}
-                      className="btn-outline btn-sm flex-shrink-0"
-                    >
-                      เช็กเอาท์
-                    </button>
-                  )}
-                  {c.check_out_at && (
-                    <span className="badge badge-gray flex-shrink-0">ออกแล้ว</span>
-                  )}
+                  <div className="flex gap-1 flex-shrink-0">
+                    {!c.check_out_at && (
+                      <button onClick={() => handleCheckout(c.id)} className="btn-outline btn-sm">เช็กเอาท์</button>
+                    )}
+                    {c.check_out_at && <span className="badge badge-gray">ออกแล้ว</span>}
+                    <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
+                    <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                  </div>
                 </div>
               )
             })}
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editCheckin && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-semibold">แก้ไขเวลา</h2>
+              <button onClick={() => setEditCheckin(null)} className="text-gray-400">✕</button>
+            </div>
+            <form onSubmit={handleEdit} className="p-5 space-y-3">
+              <div>
+                <label className="label">เวลาเช็กอิน</label>
+                <input type="datetime-local" className="input" value={editForm.check_in_at}
+                  onChange={e => setEditForm({ ...editForm, check_in_at: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">เวลาเช็กเอาท์ (ถ้ามี)</label>
+                <input type="datetime-local" className="input" value={editForm.check_out_at}
+                  onChange={e => setEditForm({ ...editForm, check_out_at: e.target.value })} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
+                <button type="button" onClick={() => setEditCheckin(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
