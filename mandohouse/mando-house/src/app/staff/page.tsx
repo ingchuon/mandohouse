@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     supabase.from('expenses')
       .select('amount')
       .gte('expense_date', firstOfMonth)
-      .lte('expense_date', today),
+      
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
       .select('carry_over, total_carry_over')
