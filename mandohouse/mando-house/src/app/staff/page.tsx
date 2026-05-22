@@ -6,7 +6,7 @@ import Link from 'next/link'
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
-if (!user) return <div>ไม่พบ user: {error?.message}</div>
+  if (!user) return <div>ไม่พบ user: {error?.message}</div>
 
   const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
 
@@ -23,10 +23,13 @@ if (!user) return <div>ไม่พบ user: {error?.message}</div>
     { data: allActiveEnrollments },
     { data: recentCheckins },
     { data: recentReviews },
+    { data: expensesThisMonth },
+    { data: allReceipts },
+    { data: monthlyBalance },
   ] = await Promise.all([
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('receipts').select('amount').gte('issued_at', firstOfMonth),
+    supabase.from('receipts').select('amount, subject, book_fee').gte('issued_at', firstOfMonth),
     supabase.from('receipts').select('amount').gte('issued_at', firstOfLastMonth).lte('issued_at', lastOfLastMonth),
     supabase.from('enrollments')
       .select('*, student:students(nickname, full_name), course:courses(name)')
@@ -40,13 +43,41 @@ if (!user) return <div>ไม่พบ user: {error?.message}</div>
       .select('*, student:students(nickname, full_name)')
       .order('created_at', { ascending: false })
       .limit(5),
+    supabase.from('expenses')
+      .select('amount')
+      .gte('expense_date', firstOfMonth)
+      .lte('expense_date', today),
+    supabase.from('receipts').select('amount'),
+    supabase.from('monthly_balance')
+      .select('carry_over')
+      .eq('month', `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+      .single(),
   ])
 
-  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + r.amount, 0) ?? 0
-  const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + r.amount, 0) ?? 0
+  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
+  const totalAllRevenue = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  const carryOver = (monthlyBalance as any)?.carry_over ?? 0
+  const netThisMonth = revenueThisMonth - totalExpenseThisMonth
   const revenuePct = revenueLastMonth > 0
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
     : 0
+
+  // กราฟแยกวิชา
+  const subjects = ['chi', 'math', 'eng', 'other']
+  const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน 🇨🇳', math: 'คณิตศาสตร์ 📐', eng: 'อังกฤษ 🇬🇧', other: 'อื่นๆ' }
+  const subjectColors: Record<string, string> = { chi: '#0F6E56', math: '#2563eb', eng: '#d97706', other: '#6b7280' }
+
+  const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
+  ;(receiptsThisMonth ?? []).forEach((r: any) => {
+    const s = String(r.subject ?? '').toLowerCase()
+    if (s.includes('chi') || s.includes('จีน')) subjectRevenue.chi += Number(r.amount)
+    else if (s.includes('math') || s.includes('คณิต')) subjectRevenue.math += Number(r.amount)
+    else if (s.includes('eng') || s.includes('อังกฤษ')) subjectRevenue.eng += Number(r.amount)
+    else subjectRevenue.other += Number(r.amount)
+  })
+  const maxSubject = Math.max(...Object.values(subjectRevenue), 1)
 
   const expiring = (allActiveEnrollments ?? [])
     .filter((e: any) => (e.lessons_total - e.lessons_used) <= 5)
@@ -54,18 +85,110 @@ if (!user) return <div>ไม่พบ user: {error?.message}</div>
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
+        </div>
+        <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
+      </div>
+
+      {/* ยอดสรุปการเงิน */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
+          <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
+          <div className="text-xs text-gray-400 mt-1">ตั้งแต่เปิดกิจการ</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">↩️ ยกยอดจากเดือนที่แล้ว</div>
+          <div className="text-xl font-semibold text-gray-700">{formatThaiMoney(carryOver)}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            <Link href="/staff/expenses" className="text-brand-500 hover:underline">แก้ไข →</Link>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">📥 รายรับเดือนนี้</div>
+          <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
+          <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
+            {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
+          <div className="text-xl font-semibold text-red-500">{formatThaiMoney(totalExpenseThisMonth)}</div>
+          <div className="text-xs text-gray-400 mt-1">ค่าใช้จ่ายรวม</div>
+        </div>
+      </div>
+
+      {/* เงินคงเหลือ + กราฟวิชา */}
+      <div className="grid grid-cols-3 gap-5 mb-6">
+        {/* เงินคงเหลือ */}
+        <div className="card p-5">
+          <h3 className="font-medium text-gray-800 mb-4">💵 เงินคงเหลือเดือนนี้</h3>
+          <div className={`text-3xl font-bold mb-2 ${netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
+            {netThisMonth >= 0 ? '+' : ''}{formatThaiMoney(netThisMonth)}
+          </div>
+          <div className="text-xs text-gray-400 mb-4">รายรับ - รายจ่าย</div>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500">ยกมา</span>
+              <span className="font-medium">{formatThaiMoney(carryOver)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">+ รายรับ</span>
+              <span className="font-medium text-brand-600">{formatThaiMoney(revenueThisMonth)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">- รายจ่าย</span>
+              <span className="font-medium text-red-500">{formatThaiMoney(totalExpenseThisMonth)}</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-100 pt-2">
+              <span className="font-medium">คงเหลือ</span>
+              <span className={`font-bold ${(carryOver + netThisMonth) >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
+                {formatThaiMoney(carryOver + netThisMonth)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* กราฟแยกวิชา */}
+        <div className="col-span-2 card p-5">
+          <h3 className="font-medium text-gray-800 mb-4">📊 รายได้แยกตามวิชาเดือนนี้</h3>
+          <div className="space-y-3">
+            {subjects.map(s => (
+              <div key={s}>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-gray-700 text-xs">{subjectLabels[s]}</span>
+                  <span className="font-medium text-xs" style={{ color: subjectColors[s] }}>
+                    {formatThaiMoney(subjectRevenue[s])}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.round((subjectRevenue[s] / maxSubject) * 100)}%`,
+                      background: subjectColors[s],
+                    }}
+                  />
+                </div>
+                <div className="text-[10px] text-gray-400 text-right mt-0.5">
+                  {revenueThisMonth > 0 ? Math.round((subjectRevenue[s] / revenueThisMonth) * 100) : 0}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'นักเรียนทั้งหมด', value: String(totalStudents ?? 0), sub: 'คน (Active)', icon: '👥' },
           { label: 'คอร์สกำลังเรียน', value: String(activeEnrollments ?? 0), sub: 'enrollment', icon: '📚' },
-          { label: 'รายได้เดือนนี้', value: formatThaiMoney(revenueThisMonth), sub: revenuePct >= 0 ? `↑ ${revenuePct}% จากเดือนก่อน` : `↓ ${Math.abs(revenuePct)}% จากเดือนก่อน`, subClass: revenuePct >= 0 ? 'text-brand-600' : 'text-red-500', icon: '💰' },
           { label: 'ใกล้หมดคอร์ส', value: String(expiring.length), sub: 'ต้องต่อคอร์ส', subClass: expiring.length > 0 ? 'text-red-500' : 'text-gray-400', icon: '⚠️' },
+          { label: 'กำไรสุทธิเดือนนี้', value: formatThaiMoney(netThisMonth), sub: `${revenueThisMonth > 0 ? Math.round((netThisMonth / revenueThisMonth) * 100) : 0}% margin`, subClass: netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500', icon: '📊' },
         ].map(c => (
           <div key={c.label} className="card p-4">
             <div className="flex items-center justify-between mb-3">
@@ -161,4 +284,3 @@ if (!user) return <div>ไม่พบ user: {error?.message}</div>
     </div>
   )
 }
-// Note: Dashboard already pulls receipts; expenses data added in expenses page
