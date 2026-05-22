@@ -45,9 +45,8 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.from('expenses')
-supabase.from('expenses')
-  .select('amount')
-  .gte('expense_date', firstOfMonth),
+      .select('amount')
+      .gte('expense_date', firstOfMonth),
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
       .select('carry_over, total_carry_over')
@@ -67,7 +66,6 @@ supabase.from('expenses')
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
     : 0
 
-  // กราฟแยกวิชา
   const subjects = ['chi', 'math', 'eng', 'other']
   const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน 🇨🇳', math: 'คณิตศาสตร์ 📐', eng: 'อังกฤษ 🇬🇧', other: 'อื่นๆ' }
   const subjectColors: Record<string, string> = { chi: '#0F6E56', math: '#2563eb', eng: '#d97706', other: '#6b7280' }
