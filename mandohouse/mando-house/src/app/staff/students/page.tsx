@@ -20,13 +20,15 @@ export default function StudentsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editStudent, setEditStudent] = useState<StudentWithEnrollment | null>(null)
   const [showEnrollModal, setShowEnrollModal] = useState<StudentWithEnrollment | null>(null)
+  const [importing, setImporting] = useState(false)
   const [enrollForm, setEnrollForm] = useState({
     course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: ''
   })
   const [enrollSaving, setEnrollSaving] = useState(false)
   const [form, setForm] = useState({
-    full_name: '', nickname: '', date_of_birth: '',
-    gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: ''
+    full_name: '', nickname: '', date_of_birth: '', gender: 'female',
+    parent_name: '', parent_phone: '', parent_line_id: '', notes: '',
+    school: '', study_type: '', enrolled_at: '',
   })
 
   async function loadStudents() {
@@ -68,7 +70,7 @@ export default function StudentsPage() {
     }
     setShowForm(false)
     setEditStudent(null)
-    setForm({ full_name: '', nickname: '', date_of_birth: '', gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: '' })
+    setForm({ full_name: '', nickname: '', date_of_birth: '', gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: '', school: '', study_type: '', enrolled_at: '' })
     loadStudents()
   }
 
@@ -78,20 +80,22 @@ export default function StudentsPage() {
       full_name: s.full_name,
       nickname: s.nickname ?? '',
       date_of_birth: s.date_of_birth ?? '',
-      gender: s.gender ?? 'female',
+      gender: (s as any).gender ?? 'female',
       parent_name: s.parent_name ?? '',
       parent_phone: s.parent_phone ?? '',
-      parent_line_id: s.parent_line_id ?? '',
-      notes: s.notes ?? '',
+      parent_line_id: (s as any).parent_line_id ?? '',
+      notes: (s as any).notes ?? '',
+      school: (s as any).school ?? '',
+      study_type: (s as any).study_type ?? '',
+      enrolled_at: (s as any).enrolled_at ?? '',
     })
     setShowForm(true)
   }
 
   async function toggleActive(s: StudentWithEnrollment) {
-    const newStatus = !s.is_active
-    const { error } = await supabase.from('students').update({ is_active: newStatus }).eq('id', s.id)
+    const { error } = await supabase.from('students').update({ is_active: !s.is_active }).eq('id', s.id)
     if (error) { toast.error('เปลี่ยนสถานะไม่สำเร็จ'); return }
-    toast.success(newStatus ? 'เปิดใช้งานแล้ว' : 'ปิดใช้งานแล้ว')
+    toast.success(!s.is_active ? 'เปิดใช้งานแล้ว' : 'ปิดใช้งานแล้ว')
     loadStudents()
   }
 
@@ -109,8 +113,7 @@ export default function StudentsPage() {
         status: 'active',
         notes: enrollForm.notes || null,
       }])
-      .select()
-      .single()
+      .select().single()
     if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
     if (enrollForm.price > 0) {
       await supabase.from('receipts').insert([{
@@ -132,18 +135,17 @@ export default function StudentsPage() {
     const data = filtered.map(s => {
       const activeEnroll = s.enrollments?.find(e => e.status === 'active')
       return {
-        'ชื่อ-นามสกุล': s.full_name,
+        'ลำดับที่': '',
+        'วันสมัคร': (s as any).enrolled_at ?? '',
+        'ชื่อ': s.full_name,
         'ชื่อเล่น': s.nickname ?? '',
-        'วันเกิด': s.date_of_birth ?? '',
-        'เพศ': s.gender === 'female' ? 'หญิง' : s.gender === 'male' ? 'ชาย' : 'อื่นๆ',
-        'ผู้ปกครอง': s.parent_name ?? '',
+        'โรงเรียน': (s as any).school ?? '',
+        'อายุ': s.date_of_birth ? `${new Date().getFullYear() - new Date(s.date_of_birth).getFullYear()} ปี` : '',
+        'วิชาที่เรียน': (activeEnroll?.course as any)?.name ?? '',
         'เบอร์โทร': s.parent_phone ?? '',
-        'LINE ID': s.parent_line_id ?? '',
-        'คอร์สปัจจุบัน': (activeEnroll?.course as any)?.name ?? '',
-        'ครั้งที่ใช้': activeEnroll?.lessons_used ?? '',
-        'ครั้งทั้งหมด': activeEnroll?.lessons_total ?? '',
+        'study type': (s as any).study_type ?? '',
+        'remark': (s as any).notes ?? '',
         'สถานะ': s.is_active ? 'Active' : 'Inactive',
-        'หมายเหตุ': s.notes ?? '',
       }
     })
     const ws = XLSX.utils.json_to_sheet(data)
@@ -151,6 +153,74 @@ export default function StudentsPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'นักเรียน')
     XLSX.writeFile(wb, `students_${new Date().toISOString().split('T')[0]}.xlsx`)
     toast.success('ดาวน์โหลด Excel แล้ว')
+  }
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
+      try {
+        const data = evt.target?.result
+        const wb = XLSX.read(data, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows: any[] = XLSX.utils.sheet_to_json(ws)
+
+        const toInsert = rows.map(row => {
+          // คำนวณวันเกิดจากอายุ
+          let dob = ''
+          if (row['อายุ']) {
+            const age = parseInt(String(row['อายุ']).replace(/[^0-9]/g, ''))
+            if (!isNaN(age)) {
+              const year = new Date().getFullYear() - age
+              dob = `${year}-01-01`
+            }
+          }
+
+          // แปลงวันสมัคร
+          let enrolledAt = ''
+          if (row['วันสมัคร']) {
+            try {
+              const d = new Date(row['วันสมัคร'])
+              if (!isNaN(d.getTime())) enrolledAt = d.toISOString().split('T')[0]
+            } catch {}
+          }
+
+          return {
+            full_name: String(row['ชื่อ'] ?? '').trim(),
+            nickname: String(row['ชื่อเล่น'] ?? '').trim() || null,
+            date_of_birth: dob || null,
+            parent_phone: String(row['เบอร์โทร'] ?? '').trim() || null,
+            school: String(row['โรงเรียน'] ?? '').trim() || null,
+            study_type: String(row['study type'] ?? '').trim() || null,
+            notes: String(row['remark'] ?? '').trim() || null,
+            enrolled_at: enrolledAt || null,
+            is_active: true,
+          }
+        }).filter(s => s.full_name) // กรองแถวที่ไม่มีชื่อออก
+
+        if (toInsert.length === 0) {
+          toast.error('ไม่พบข้อมูลในไฟล์')
+          setImporting(false)
+          return
+        }
+
+        const { error } = await supabase.from('students').insert(toInsert)
+        if (error) {
+          toast.error('Import ไม่สำเร็จ: ' + error.message)
+        } else {
+          toast.success(`Import สำเร็จ ${toInsert.length} คน 🎉`)
+          loadStudents()
+        }
+      } catch (err) {
+        toast.error('อ่านไฟล์ไม่สำเร็จ')
+      }
+      setImporting(false)
+    }
+    reader.readAsBinaryString(file)
+    e.target.value = '' // reset input
   }
 
   return (
@@ -161,12 +231,16 @@ export default function StudentsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{filtered.length} คน</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportExcel} className="btn-outline">
-            📥 Export Excel
-          </button>
-          <button onClick={() => { setEditStudent(null); setForm({ full_name: '', nickname: '', date_of_birth: '', gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: '' }); setShowForm(true) }} className="btn-brand">
-            + เพิ่มนักเรียน
-          </button>
+          <button onClick={exportExcel} className="btn-outline">📥 Export Excel</button>
+          <label className={`btn-outline cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+            {importing ? 'กำลัง Import...' : '📤 Import Excel'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importExcel} disabled={importing} />
+          </label>
+          <button onClick={() => {
+            setEditStudent(null)
+            setForm({ full_name: '', nickname: '', date_of_birth: '', gender: 'female', parent_name: '', parent_phone: '', parent_line_id: '', notes: '', school: '', study_type: '', enrolled_at: '' })
+            setShowForm(true)
+          }} className="btn-brand">+ เพิ่มนักเรียน</button>
         </div>
       </div>
 
@@ -189,6 +263,11 @@ export default function StudentsPage() {
         </div>
       </div>
 
+      {/* Template download hint */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-600">
+        💡 ไฟล์ Excel ต้องมี column: <strong>ลำดับที่, วันสมัคร, ชื่อ, โรงเรียน, อายุ, วิชาที่เรียน, เบอร์โทร, study type, remark</strong>
+      </div>
+
       <div className="card overflow-hidden">
         {loading ? (
           <p className="text-center text-gray-400 py-12">กำลังโหลด...</p>
@@ -197,10 +276,10 @@ export default function StudentsPage() {
             <thead>
               <tr>
                 <th>นักเรียน</th>
-                <th>อายุ</th>
+                <th>โรงเรียน</th>
                 <th>คอร์สปัจจุบัน</th>
                 <th>ความคืบหน้า</th>
-                <th>ผู้ปกครอง</th>
+                <th>เบอร์โทร</th>
                 <th>สถานะ</th>
                 <th></th>
               </tr>
@@ -221,12 +300,11 @@ export default function StudentsPage() {
                         <div>
                           <div className="font-medium text-gray-900 text-sm">{s.nickname || s.full_name}</div>
                           {s.nickname && <div className="text-xs text-gray-400">{s.full_name}</div>}
+                          {(s as any).study_type && <div className="text-[10px] text-blue-400">{(s as any).study_type}</div>}
                         </div>
                       </div>
                     </td>
-                    <td className="text-gray-600">
-                      {s.date_of_birth ? `${new Date().getFullYear() - new Date(s.date_of_birth).getFullYear()} ปี` : '—'}
-                    </td>
+                    <td className="text-sm text-gray-500">{(s as any).school || '—'}</td>
                     <td>
                       {activeEnroll
                         ? <span className="text-sm">{(activeEnroll.course as any)?.name}</span>
@@ -249,8 +327,7 @@ export default function StudentsPage() {
                       )}
                     </td>
                     <td>
-                      <div className="text-sm">{s.parent_name || '—'}</div>
-                      {s.parent_phone && <div className="text-xs text-gray-400">{s.parent_phone}</div>}
+                      <div className="text-sm">{s.parent_phone || '—'}</div>
                     </td>
                     <td>
                       <button
@@ -338,10 +415,10 @@ export default function StudentsPage() {
       {/* Add/Edit Student Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{editStudent ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียนใหม่'}</h2>
-              <button onClick={() => { setShowForm(false); setEditStudent(null) }} className="text-gray-400 hover:text-gray-600">✕</button>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+              <h2 className="font-semibold">{editStudent ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียนใหม่'}</h2>
+              <button onClick={() => { setShowForm(false); setEditStudent(null) }} className="text-gray-400">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -368,22 +445,36 @@ export default function StudentsPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="label">ชื่อผู้ปกครอง</label>
-                <input className="input" value={form.parent_name} onChange={e => setForm({...form, parent_name: e.target.value})} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">โรงเรียน</label>
+                  <input className="input" value={form.school} onChange={e => setForm({...form, school: e.target.value})} />
+                </div>
+                <div>
+                  <label className="label">Study Type</label>
+                  <input className="input" placeholder="เช่น Online, Onsite" value={form.study_type} onChange={e => setForm({...form, study_type: e.target.value})} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">เบอร์โทรผู้ปกครอง</label>
-                  <input className="input" type="tel" value={form.parent_phone} onChange={e => setForm({...form, parent_phone: e.target.value})} />
+                  <label className="label">วันสมัคร</label>
+                  <input type="date" className="input" value={form.enrolled_at} onChange={e => setForm({...form, enrolled_at: e.target.value})} />
                 </div>
                 <div>
-                  <label className="label">LINE ID ผู้ปกครอง</label>
-                  <input className="input" value={form.parent_line_id} onChange={e => setForm({...form, parent_line_id: e.target.value})} />
+                  <label className="label">เบอร์โทร</label>
+                  <input className="input" type="tel" value={form.parent_phone} onChange={e => setForm({...form, parent_phone: e.target.value})} />
                 </div>
               </div>
               <div>
-                <label className="label">หมายเหตุ</label>
+                <label className="label">ผู้ปกครอง</label>
+                <input className="input" value={form.parent_name} onChange={e => setForm({...form, parent_name: e.target.value})} />
+              </div>
+              <div>
+                <label className="label">LINE ID ผู้ปกครอง</label>
+                <input className="input" value={form.parent_line_id} onChange={e => setForm({...form, parent_line_id: e.target.value})} />
+              </div>
+              <div>
+                <label className="label">หมายเหตุ (remark)</label>
                 <textarea className="input min-h-[70px] resize-none" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
               </div>
               <div className="flex gap-2 pt-1">
