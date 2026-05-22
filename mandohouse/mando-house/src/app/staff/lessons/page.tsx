@@ -68,13 +68,13 @@ export default function LessonsPage() {
     loadData()
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('ยกเลิก enrollment นี้?')) return
-    const { error } = await supabase.from('enrollments').update({ status: 'cancelled' }).eq('id', id)
-    if (error) { toast.error('ยกเลิกไม่สำเร็จ'); return }
-    toast.success('ยกเลิก enrollment แล้ว')
-    loadData()
-  }
+async function handleDelete(id: string) {
+  if (!confirm('ปิด enrollment นี้?')) return
+  const { error } = await supabase.from('enrollments').update({ status: 'completed' }).eq('id', id)
+  if (error) { toast.error('ไม่สำเร็จ: ' + error.message); return }
+  toast.success('ปิด enrollment แล้ว')
+  loadData()
+}
 
   return (
     <div className="p-6">
