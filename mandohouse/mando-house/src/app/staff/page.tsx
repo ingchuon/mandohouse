@@ -14,6 +14,7 @@ export default async function DashboardPage() {
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
   const firstOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().split('T')[0]
   const lastOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().split('T')[0]
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
   const [
     { count: totalStudents },
@@ -49,16 +50,18 @@ export default async function DashboardPage() {
       .lte('expense_date', today),
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
-      .select('carry_over')
-      .eq('month', `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+      .select('carry_over, total_carry_over')
+      .eq('month', currentMonth)
       .single(),
   ])
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
-  const totalAllRevenue = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const carryOver = (monthlyBalance as any)?.carry_over ?? 0
+  const totalCarryOver = (monthlyBalance as any)?.total_carry_over ?? 0
+  const totalAllRevenue = totalCarryOver > 0 ? totalCarryOver : totalAllRevenueFromDB
   const netThisMonth = revenueThisMonth - totalExpenseThisMonth
   const revenuePct = revenueLastMonth > 0
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
@@ -90,7 +93,10 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
           <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
-        <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
+        <div className="flex gap-2">
+          <Link href="/staff/settings" className="btn-outline text-sm">⚙️ ตั้งค่ายอดเงิน</Link>
+          <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
+        </div>
       </div>
 
       {/* ยอดสรุปการเงิน */}
@@ -104,7 +110,7 @@ export default async function DashboardPage() {
           <div className="text-xs text-gray-500 mb-2">↩️ ยกยอดจากเดือนที่แล้ว</div>
           <div className="text-xl font-semibold text-gray-700">{formatThaiMoney(carryOver)}</div>
           <div className="text-xs text-gray-400 mt-1">
-            <Link href="/staff/expenses" className="text-brand-500 hover:underline">แก้ไข →</Link>
+            <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
           </div>
         </div>
         <div className="card p-4">
@@ -123,7 +129,6 @@ export default async function DashboardPage() {
 
       {/* เงินคงเหลือ + กราฟวิชา */}
       <div className="grid grid-cols-3 gap-5 mb-6">
-        {/* เงินคงเหลือ */}
         <div className="card p-5">
           <h3 className="font-medium text-gray-800 mb-4">💵 เงินคงเหลือเดือนนี้</h3>
           <div className={`text-3xl font-bold mb-2 ${netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
@@ -152,7 +157,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* กราฟแยกวิชา */}
         <div className="col-span-2 card p-5">
           <h3 className="font-medium text-gray-800 mb-4">📊 รายได้แยกตามวิชาเดือนนี้</h3>
           <div className="space-y-3">
@@ -165,13 +169,8 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.round((subjectRevenue[s] / maxSubject) * 100)}%`,
-                      background: subjectColors[s],
-                    }}
-                  />
+                  <div className="h-full rounded-full transition-all"
+                    style={{ width: `${Math.round((subjectRevenue[s] / maxSubject) * 100)}%`, background: subjectColors[s] }} />
                 </div>
                 <div className="text-[10px] text-gray-400 text-right mt-0.5">
                   {revenueThisMonth > 0 ? Math.round((subjectRevenue[s] / revenueThisMonth) * 100) : 0}%
@@ -202,7 +201,6 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-5">
-        {/* Expiring */}
         <div className="col-span-2 card">
           <div className="card-header">
             <h3 className="font-medium text-gray-800">นักเรียนใกล้หมดคอร์ส</h3>
@@ -230,7 +228,6 @@ export default async function DashboardPage() {
           </table>
         </div>
 
-        {/* Recent reviews */}
         <div className="card">
           <div className="card-header">
             <h3 className="font-medium text-gray-800">รีวิวล่าสุด</h3>
@@ -254,7 +251,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Today checkins */}
       <div className="card mt-5">
         <div className="card-header">
           <h3 className="font-medium text-gray-800">เช็กอินวันนี้</h3>
