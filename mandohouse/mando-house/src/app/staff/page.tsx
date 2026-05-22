@@ -45,9 +45,9 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.from('expenses')
-      .select('amount')
-      .gte('expense_date', firstOfMonth)
-      
+supabase.from('expenses')
+  .select('amount')
+  .gte('expense_date', firstOfMonth),
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
       .select('carry_over, total_carry_over')
