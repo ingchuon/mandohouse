@@ -60,7 +60,7 @@ export default async function DashboardPage() {
   const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const carryOver = (monthlyBalance as any)?.carry_over ?? 0
-  const totalCarryOver = (monthlyBalance as any)?.total_carry_over ?? 0
+  const totalCarryOver = Number((monthlyBalance as any)?.total_carry_over ?? 0)
   const totalAllRevenue = totalCarryOver > 0 ? totalCarryOver : totalAllRevenueFromDB
   const netThisMonth = revenueThisMonth - totalExpenseThisMonth
   const revenuePct = revenueLastMonth > 0
