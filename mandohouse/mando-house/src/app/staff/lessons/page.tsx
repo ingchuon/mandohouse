@@ -69,10 +69,10 @@ export default function LessonsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('ลบ enrollment นี้? ข้อมูลการเรียนจะหายทั้งหมด')) return
-    const { error } = await supabase.from('enrollments').delete().eq('id', id)
-    if (error) { toast.error('ลบไม่สำเร็จ'); return }
-    toast.success('ลบแล้ว')
+    if (!confirm('ยกเลิก enrollment นี้?')) return
+    const { error } = await supabase.from('enrollments').update({ status: 'cancelled' }).eq('id', id)
+    if (error) { toast.error('ยกเลิกไม่สำเร็จ'); return }
+    toast.success('ยกเลิก enrollment แล้ว')
     loadData()
   }
 
@@ -97,7 +97,7 @@ export default function LessonsPage() {
             <tbody>
               {enrollments.map(en => {
                 const remaining = en.lessons_total - en.lessons_used
-                const pct = Math.round((en.lessons_used / en.lessons_total) * 100)
+                const pct = en.lessons_total > 0 ? Math.round((en.lessons_used / en.lessons_total) * 100) : 0
                 const name = en.student?.nickname || en.student?.full_name
 
                 return (
@@ -113,20 +113,20 @@ export default function LessonsPage() {
                     <td className="text-gray-600 text-sm">{en.course?.name}</td>
                     <td className="font-medium text-sm">{en.lessons_used} / {en.lessons_total} ครั้ง</td>
                     <td>
-                      <span className={`font-semibold text-sm ${remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-brand-600'}`}>
+                      <span className={`font-semibold text-sm ${remaining <= 0 ? 'text-red-600' : remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-brand-600'}`}>
                         {remaining} ครั้ง
                       </span>
                     </td>
                     <td>
                       <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`}
-                          style={{ width: `${pct}%` }} />
+                          style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">{pct}%</div>
                     </td>
                     <td>
                       <div className="flex gap-1.5">
-                        <button onClick={() => setAdding(en.id)} disabled={remaining <= 0} className="btn-brand btn-sm">
+                        <button onClick={() => setAdding(en.id)} disabled={remaining <= 0} className="btn-brand btn-sm disabled:opacity-40">
                           + บันทึก
                         </button>
                         <button onClick={() => openEdit(en)} className="btn-outline btn-sm px-2">✎</button>
