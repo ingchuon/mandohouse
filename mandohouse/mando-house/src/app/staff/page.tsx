@@ -54,7 +54,7 @@ export default async function DashboardPage() {
       .single(),
   ])
 
-  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount) + Number(r.book_fee ?? 0), 0) ?? 0
+  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
