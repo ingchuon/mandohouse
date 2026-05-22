@@ -21,6 +21,9 @@ export default function StudentsPage() {
   const [editStudent, setEditStudent] = useState<StudentWithEnrollment | null>(null)
   const [showEnrollModal, setShowEnrollModal] = useState<StudentWithEnrollment | null>(null)
   const [importing, setImporting] = useState(false)
+  const [detailStudent, setDetailStudent] = useState<StudentWithEnrollment | null>(null)
+  const [detailCheckins, setDetailCheckins] = useState<any[]>([])
+  const [detailLoading, setDetailLoading] = useState(false)
   const [enrollForm, setEnrollForm] = useState({
     course_id: '', lessons_total: 10, price: 0, payment_method: 'transfer', notes: ''
   })
@@ -50,6 +53,18 @@ export default function StudentsPage() {
   }
 
   useEffect(() => { loadStudents(); loadCourses() }, [filterStatus])
+
+  async function openDetail(s: StudentWithEnrollment) {
+    setDetailStudent(s)
+    setDetailLoading(true)
+    const { data } = await supabase
+      .from('checkins')
+      .select('*, enrollment:enrollments(*, course:courses(name))')
+      .eq('student_id', s.id)
+      .order('check_in_at', { ascending: false })
+    setDetailCheckins(data ?? [])
+    setDetailLoading(false)
+  }
 
   const filtered = students.filter(s =>
     s.full_name.includes(search) ||
@@ -159,7 +174,6 @@ export default function StudentsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setImporting(true)
-
     const reader = new FileReader()
     reader.onload = async (evt) => {
       try {
@@ -167,27 +181,16 @@ export default function StudentsPage() {
         const wb = XLSX.read(data, { type: 'binary' })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows: any[] = XLSX.utils.sheet_to_json(ws)
-
         const toInsert = rows.map(row => {
-          // คำนวณวันเกิดจากอายุ
           let dob = ''
           if (row['อายุ']) {
             const age = parseInt(String(row['อายุ']).replace(/[^0-9]/g, ''))
-            if (!isNaN(age)) {
-              const year = new Date().getFullYear() - age
-              dob = `${year}-01-01`
-            }
+            if (!isNaN(age)) { const year = new Date().getFullYear() - age; dob = `${year}-01-01` }
           }
-
-          // แปลงวันสมัคร
           let enrolledAt = ''
           if (row['วันสมัคร']) {
-            try {
-              const d = new Date(row['วันสมัคร'])
-              if (!isNaN(d.getTime())) enrolledAt = d.toISOString().split('T')[0]
-            } catch {}
+            try { const d = new Date(row['วันสมัคร']); if (!isNaN(d.getTime())) enrolledAt = d.toISOString().split('T')[0] } catch {}
           }
-
           return {
             full_name: String(row['ชื่อ'] ?? '').trim(),
             nickname: String(row['ชื่อเล่น'] ?? '').trim() || null,
@@ -199,29 +202,20 @@ export default function StudentsPage() {
             enrolled_at: enrolledAt || null,
             is_active: true,
           }
-        }).filter(s => s.full_name) // กรองแถวที่ไม่มีชื่อออก
-
-        if (toInsert.length === 0) {
-          toast.error('ไม่พบข้อมูลในไฟล์')
-          setImporting(false)
-          return
-        }
-
+        }).filter(s => s.full_name)
+        if (toInsert.length === 0) { toast.error('ไม่พบข้อมูลในไฟล์'); setImporting(false); return }
         const { error } = await supabase.from('students').insert(toInsert)
-        if (error) {
-          toast.error('Import ไม่สำเร็จ: ' + error.message)
-        } else {
-          toast.success(`Import สำเร็จ ${toInsert.length} คน 🎉`)
-          loadStudents()
-        }
-      } catch (err) {
-        toast.error('อ่านไฟล์ไม่สำเร็จ')
-      }
+        if (error) { toast.error('Import ไม่สำเร็จ: ' + error.message) }
+        else { toast.success(`Import สำเร็จ ${toInsert.length} คน 🎉`); loadStudents() }
+      } catch { toast.error('อ่านไฟล์ไม่สำเร็จ') }
       setImporting(false)
     }
     reader.readAsBinaryString(file)
-    e.target.value = '' // reset input
+    e.target.value = ''
   }
+
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="p-6">
@@ -245,25 +239,17 @@ export default function StudentsPage() {
       </div>
 
       <div className="card mb-4 p-4 flex flex-wrap gap-3">
-        <input
-          className="input max-w-xs"
-          placeholder="ค้นหาชื่อ, ชื่อเล่น, ผู้ปกครอง..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <input className="input max-w-xs" placeholder="ค้นหาชื่อ, ชื่อเล่น, ผู้ปกครอง..." value={search} onChange={e => setSearch(e.target.value)} />
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           {(['active', 'inactive', 'all'] as const).map(s => (
-            <button key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 text-xs transition-colors border-l first:border-l-0 border-gray-200 ${filterStatus === s ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
+            <button key={s} onClick={() => setFilterStatus(s)}
+              className={`px-3 py-1.5 text-xs transition-colors border-l first:border-l-0 border-gray-200 ${filterStatus === s ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
               {s === 'active' ? 'Active' : s === 'inactive' ? 'Inactive' : 'ทั้งหมด'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Template download hint */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-600">
         💡 ไฟล์ Excel ต้องมี column: <strong>ลำดับที่, วันสมัคร, ชื่อ, โรงเรียน, อายุ, วิชาที่เรียน, เบอร์โทร, study type, remark</strong>
       </div>
@@ -289,7 +275,6 @@ export default function StudentsPage() {
                 const activeEnroll = s.enrollments?.find(e => e.status === 'active')
                 const remaining = activeEnroll ? activeEnroll.lessons_total - activeEnroll.lessons_used : null
                 const pct = activeEnroll ? Math.round((activeEnroll.lessons_used / activeEnroll.lessons_total) * 100) : 0
-
                 return (
                   <tr key={s.id} className={`table-row-hover ${!s.is_active ? 'opacity-50' : ''}`}>
                     <td>
@@ -298,7 +283,12 @@ export default function StudentsPage() {
                           {getInitials(s.nickname || s.full_name)}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900 text-sm">{s.nickname || s.full_name}</div>
+                          <button
+                            onClick={() => openDetail(s)}
+                            className="font-medium text-gray-900 text-sm hover:text-brand-600 hover:underline text-left"
+                          >
+                            {s.nickname || s.full_name}
+                          </button>
                           {s.nickname && <div className="text-xs text-gray-400">{s.full_name}</div>}
                           {(s as any).study_type && <div className="text-[10px] text-blue-400">{(s as any).study_type}</div>}
                         </div>
@@ -326,14 +316,10 @@ export default function StudentsPage() {
                         </div>
                       )}
                     </td>
+                    <td><div className="text-sm">{s.parent_phone || '—'}</div></td>
                     <td>
-                      <div className="text-sm">{s.parent_phone || '—'}</div>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => toggleActive(s)}
-                        className={`badge cursor-pointer hover:opacity-80 transition ${s.is_active ? 'badge-green' : 'badge-gray'}`}
-                      >
+                      <button onClick={() => toggleActive(s)}
+                        className={`badge cursor-pointer hover:opacity-80 transition ${s.is_active ? 'badge-green' : 'badge-gray'}`}>
                         {s.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
@@ -353,6 +339,133 @@ export default function StudentsPage() {
           </table>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {detailStudent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-lg">
+                  {getInitials(detailStudent.nickname || detailStudent.full_name)}
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">{detailStudent.nickname || detailStudent.full_name}</h2>
+                  {detailStudent.nickname && <p className="text-xs text-gray-400">{detailStudent.full_name}</p>}
+                </div>
+              </div>
+              <button onClick={() => setDetailStudent(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-5">
+              {/* ประวัติ */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="text-xs text-gray-400 mb-2 font-medium">👤 ข้อมูลนักเรียน</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-500">โรงเรียน</span><span>{(detailStudent as any).school || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Study type</span><span>{(detailStudent as any).study_type || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">วันสมัคร</span><span>{(detailStudent as any).enrolled_at || '—'}</span></div>
+                    {(detailStudent as any).notes && (
+                      <div className="pt-1 text-xs text-gray-500 border-t border-gray-200">{(detailStudent as any).notes}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="text-xs text-gray-400 mb-2 font-medium">👨‍👩‍👧 ผู้ปกครอง</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-500">ชื่อ</span><span>{detailStudent.parent_name || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">โทร</span><span>{detailStudent.parent_phone || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">LINE</span><span>{(detailStudent as any).parent_line_id || '—'}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* คอร์สทั้งหมด */}
+              <div>
+                <div className="text-xs text-gray-400 font-medium mb-2">📚 ประวัติคอร์ส</div>
+                <div className="space-y-2">
+                  {detailStudent.enrollments?.length === 0 && (
+                    <p className="text-sm text-gray-400">ยังไม่มีคอร์ส</p>
+                  )}
+                  {detailStudent.enrollments?.map((enroll: any) => {
+                    const pct = Math.round((enroll.lessons_used / enroll.lessons_total) * 100)
+                    const remaining = enroll.lessons_total - enroll.lessons_used
+                    return (
+                      <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
+                          <span className={`badge ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{enroll.status}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`}
+                              style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500 flex-shrink-0">
+                            {enroll.lessons_used}/{enroll.lessons_total} ครั้ง · เหลือ <span className={remaining <= 2 ? 'text-red-500 font-medium' : remaining <= 5 ? 'text-amber-500 font-medium' : 'text-brand-600'}>{remaining}</span> ครั้ง
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ประวัติเช็กอิน + บันทึก */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs text-gray-400 font-medium">🕐 ประวัติการเรียน ({detailCheckins.length} ครั้ง)</div>
+                </div>
+                {detailLoading ? (
+                  <p className="text-sm text-gray-400">กำลังโหลด...</p>
+                ) : detailCheckins.length === 0 ? (
+                  <p className="text-sm text-gray-400">ยังไม่มีประวัติการเรียน</p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {detailCheckins.map((c, idx) => {
+                      const sessionNo = detailCheckins.length - idx
+                      const inTime = new Date(c.check_in_at)
+                      const outTime = c.check_out_at ? new Date(c.check_out_at) : null
+                      const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
+                      return (
+                        <div key={c.id} className="bg-gray-50 rounded-xl p-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs bg-brand-100 text-brand-700 rounded-full px-2 py-0.5 font-medium flex-shrink-0">
+                                ครั้งที่ {sessionNo}
+                              </span>
+                              <span className="text-xs text-gray-500">{c.enrollment?.course?.name || '—'}</span>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-xs font-medium text-gray-700">{fmtDate(c.check_in_at)}</div>
+                              <div className="text-xs text-gray-400">
+                                {fmtTime(c.check_in_at)}{outTime ? ` → ${fmtTime(c.check_out_at)}` : ''}
+                                {duration ? ` (${duration} นาที)` : ''}
+                              </div>
+                            </div>
+                          </div>
+                          {c.lesson_note && (
+                            <div className="mt-2 text-xs text-gray-600 bg-yellow-50 rounded-lg px-2.5 py-1.5 border border-yellow-100">
+                              📖 {c.lesson_note}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
+              <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enroll Modal */}
       {showEnrollModal && (
