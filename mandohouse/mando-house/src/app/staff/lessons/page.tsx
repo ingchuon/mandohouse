@@ -1,16 +1,16 @@
 'use client'
-// src/app/staff/lessons/page.tsx
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { formatDate } from '@/lib/utils'
 
 export default function LessonsPage() {
   const supabase = createClient()
   const [enrollments, setEnrollments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState<string | null>(null)
+  const [editEnroll, setEditEnroll] = useState<any>(null)
   const [logForm, setLogForm] = useState({ topic: '', homework: '', lesson_date: new Date().toISOString().split('T')[0] })
+  const [editForm, setEditForm] = useState({ lessons_total: 0, lessons_used: 0, status: 'active', notes: '' })
 
   async function loadData() {
     const { data } = await supabase
@@ -29,7 +29,6 @@ export default function LessonsPage() {
     if (!adding) return
     const enrollment = enrollments.find(en => en.id === adding)
     if (!enrollment) return
-
     const { error } = await supabase.from('lesson_logs').insert({
       enrollment_id: adding,
       student_id: enrollment.student_id,
@@ -42,6 +41,38 @@ export default function LessonsPage() {
     toast.success(`บันทึกครั้งที่ ${enrollment.lessons_used + 1} แล้ว`)
     setAdding(null)
     setLogForm({ topic: '', homework: '', lesson_date: new Date().toISOString().split('T')[0] })
+    loadData()
+  }
+
+  function openEdit(en: any) {
+    setEditEnroll(en)
+    setEditForm({
+      lessons_total: en.lessons_total,
+      lessons_used: en.lessons_used,
+      status: en.status,
+      notes: en.notes ?? '',
+    })
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.from('enrollments').update({
+      lessons_total: editForm.lessons_total,
+      lessons_used: editForm.lessons_used,
+      status: editForm.status,
+      notes: editForm.notes || null,
+    }).eq('id', editEnroll.id)
+    if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
+    toast.success('แก้ไขแล้ว')
+    setEditEnroll(null)
+    loadData()
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('ลบ enrollment นี้? ข้อมูลการเรียนจะหายทั้งหมด')) return
+    const { error } = await supabase.from('enrollments').delete().eq('id', id)
+    if (error) { toast.error('ลบไม่สำเร็จ'); return }
+    toast.success('ลบแล้ว')
     loadData()
   }
 
@@ -80,33 +111,27 @@ export default function LessonsPage() {
                       </div>
                     </td>
                     <td className="text-gray-600 text-sm">{en.course?.name}</td>
-                    <td className="font-medium text-sm">
-                      {en.lessons_used} / {en.lessons_total} ครั้ง
-                    </td>
+                    <td className="font-medium text-sm">{en.lessons_used} / {en.lessons_total} ครั้ง</td>
                     <td>
-                      <span className={`font-semibold text-sm ${
-                        remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-brand-600'
-                      }`}>
+                      <span className={`font-semibold text-sm ${remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-brand-600'}`}>
                         {remaining} ครั้ง
                       </span>
                     </td>
                     <td>
                       <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`}
-                          style={{ width: `${pct}%` }}
-                        />
+                        <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`}
+                          style={{ width: `${pct}%` }} />
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">{pct}%</div>
                     </td>
                     <td>
-                      <button
-                        onClick={() => setAdding(en.id)}
-                        disabled={remaining <= 0}
-                        className="btn-brand btn-sm"
-                      >
-                        + บันทึกครั้งเรียน
-                      </button>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => setAdding(en.id)} disabled={remaining <= 0} className="btn-brand btn-sm">
+                          + บันทึก
+                        </button>
+                        <button onClick={() => openEdit(en)} className="btn-outline btn-sm px-2">✎</button>
+                        <button onClick={() => handleDelete(en.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -136,18 +161,65 @@ export default function LessonsPage() {
               <div>
                 <label className="label">เนื้อหาที่เรียน</label>
                 <input className="input" placeholder="เช่น สระจีน, พินอิน, บทที่ 3"
-                  value={logForm.topic}
-                  onChange={e => setLogForm({...logForm, topic: e.target.value})} />
+                  value={logForm.topic} onChange={e => setLogForm({...logForm, topic: e.target.value})} />
               </div>
               <div>
                 <label className="label">การบ้าน</label>
                 <textarea className="input min-h-[70px] resize-none" placeholder="การบ้านที่ให้..."
-                  value={logForm.homework}
-                  onChange={e => setLogForm({...logForm, homework: e.target.value})} />
+                  value={logForm.homework} onChange={e => setLogForm({...logForm, homework: e.target.value})} />
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
                 <button type="button" onClick={() => setAdding(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Enrollment Modal */}
+      {editEnroll && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">แก้ไข Enrollment</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {editEnroll.student?.nickname || editEnroll.student?.full_name} — {editEnroll.course?.name}
+                </p>
+              </div>
+              <button onClick={() => setEditEnroll(null)} className="text-gray-400">✕</button>
+            </div>
+            <form onSubmit={handleEdit} className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">ครั้งทั้งหมด</label>
+                  <input type="number" min={1} className="input" value={editForm.lessons_total}
+                    onChange={e => setEditForm({ ...editForm, lessons_total: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="label">ครั้งที่ใช้แล้ว</label>
+                  <input type="number" min={0} className="input" value={editForm.lessons_used}
+                    onChange={e => setEditForm({ ...editForm, lessons_used: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div>
+                <label className="label">สถานะ</label>
+                <select className="input" value={editForm.status}
+                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">หมายเหตุ</label>
+                <input className="input" value={editForm.notes}
+                  onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
+                <button type="button" onClick={() => setEditEnroll(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
               </div>
             </form>
           </div>
