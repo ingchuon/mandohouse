@@ -113,6 +113,7 @@ export default function SchedulePage() {
     if (!confirm('ลบคลาสนี้ออกจากตาราง?')) return
     await supabase.from('class_schedules').update({ is_active: false }).eq('id', id)
     toast.success('ลบแล้ว')
+    setShowStudentModal(null)
     loadData()
   }
 
@@ -230,8 +231,12 @@ export default function SchedulePage() {
                     s.day_of_week === d && s.start_time.slice(0,5) === time
                   )
                   const room = rooms.find(r => r.id === slot?.room_id)
+                  const studentNames = (slot?.schedule_students ?? [])
+                    .map(ss => ss.student?.nickname || ss.student?.full_name)
+                    .filter(Boolean)
+
                   return (
-                    <td key={d} className="border-b border-gray-100 p-1 align-top min-w-[120px]">
+                    <td key={d} className="border-b border-gray-100 p-1 align-top min-w-[140px]">
                       {slot ? (
                         <div
                           className="rounded-lg p-2 cursor-pointer hover:opacity-80 transition h-full"
@@ -241,12 +246,37 @@ export default function SchedulePage() {
                           <div className="font-semibold text-xs text-gray-800 truncate">{slot.course?.name ?? 'ไม่ระบุ'}</div>
                           <div className="text-[10px] text-gray-400 mt-0.5">{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</div>
                           <div className="text-[10px] text-gray-400">{room?.name}</div>
+                          {/* ชื่อครู */}
+                          {slot.teacher?.full_name && (
+                            <div className="text-[10px] text-brand-600 mt-0.5 truncate">
+                              👩‍🏫 {slot.teacher.full_name}
+                            </div>
+                          )}
+                          {/* ชื่อนักเรียน */}
+                          {studentNames.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-0.5">
+                              {studentNames.slice(0, 3).map((name, i) => (
+                                <span key={i} className="text-[9px] bg-white/70 rounded px-1 py-0.5 text-gray-600 truncate max-w-[60px]">
+                                  {name}
+                                </span>
+                              ))}
+                              {studentNames.length > 3 && (
+                                <span className="text-[9px] text-gray-400">+{studentNames.length - 3}</span>
+                              )}
+                            </div>
+                          )}
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-[10px] text-gray-400">{slot.schedule_students?.length ?? 0}/{room?.capacity ?? '?'} คน</span>
-                            <button
-                              onClick={e => { e.stopPropagation(); openEdit(slot) }}
-                              className="text-[10px] text-gray-400 hover:text-gray-600"
-                            >✎</button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={e => { e.stopPropagation(); openEdit(slot) }}
+                                className="text-[10px] text-gray-400 hover:text-gray-600"
+                              >✎</button>
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteSchedule(slot.id) }}
+                                className="text-[10px] text-red-300 hover:text-red-500"
+                              >✕</button>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -357,7 +387,8 @@ export default function SchedulePage() {
               <div>
                 <h2 className="font-semibold">{showStudentModal.course?.name ?? 'คลาส'}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {DAYS[showStudentModal.day_of_week]} {showStudentModal.start_time.slice(0,5)}–{showStudentModal.end_time.slice(0,5)} · ครู{showStudentModal.teacher?.full_name}
+                  {DAYS[showStudentModal.day_of_week]} {showStudentModal.start_time.slice(0,5)}–{showStudentModal.end_time.slice(0,5)}
+                  {showStudentModal.teacher?.full_name && ` · 👩‍🏫 ${showStudentModal.teacher.full_name}`}
                 </p>
               </div>
               <button onClick={() => setShowStudentModal(null)} className="text-gray-400">✕</button>
@@ -386,21 +417,33 @@ export default function SchedulePage() {
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-gray-100">
-              <label className="label">เพิ่มนักเรียน</label>
-              <select className="input"
-                onChange={e => { if (e.target.value) addStudent(showStudentModal.id, e.target.value) }}
-                defaultValue=""
-              >
-                <option value="">— เลือกนักเรียน —</option>
-                {students
-                  .filter(s => !(showStudentModal.schedule_students ?? []).some(ss =>
-                    (ss.student?.nickname || ss.student?.full_name) === (s.nickname || s.full_name)
-                  ))
-                  .map(s => (
-                    <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>
-                  ))}
-              </select>
+            <div className="p-4 border-t border-gray-100 space-y-3">
+              <div>
+                <label className="label">เพิ่มนักเรียน</label>
+                <select className="input"
+                  onChange={e => { if (e.target.value) addStudent(showStudentModal.id, e.target.value) }}
+                  defaultValue=""
+                >
+                  <option value="">— เลือกนักเรียน —</option>
+                  {students
+                    .filter(s => !(showStudentModal.schedule_students ?? []).some(ss =>
+                      (ss.student?.nickname || ss.student?.full_name) === (s.nickname || s.full_name)
+                    ))
+                    .map(s => (
+                      <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowStudentModal(null); openEdit(showStudentModal) }}
+                  className="btn-outline flex-1 justify-center text-xs"
+                >✎ แก้ไขคลาส</button>
+                <button
+                  onClick={() => deleteSchedule(showStudentModal.id)}
+                  className="btn-outline flex-1 justify-center text-xs text-red-400 hover:bg-red-50"
+                >🗑 ลบคลาส</button>
+              </div>
             </div>
           </div>
         </div>
