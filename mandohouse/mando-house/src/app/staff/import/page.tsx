@@ -65,7 +65,7 @@ export default function ImportPage() {
       const remark = String(row['Remark'] ?? row['remark'] ?? '').trim()
       const payment = String(row['Payment'] ?? 'transfer').trim().toLowerCase()
 
-      if (!name || amount <= 0) { fail++; continue }
+      if (!name) { fail++; continue }
 
       // หา student_id จากชื่อ
       const { data: students } = await supabase
