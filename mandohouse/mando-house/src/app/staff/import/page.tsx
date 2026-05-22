@@ -13,23 +13,34 @@ export default function ImportPage() {
 
   function parseDate(val: any): string {
     if (!val) return new Date().toISOString().split('T')[0]
+    // Excel date number
     if (typeof val === 'number') {
       const d = new Date((val - 25569) * 86400 * 1000)
       return d.toISOString().split('T')[0]
     }
-    try {
-      const d = new Date(val)
-      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
-    } catch {}
+    // String เช่น "1-May", "2026-05-01"
+    if (typeof val === 'string') {
+      try {
+        const d = new Date(val)
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+      } catch {}
+    }
+    // Date object
+    if (val instanceof Date || (typeof val === 'object' && val !== null)) {
+      try {
+        const d = new Date(val)
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+      } catch {}
+    }
     return new Date().toISOString().split('T')[0]
   }
 
   function readFile(file: File, type: 'income' | 'expense') {
     const reader = new FileReader()
     reader.onload = (evt) => {
-      const wb = XLSX.read(evt.target?.result, { type: 'binary' })
+      const wb = XLSX.read(evt.target?.result, { type: 'binary', cellDates: true })
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows: any[] = XLSX.utils.sheet_to_json(ws)
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { raw: false })
       setRawRows(rows)
       setPreviewType(type)
       setPreview(rows.slice(0, 5))
@@ -45,8 +56,8 @@ export default function ImportPage() {
     for (const row of rawRows) {
       const name = String(row['Name'] ?? row['ชื่อ'] ?? '').trim()
       const subject = String(row['Subject'] ?? row['วิชาที่เรียน'] ?? '').trim()
-      const amount = Number(row['Amount'] ?? row['จำนวนเงิน'] ?? 0)
-      const bookFee = Number(row['ค่าหนังสือ'] ?? 0)
+      const amount = Number(String(row['Amount'] ?? row['จำนวนเงิน'] ?? '0').replace(/,/g, ''))
+      const bookFee = Number(String(row['ค่าหนังสือ'] ?? '0').replace(/,/g, ''))
       const dateVal = row['Date'] ?? row['วันสมัคร'] ?? ''
       const teacher = String(row['Teacher'] ?? row['ครู'] ?? '').trim()
       const place = String(row['Place'] ?? '').trim()
@@ -64,7 +75,6 @@ export default function ImportPage() {
         .limit(1)
 
       const studentId = students?.[0]?.id ?? null
-
       const issued_at = parseDate(dateVal)
 
       const { error } = await supabase.from('receipts').insert({
@@ -75,12 +85,12 @@ export default function ImportPage() {
         teacher_name: teacher || null,
         place: place || null,
         customer_type: customerType || null,
-        payment_method: payment === 'transfer' ? 'transfer' : payment === 'cash' ? 'cash' : 'transfer',
+        payment_method: payment === 'cash' ? 'cash' : payment === 'promptpay' ? 'promptpay' : 'transfer',
         notes: remark || null,
         issued_at,
       })
 
-      if (error) { fail++ } else { success++ }
+      if (error) { console.error(error); fail++ } else { success++ }
     }
 
     toast.success(`Import รายรับสำเร็จ ${success} รายการ${fail > 0 ? ` (ข้าม ${fail})` : ''}`)
@@ -97,13 +107,12 @@ export default function ImportPage() {
 
     for (const row of rawRows) {
       const title = String(row['List'] ?? row['รายการ'] ?? '').trim()
-      const amount = Number(row['price'] ?? row['Price'] ?? row['จำนวนเงิน'] ?? 0)
-      const teacherAmount = Number(row['teacher'] ?? 0)
-      const ingBeeAom = Number(row['Ing+Bee+Aom'] ?? 0)
+      const amount = Number(String(row['price'] ?? row['Price'] ?? row['จำนวนเงิน'] ?? '0').replace(/,/g, ''))
+      const teacherAmount = Number(String(row['teacher'] ?? '0').replace(/,/g, ''))
+      const ingBeeAom = Number(String(row['Ing+Bee+Aom'] ?? '0').replace(/,/g, ''))
       const dateVal = row['Date'] ?? row['วันที่'] ?? ''
       const expDate = parseDate(dateVal)
 
-      // บันทึกค่าใช้จ่ายหลัก
       if (title && amount > 0) {
         const { error } = await supabase.from('expenses').insert({
           title,
@@ -114,7 +123,6 @@ export default function ImportPage() {
         if (error) { fail++ } else { success++ }
       }
 
-      // บันทึกค่าสอนครู
       if (teacherAmount > 0) {
         const { error } = await supabase.from('expenses').insert({
           title: `ค่าสอนครู${title ? ` (${title})` : ''}`,
@@ -126,7 +134,6 @@ export default function ImportPage() {
         if (error) { fail++ } else { success++ }
       }
 
-      // บันทึกค่าสอน Ing+Bee+Aom
       if (ingBeeAom > 0) {
         const { error } = await supabase.from('expenses').insert({
           title: `ค่าสอน Ing+Bee+Aom${title ? ` (${title})` : ''}`,
@@ -199,7 +206,7 @@ export default function ImportPage() {
               <thead>
                 <tr>
                   {Object.keys(preview[0]).map(k => (
-                    <th key={k} className="px-2 py-1 text-left bg-gray-50 border border-gray-100">{k}</th>
+                    <th key={k} className="px-2 py-1 text-left bg-gray-50 border border-gray-100 whitespace-nowrap">{k}</th>
                   ))}
                 </tr>
               </thead>
@@ -236,7 +243,7 @@ export default function ImportPage() {
           <p>• ไฟล์ต้องเป็น .xlsx หรือ .xls เท่านั้น</p>
           <p>• ชื่อ column ต้องตรงตามที่กำหนด (case sensitive)</p>
           <p>• ระบบจะจับคู่นักเรียนจากชื่ออัตโนมัติ ถ้าไม่พบจะบันทึกเป็น guest</p>
-          <p>• วันที่รองรับรูปแบบ: 1-May, 2026-05-01, หรือ Excel date number</p>
+          <p>• วันที่รองรับรูปแบบ: Excel date, 1-May, 2026-05-01</p>
           <p>• Import ซ้ำได้ แต่ข้อมูลจะเพิ่มขึ้นทุกครั้ง ควรเช็คก่อน</p>
         </div>
       </div>
