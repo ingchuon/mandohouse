@@ -111,18 +111,18 @@ export default async function DashboardPage() {
             <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
           </div>
         </div>
-        <div className="card p-4">
+        <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📥 รายรับเดือนนี้</div>
           <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
           <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
             {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
-        </div>
-        <div className="card p-4">
+        </Link>
+        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
           <div className="text-xl font-semibold text-red-500">{formatThaiMoney(totalExpenseThisMonth)}</div>
           <div className="text-xs text-gray-400 mt-1">ค่าใช้จ่ายรวม</div>
-        </div>
+        </Link>
       </div>
 
       {/* เงินคงเหลือ + กราฟวิชา */}
@@ -181,21 +181,43 @@ export default async function DashboardPage() {
 
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'นักเรียนทั้งหมด', value: String(totalStudents ?? 0), sub: 'คน (Active)', icon: '👥' },
-          { label: 'คอร์สกำลังเรียน', value: String(activeEnrollments ?? 0), sub: 'enrollment', icon: '📚' },
-          { label: 'ใกล้หมดคอร์ส', value: String(expiring.length), sub: 'ต้องต่อคอร์ส', subClass: expiring.length > 0 ? 'text-red-500' : 'text-gray-400', icon: '⚠️' },
-          { label: 'กำไรสุทธิเดือนนี้', value: formatThaiMoney(netThisMonth), sub: `${revenueThisMonth > 0 ? Math.round((netThisMonth / revenueThisMonth) * 100) : 0}% margin`, subClass: netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500', icon: '📊' },
-        ].map(c => (
-          <div key={c.label} className="card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500">{c.label}</span>
-              <span className="text-lg">{c.icon}</span>
-            </div>
-            <div className="text-2xl font-semibold text-gray-900">{c.value}</div>
-            <div className={`text-xs mt-1 ${(c as any).subClass ?? 'text-gray-400'}`}>{c.sub}</div>
+        <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500">นักเรียนทั้งหมด</span>
+            <span className="text-lg">👥</span>
           </div>
-        ))}
+          <div className="text-2xl font-semibold text-gray-900">{totalStudents ?? 0}</div>
+          <div className="text-xs mt-1 text-gray-400">คน (Active)</div>
+        </Link>
+
+        <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500">คอร์สกำลังเรียน</span>
+            <span className="text-lg">📚</span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">{activeEnrollments ?? 0}</div>
+          <div className="text-xs mt-1 text-gray-400">enrollment</div>
+        </Link>
+
+        <Link href="/staff/alerts" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500">ใกล้หมดคอร์ส</span>
+            <span className="text-lg">⚠️</span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">{expiring.length}</div>
+          <div className={`text-xs mt-1 ${expiring.length > 0 ? 'text-red-500' : 'text-gray-400'}`}>ต้องต่อคอร์ส</div>
+        </Link>
+
+        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500">กำไรสุทธิเดือนนี้</span>
+            <span className="text-lg">📊</span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">{formatThaiMoney(netThisMonth)}</div>
+          <div className={`text-xs mt-1 ${netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
+            {revenueThisMonth > 0 ? Math.round((netThisMonth / revenueThisMonth) * 100) : 0}% margin
+          </div>
+        </Link>
       </div>
 
       <div className="grid grid-cols-3 gap-5">
@@ -259,7 +281,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="flex flex-wrap gap-2 p-4">
             {(recentCheckins ?? []).map((c: any) => (
-              <div key={c.id} className="flex items-center gap-2 bg-brand-50 rounded-lg px-3 py-2">
+              <Link href="/staff/checkin" key={c.id} className="flex items-center gap-2 bg-brand-50 rounded-lg px-3 py-2 hover:bg-brand-100 transition">
                 <div className="w-6 h-6 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 text-[10px] font-bold">
                   {((c.student?.nickname || c.student?.full_name || '?')).slice(0,2)}
                 </div>
@@ -270,7 +292,7 @@ export default async function DashboardPage() {
                     {!c.check_out_at && ' (ยังอยู่)'}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
