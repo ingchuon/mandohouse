@@ -1,5 +1,4 @@
 'use client'
-// src/app/staff/courses/page.tsx
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatThaiMoney, getCourseTypeLabel, getCourseTypeClass } from '@/lib/utils'
@@ -18,7 +17,10 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
-  const [form, setForm] = useState({ name: '', type: 'group', description: '', total_lessons: 12, duration_minutes: 60, price: 3000, max_students: 5 })
+  const [form, setForm] = useState({
+    name: '', type: 'group', description: '', total_lessons: 12,
+    duration_minutes: 60, price: 3000, max_students: 5
+  })
 
   async function loadCourses() {
     const { data } = await supabase.from('courses').select('*').order('price')
@@ -29,13 +31,23 @@ export default function CoursesPage() {
 
   function openEdit(c: Course) {
     setEditing(c)
-    setForm({ name: c.name, type: c.type, description: c.description || '', total_lessons: c.total_lessons, duration_minutes: c.duration_minutes, price: c.price, max_students: c.max_students })
+    setForm({
+      name: c.name, type: c.type, description: c.description || '',
+      total_lessons: c.total_lessons, duration_minutes: c.duration_minutes,
+      price: c.price, max_students: c.max_students
+    })
     setShowForm(true)
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const payload = { ...form, price: Number(form.price), total_lessons: Number(form.total_lessons), duration_minutes: Number(form.duration_minutes), max_students: Number(form.max_students) }
+    const payload = {
+      ...form,
+      price: Number(form.price),
+      total_lessons: Number(form.total_lessons),
+      duration_minutes: Number(form.duration_minutes),
+      max_students: Number(form.max_students)
+    }
     if (editing) {
       const { error } = await supabase.from('courses').update(payload).eq('id', editing.id)
       if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
@@ -45,15 +57,16 @@ export default function CoursesPage() {
       if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
       toast.success('เพิ่มคอร์สแล้ว')
     }
-    setShowForm(false); setEditing(null)
+    setShowForm(false)
+    setEditing(null)
     loadCourses()
   }
 
   async function deleteCourse(c: Course) {
-    if (!confirm(`ลบคอร์ส "${c.name}" ใช่ไหม?`)) return
-    const { error } = await supabase.from('courses').delete().eq('id', c.id)
-    if (error) { toast.error('ลบไม่สำเร็จ (อาจมี enrollment อยู่)'); return }
-    toast.success('ลบคอร์สแล้ว')
+    if (!confirm(`ปิดคอร์ส "${c.name}" ใช่ไหม?`)) return
+    const { error } = await supabase.from('courses').update({ is_active: false }).eq('id', c.id)
+    if (error) { toast.error('ไม่สำเร็จ'); return }
+    toast.success('ปิดคอร์สแล้ว')
     loadCourses()
   }
 
@@ -84,7 +97,12 @@ export default function CoursesPage() {
             </div>
             <div className="flex gap-2 mt-4">
               <button onClick={() => openEdit(c)} className="btn-outline btn-sm flex-1 justify-center">แก้ไข</button>
-              <button onClick={() => supabase.from('courses').update({ is_active: !c.is_active }).eq('id', c.id).then(loadCourses)} className="btn-outline btn-sm flex-1 justify-center text-gray-500">{c.is_active ? 'ปิด' : 'เปิด'}</button>
+              <button
+                onClick={() => supabase.from('courses').update({ is_active: !c.is_active }).eq('id', c.id).then(loadCourses)}
+                className="btn-outline btn-sm flex-1 justify-center text-gray-500"
+              >
+                {c.is_active ? 'ปิด' : 'เปิด'}
+              </button>
               <button onClick={() => deleteCourse(c)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50 hover:border-red-200">🗑</button>
             </div>
           </div>
@@ -116,11 +134,23 @@ export default function CoursesPage() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div><label className="label">จำนวนครั้ง</label><input type="number" className="input" value={form.total_lessons} onChange={e => setForm({...form, total_lessons: Number(e.target.value)})} /></div>
-                <div><label className="label">นาที/ครั้ง</label><input type="number" className="input" value={form.duration_minutes} onChange={e => setForm({...form, duration_minutes: Number(e.target.value)})} /></div>
-                <div><label className="label">นักเรียนสูงสุด</label><input type="number" className="input" value={form.max_students} onChange={e => setForm({...form, max_students: Number(e.target.value)})} /></div>
+                <div>
+                  <label className="label">จำนวนครั้ง</label>
+                  <input type="number" className="input" value={form.total_lessons} onChange={e => setForm({...form, total_lessons: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="label">นาที/ครั้ง</label>
+                  <input type="number" className="input" value={form.duration_minutes} onChange={e => setForm({...form, duration_minutes: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="label">นักเรียนสูงสุด</label>
+                  <input type="number" className="input" value={form.max_students} onChange={e => setForm({...form, max_students: Number(e.target.value)})} />
+                </div>
               </div>
-              <div><label className="label">รายละเอียด</label><textarea className="input min-h-[70px] resize-none" value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
+              <div>
+                <label className="label">รายละเอียด</label>
+                <textarea className="input min-h-[70px] resize-none" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+              </div>
               <div className="flex gap-2 pt-1">
                 <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
                 <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
