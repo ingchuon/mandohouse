@@ -54,7 +54,7 @@ export default async function DashboardPage() {
       .single(),
   ])
 
-  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount) + Number(r.book_fee ?? 0), 0) ?? 0
   const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
@@ -71,17 +71,16 @@ export default async function DashboardPage() {
   const subjectColors: Record<string, string> = { chi: '#0F6E56', math: '#2563eb', eng: '#d97706', other: '#6b7280' }
 
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
- const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
-;(receiptsThisMonth ?? []).forEach((r: any) => {
-  const s = String(r.subject ?? '').toLowerCase()
-  const amt = Number(r.amount ?? 0)
-  const book = Number(r.book_fee ?? 0)
-  if (s.includes('chi') || s.includes('จีน')) subjectRevenue.chi += amt
-  else if (s.includes('math') || s.includes('คณิต')) subjectRevenue.math += amt
-  else if (s.includes('eng') || s.includes('อังกฤษ')) subjectRevenue.eng += amt
-  else subjectRevenue.other += amt
-  if (book > 0) subjectRevenue.other += book
-})
+  ;(receiptsThisMonth ?? []).forEach((r: any) => {
+    const s = String(r.subject ?? '').toLowerCase()
+    const amt = Number(r.amount ?? 0)
+    const book = Number(r.book_fee ?? 0)
+    if (s.includes('chi') || s.includes('จีน')) subjectRevenue.chi += amt
+    else if (s.includes('math') || s.includes('คณิต')) subjectRevenue.math += amt
+    else if (s.includes('eng') || s.includes('อังกฤษ')) subjectRevenue.eng += amt
+    else subjectRevenue.other += amt
+    if (book > 0) subjectRevenue.other += book
+  })
   const maxSubject = Math.max(...Object.values(subjectRevenue), 1)
 
   const expiring = (allActiveEnrollments ?? [])
