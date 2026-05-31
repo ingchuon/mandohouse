@@ -440,9 +440,11 @@ export default function TeachingPage() {
   }, [])
 
   useEffect(() => {
-    fetchLogs()
+    if (teachers.length > 0 || selectedTeacherId === '') {
+      fetchLogs()
+    }
     fetchEnrollments()
-  }, [fetchLogs, fetchEnrollments])
+  }, [fetchLogs, fetchEnrollments, teachers])
 
   /* สถิติรวม */
   const totalMinutes = logs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
