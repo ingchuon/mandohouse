@@ -25,9 +25,10 @@ const navItems = [
   {
     group: 'การสอน',
     items: [
-      { href: '/staff/schedule', label: 'ตารางสอน',     icon: '🗓' },
-      { href: '/staff/reviews',  label: 'รีวิวหลังสอน', icon: '⭐' },
-      { href: '/staff/courses',  label: 'คอร์สและราคา', icon: '📚' },
+      { href: '/staff/teaching', label: 'ชั่วโมงการสอน',  icon: '⏱' },
+      { href: '/staff/schedule', label: 'ตารางสอน',        icon: '🗓' },
+      { href: '/staff/reviews',  label: 'รีวิวหลังสอน',   icon: '⭐' },
+      { href: '/staff/courses',  label: 'คอร์สและราคา',   icon: '📚' },
     ],
   },
   {
@@ -48,7 +49,7 @@ const navItems = [
   {
     group: 'ทีมงาน',
     items: [
-      { href: '/staff/team',     label: 'จัดการทีม',     icon: '🎓' },
+      { href: '/staff/team',     label: 'จัดการทีม',      icon: '🎓' },
       { href: '/staff/settings', label: 'ตั้งค่ายอดเงิน', icon: '⚙️' },
     ],
   },
