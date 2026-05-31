@@ -12,6 +12,13 @@ interface Profile {
   full_name: string
 }
 
+interface Teacher {
+  id: string
+  full_name: string
+  subject: string | null
+  is_active: boolean
+}
+
 interface Course {
   id: string
   name: string
@@ -38,6 +45,7 @@ interface LessonLog {
   lesson_date: string
   lesson_number: number
   teacher_id: string | null
+  teacher_name: string | null
   topic: string | null
   homework: string | null
   duration_minutes: number
@@ -60,7 +68,7 @@ function LogModal({
 }) {
   const supabase = createClient()
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [teachers, setTeachers] = useState<Profile[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showAddTeacher, setShowAddTeacher] = useState(false)
@@ -88,14 +96,14 @@ function LogModal({
         .eq('status', 'active')
         .order('created_at', { ascending: false }),
       supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('role', ['teacher', 'admin', 'staff'])
+        .from('teachers')
+        .select('id, full_name, subject')
+        .eq('is_active', true)
         .order('full_name'),
     ]).then(([{ data: eData, error }, { data: tData }]) => {
       if (error) toast.error('โหลดข้อมูลคอร์สล้มเหลว')
       setEnrollments((eData as unknown as Enrollment[]) ?? [])
-      setTeachers((tData as Profile[]) ?? [])
+      setTeachers((tData as Teacher[]) ?? [])
       setLoading(false)
     })
   }, [])
@@ -104,14 +112,12 @@ function LogModal({
     if (!newTeacher.full_name.trim()) { toast.error('กรุณากรอกชื่อครู'); return }
     setSavingTeacher(true)
     const { data, error } = await supabase
-      .from('profiles')
+      .from('teachers')
       .insert({
-        id: crypto.randomUUID(),
         full_name: newTeacher.full_name.trim(),
-        role: 'teacher',
-        phone: newTeacher.subject ? `วิชา: ${newTeacher.subject}` : null,
+        subject: newTeacher.subject.trim() || null,
       })
-      .select('id, full_name')
+      .select('id, full_name, subject')
       .single()
 
     if (error) {
@@ -120,8 +126,8 @@ function LogModal({
       return
     }
     toast.success(`เพิ่มครู ${newTeacher.full_name} แล้ว`)
-    setTeachers(prev => [...prev, data as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name, 'th')))
-    setForm(f => ({ ...f, selected_teacher_id: (data as Profile).id }))
+    setTeachers(prev => [...prev, data as Teacher].sort((a, b) => a.full_name.localeCompare(b.full_name, 'th')))
+    setForm(f => ({ ...f, selected_teacher_id: (data as Teacher).id }))
     setNewTeacher({ full_name: '', subject: '' })
     setShowAddTeacher(false)
     setSavingTeacher(false)
@@ -146,10 +152,11 @@ function LogModal({
 
     const nextLesson = (last?.lesson_number ?? 0) + 1
 
+    const selectedTeacher = teachers.find(t => t.id === form.selected_teacher_id)
     const { error } = await supabase.from('lesson_logs').insert({
       enrollment_id: form.enrollment_id,
       student_id: enroll.student_id,
-      teacher_id: form.selected_teacher_id || teacherId,
+      teacher_name: selectedTeacher?.full_name ?? null,
       lesson_date: form.lesson_date,
       lesson_number: nextLesson,
       duration_minutes: form.duration_minutes,
@@ -335,7 +342,7 @@ export default function TeachingPage() {
   const supabase = createClient()
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
-  const [teachers, setTeachers] = useState<Profile[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date()
@@ -366,9 +373,9 @@ export default function TeachingPage() {
 
       if (admin) {
         const { data: all } = await supabase
-          .from('profiles')
+          .from('teachers')
           .select('id, full_name')
-          .in('role', ['teacher', 'admin'])
+          .eq('is_active', true)
           .order('full_name')
         setTeachers(all ?? [])
       }
@@ -388,7 +395,7 @@ export default function TeachingPage() {
       .from('lesson_logs')
       .select(`
         id, enrollment_id, student_id, lesson_date, lesson_number,
-        teacher_id, topic, homework, duration_minutes, created_at,
+        teacher_id, teacher_name, topic, homework, duration_minutes, created_at,
         enrollments (
           courses ( id, name, name_en, type ),
           profiles:student_id ( id, full_name )
