@@ -387,45 +387,7 @@ export default function TeachingPage() {
     })
   }, [])
 
-  /* โหลด lesson_logs ตาม teacher + เดือน */
-  const fetchLogs = useCallback(async () => {
-    setLoadingLogs(true)
-
-    const [year, month] = selectedMonth.split('-')
-    const from = `${year}-${month}-01`
-    const to   = new Date(+year, +month, 0).toISOString().slice(0, 10)
-
-    // หาชื่อครูที่เลือก
-    const selectedTeacher = teachers.find(t => t.id === selectedTeacherId)
-    const selectedTeacherName = selectedTeacher?.full_name
-
-    let query = supabase
-      .from('lesson_logs')
-      .select(`
-        id, enrollment_id, student_id, lesson_date, lesson_number,
-        teacher_id, teacher_name, topic, homework, duration_minutes, created_at,
-        enrollments (
-          courses ( id, name, name_en, type ),
-          students:student_id ( id, full_name, nickname )
-        )
-      `)
-      .gte('lesson_date', from)
-      .lte('lesson_date', to)
-      .order('lesson_date', { ascending: false })
-
-    // filter ตาม teacher_name ถ้าเลือกครูคนใดคนหนึ่ง ถ้าว่าง = ดึงทุกครู
-    if (selectedTeacherId && selectedTeacherName) {
-      query = query.eq('teacher_name', selectedTeacherName)
-    }
-
-    const { data, error } = await query
-
-    if (error) toast.error('โหลดข้อมูลล้มเหลว')
-    setLogs((data as unknown as LessonLog[]) ?? [])
-    setLoadingLogs(false)
-  }, [selectedTeacherId, selectedMonth, teachers])
-
-  /* โหลด enrollments (ฝั่งขวา) — ดึงทั้งหมด teacher_id อาจยัง NULL */
+  /* โหลด enrollments (ฝั่งขวา) */
   const fetchEnrollments = useCallback(async () => {
     const { data } = await supabase
       .from('enrollments')
@@ -439,12 +401,47 @@ export default function TeachingPage() {
     setEnrollments((data as unknown as Enrollment[]) ?? [])
   }, [])
 
+  /* โหลด lesson_logs — รันทุกครั้งที่ selectedTeacherId หรือ selectedMonth เปลี่ยน */
   useEffect(() => {
-    if (teachers.length > 0 || selectedTeacherId === '') {
-      fetchLogs()
+    async function loadLogs() {
+      setLoadingLogs(true)
+
+      const [year, month] = selectedMonth.split('-')
+      const from = `${year}-${month}-01`
+      const to   = new Date(+year, +month, 0).toISOString().slice(0, 10)
+
+      const selectedTeacherName = teachers.find(t => t.id === selectedTeacherId)?.full_name
+
+      let query = supabase
+        .from('lesson_logs')
+        .select(`
+          id, enrollment_id, student_id, lesson_date, lesson_number,
+          teacher_id, teacher_name, topic, homework, duration_minutes, created_at,
+          enrollments (
+            courses ( id, name, name_en, type ),
+            students:student_id ( id, full_name, nickname )
+          )
+        `)
+        .gte('lesson_date', from)
+        .lte('lesson_date', to)
+        .order('lesson_date', { ascending: false })
+
+      if (selectedTeacherId && selectedTeacherName) {
+        query = query.eq('teacher_name', selectedTeacherName)
+      }
+
+      const { data, error } = await query
+      if (error) toast.error('โหลดข้อมูลล้มเหลว')
+      setLogs((data as unknown as LessonLog[]) ?? [])
+      setLoadingLogs(false)
     }
+
+    loadLogs()
+  }, [selectedTeacherId, selectedMonth, teachers])
+
+  useEffect(() => {
     fetchEnrollments()
-  }, [fetchLogs, fetchEnrollments, teachers])
+  }, [fetchEnrollments])
 
   /* สถิติรวม */
   const totalMinutes = logs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
@@ -757,7 +754,7 @@ export default function TeachingPage() {
         <LogModal
           teacherId={selectedTeacherId || (currentUser?.id ?? '')}
           onClose={() => setShowModal(false)}
-          onSaved={() => { fetchLogs(); fetchEnrollments() }}
+          onSaved={() => { setSelectedMonth(m => m); fetchEnrollments() }}
         />
       )}
     </div>
