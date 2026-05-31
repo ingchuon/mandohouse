@@ -405,6 +405,7 @@ export default function TeachingPage() {
   useEffect(() => {
     async function loadLogs() {
       setLoadingLogs(true)
+      console.log('loadLogs', { selectedTeacherId, selectedMonth, teachersCount: teachers.length, teachers: teachers.map(t => t.full_name) })
 
       const [year, month] = selectedMonth.split('-')
       const from = `${year}-${month}-01`
