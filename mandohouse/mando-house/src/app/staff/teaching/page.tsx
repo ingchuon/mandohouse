@@ -60,11 +60,13 @@ function LogModal({
 }) {
   const supabase = createClient()
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [teachers, setTeachers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
     enrollment_id: '',
+    selected_teacher_id: teacherId,
     lesson_date: new Date().toISOString().slice(0, 10),
     duration_minutes: 60,
     topic: '',
@@ -72,20 +74,27 @@ function LogModal({
   })
 
   useEffect(() => {
-    supabase
-      .from('enrollments')
-      .select(`
-        id, student_id, course_id, teacher_id, lessons_used, lessons_total, status,
-        courses ( id, name, name_en, type ),
-        profiles:student_id ( id, full_name )
-      `)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) toast.error('โหลดข้อมูลคอร์สล้มเหลว')
-        setEnrollments((data as unknown as Enrollment[]) ?? [])
-        setLoading(false)
-      })
+    Promise.all([
+      supabase
+        .from('enrollments')
+        .select(`
+          id, student_id, course_id, teacher_id, lessons_used, lessons_total, status,
+          courses ( id, name, name_en, type ),
+          profiles:student_id ( id, full_name )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('role', ['teacher', 'admin', 'staff'])
+        .order('full_name'),
+    ]).then(([{ data: eData, error }, { data: tData }]) => {
+      if (error) toast.error('โหลดข้อมูลคอร์สล้มเหลว')
+      setEnrollments((eData as unknown as Enrollment[]) ?? [])
+      setTeachers((tData as Profile[]) ?? [])
+      setLoading(false)
+    })
   }, [])
 
   async function handleSave() {
@@ -110,7 +119,7 @@ function LogModal({
     const { error } = await supabase.from('lesson_logs').insert({
       enrollment_id: form.enrollment_id,
       student_id: enroll.student_id,
-      teacher_id: teacherId,
+      teacher_id: form.selected_teacher_id || teacherId,
       lesson_date: form.lesson_date,
       lesson_number: nextLesson,
       duration_minutes: form.duration_minutes,
@@ -148,6 +157,23 @@ function LogModal({
           <div className="py-8 text-center text-gray-400">กำลังโหลด...</div>
         ) : (
           <div className="space-y-4">
+            {/* เลือกครู */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ครูผู้สอน <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                value={form.selected_teacher_id}
+                onChange={e => setForm(f => ({ ...f, selected_teacher_id: e.target.value }))}
+              >
+                <option value="">— เลือกครู —</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.full_name}</option>
+                ))}
+              </select>
+            </div>
+
             {/* เลือกคอร์ส/นักเรียน */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
