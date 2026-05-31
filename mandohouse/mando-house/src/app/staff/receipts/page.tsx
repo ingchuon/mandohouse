@@ -66,7 +66,6 @@ export default function ReceiptsPage() {
     e.preventDefault()
 
     if (editReceipt) {
-      // แก้ไข
       const { error } = await supabase.from('receipts').update({
         payment_method: form.payment_method,
         notes: form.notes || null,
@@ -76,7 +75,6 @@ export default function ReceiptsPage() {
       if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
       toast.success('แก้ไขแล้ว')
     } else {
-      // เพิ่มใหม่
       const en = enrollments.find(x => x.id === form.enrollment_id)
       if (!en) { toast.error('กรุณาเลือกนักเรียน'); return }
 
@@ -130,21 +128,25 @@ export default function ReceiptsPage() {
       <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number}</title>
       <style>
         body{font-family:'Noto Sans Thai',sans-serif;padding:40px;max-width:480px;margin:0 auto;color:#111}
-        .logo{font-size:24px;font-weight:700;text-align:center;margin-bottom:4px}
-        .sub{color:#666;font-size:14px;text-align:center;margin-bottom:20px}
+        .logo{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px}
+        .sub{color:#444;font-size:13px;text-align:center;line-height:1.8;margin-bottom:6px}
+        .receipt-label{color:#666;font-size:13px;text-align:center;margin-bottom:20px}
         .divider{border:0;border-top:1px solid #eee;margin:16px 0}
         .row{display:flex;justify-content:space-between;font-size:14px;padding:6px 0}
         .total{font-size:16px;font-weight:700;border-top:2px solid #111;margin-top:8px;padding-top:12px}
         .footer{text-align:center;font-size:13px;color:#666;margin-top:24px}
         @media print{@page{margin:20mm}}
       </style></head><body>
-      <div class="logo">曼 Mando House</div>
-      <div class="sub">ใบเสร็จรับเงิน · Receipt</div>
+      <div class="logo">Mando House</div>
+      <div class="sub">
+        สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br>
+        085-0930111 ， 097-1727677
+      </div>
+      <div class="receipt-label">ใบเสร็จรับเงิน · Receipt</div>
       <hr class="divider">
       <div class="row"><span>เลขที่</span><span>${r.receipt_number ?? '—'}</span></div>
       <div class="row"><span>วันที่</span><span>${formatDate(r.issued_at)}</span></div>
       <div class="row"><span>นักเรียน</span><span>${r.student?.nickname || r.student?.full_name || '—'}</span></div>
-      <div class="row"><span>ผู้ปกครอง</span><span>${r.student?.parent_name || '—'}</span></div>
       <hr class="divider">
       ${items.length > 0 ? items.map((it: any) => `
         <div class="row"><span>${it.description ?? '—'}</span><span></span></div>
@@ -219,7 +221,6 @@ export default function ReceiptsPage() {
         </table>
       </div>
 
-      {/* Issue / Edit Receipt Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
@@ -277,15 +278,18 @@ export default function ReceiptsPage() {
                 </div>
               </form>
 
-              {/* Preview (เฉพาะตอนสร้างใหม่) */}
               {!editReceipt && (
                 <div className="p-5">
                   <p className="text-xs text-gray-400 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
                   {preview ? (
                     <div className="border border-gray-100 rounded-xl p-5 font-mono text-sm">
-                      <div className="text-center mb-4">
-                        <div className="text-lg font-bold">曼 Mando House</div>
-                        <div className="text-xs text-gray-500">ใบเสร็จรับเงิน</div>
+                      <div className="text-center mb-2">
+                        <div className="text-base font-bold">Mando House</div>
+                        <div className="text-[11px] text-gray-500 leading-relaxed">
+                          สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br/>
+                          085-0930111 ， 097-1727677
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">ใบเสร็จรับเงิน</div>
                       </div>
                       <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
                         <div className="flex justify-between"><span className="text-gray-500">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
