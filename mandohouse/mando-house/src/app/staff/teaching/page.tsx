@@ -371,29 +371,40 @@ export default function TeachingPage() {
       setCurrentUser(profile)
       const admin = profile.role === 'admin'
       setIsAdmin(admin)
-      setSelectedTeacherId(profile.id)
 
-      if (admin) {
-        const { data: all } = await supabase
-          .from('teachers')
-          .select('id, full_name, subject, is_active')
-          .eq('is_active', true)
-          .order('full_name')
-        setTeachers((all as Teacher[]) ?? [])
+      // ดึง teachers ทุกคนเสมอ
+      const { data: all } = await supabase
+        .from('teachers')
+        .select('id, full_name, subject, is_active')
+        .eq('is_active', true)
+        .order('full_name')
+      const teacherList = (all as Teacher[]) ?? []
+      setTeachers(teacherList)
+      setIsAdmin(admin)
+
+      // pre-select ครูคนแรก หรือครูที่ชื่อตรงกับ profile
+      if (teacherList.length > 0) {
+        const matched = teacherList.find(t =>
+          t.full_name.toLowerCase() === (profile.full_name ?? '').toLowerCase()
+        )
+        setSelectedTeacherId(matched?.id ?? teacherList[0].id)
       }
     })
   }, [])
 
   /* โหลด lesson_logs ตาม teacher + เดือน */
   const fetchLogs = useCallback(async () => {
-    if (!selectedTeacherId) return
     setLoadingLogs(true)
 
     const [year, month] = selectedMonth.split('-')
     const from = `${year}-${month}-01`
-    const to   = new Date(+year, +month, 0).toISOString().slice(0, 10) // end of month
+    const to   = new Date(+year, +month, 0).toISOString().slice(0, 10)
 
-    const { data, error } = await supabase
+    // หาชื่อครูที่เลือก
+    const selectedTeacher = teachers.find(t => t.id === selectedTeacherId)
+    const selectedTeacherName = selectedTeacher?.full_name
+
+    let query = supabase
       .from('lesson_logs')
       .select(`
         id, enrollment_id, student_id, lesson_date, lesson_number,
@@ -403,15 +414,21 @@ export default function TeachingPage() {
           students:student_id ( id, full_name, nickname )
         )
       `)
-      .eq('teacher_id', selectedTeacherId)
       .gte('lesson_date', from)
       .lte('lesson_date', to)
       .order('lesson_date', { ascending: false })
 
+    // filter ตาม teacher_name ถ้าเลือกครูคนใดคนหนึ่ง
+    if (selectedTeacherName) {
+      query = query.eq('teacher_name', selectedTeacherName)
+    }
+
+    const { data, error } = await query
+
     if (error) toast.error('โหลดข้อมูลล้มเหลว')
     setLogs((data as unknown as LessonLog[]) ?? [])
     setLoadingLogs(false)
-  }, [selectedTeacherId, selectedMonth])
+  }, [selectedTeacherId, selectedMonth, teachers])
 
   /* โหลด enrollments (ฝั่งขวา) — ดึงทั้งหมด teacher_id อาจยัง NULL */
   const fetchEnrollments = useCallback(async () => {
