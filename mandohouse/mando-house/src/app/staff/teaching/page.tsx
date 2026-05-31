@@ -374,10 +374,10 @@ export default function TeachingPage() {
       if (admin) {
         const { data: all } = await supabase
           .from('teachers')
-          .select('id, full_name')
+          .select('id, full_name, subject, is_active')
           .eq('is_active', true)
           .order('full_name')
-        setTeachers(all ?? [])
+        setTeachers((all as Teacher[]) ?? [])
       }
     })
   }, [])
