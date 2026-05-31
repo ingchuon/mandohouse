@@ -80,6 +80,7 @@ function LogModal({
         profiles:student_id ( id, full_name )
       `)
       .eq('status', 'active')
+      .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (error) toast.error('โหลดข้อมูลคอร์สล้มเหลว')
         setEnrollments((data as unknown as Enrollment[]) ?? [])
@@ -310,9 +311,8 @@ export default function TeachingPage() {
     setLoadingLogs(false)
   }, [selectedTeacherId, selectedMonth])
 
-  /* โหลด enrollments ของ teacher (ฝั่งขวา) */
+  /* โหลด enrollments (ฝั่งขวา) — ดึงทั้งหมด teacher_id อาจยัง NULL */
   const fetchEnrollments = useCallback(async () => {
-    if (!selectedTeacherId) return
     const { data } = await supabase
       .from('enrollments')
       .select(`
@@ -320,11 +320,10 @@ export default function TeachingPage() {
         courses ( id, name, name_en, type ),
         profiles:student_id ( id, full_name )
       `)
-      .eq('teacher_id', selectedTeacherId)
       .eq('status', 'active')
       .order('lessons_used', { ascending: false })
     setEnrollments((data as unknown as Enrollment[]) ?? [])
-  }, [selectedTeacherId])
+  }, [])
 
   useEffect(() => {
     fetchLogs()
