@@ -580,7 +580,7 @@ export default function TeachingPage() {
       {/* Modal */}
       {showModal && (
         <LogModal
-          teacherId={selectedTeacherId || currentUser?.id ?? ''}
+          teacherId={selectedTeacherId || (currentUser?.id ?? '')}
           onClose={() => setShowModal(false)}
           onSaved={() => { fetchLogs(); fetchEnrollments() }}
         />
