@@ -24,7 +24,6 @@ export default async function DashboardPage() {
     { data: allActiveEnrollments },
     { data: recentCheckins },
     { data: recentReviews },
-    { data: expensesThisMonth },
     { data: allReceipts },
     { data: monthlyBalance },
   ] = await Promise.all([
@@ -44,9 +43,6 @@ export default async function DashboardPage() {
       .select('*, student:students(nickname, full_name)')
       .order('created_at', { ascending: false })
       .limit(5),
-    supabase.from('expenses')
-      .select('amount')
-      .gte('expense_date', firstOfMonth),
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
       .select('carry_over, total_carry_over')
@@ -56,12 +52,10 @@ export default async function DashboardPage() {
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
-  const totalExpenseThisMonth = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const carryOver = (monthlyBalance as any)?.carry_over ?? 0
   const totalCarryOver = Number((monthlyBalance as any)?.total_carry_over ?? 0)
   const totalAllRevenue = totalCarryOver > 0 ? totalCarryOver : totalAllRevenueFromDB
-  const netThisMonth = revenueThisMonth - totalExpenseThisMonth
   const revenuePct = revenueLastMonth > 0
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
     : 0
@@ -100,8 +94,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ยอดสรุปการเงิน */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* ยอดสรุปการเงิน — 3 card (ตัดรายจ่ายออก) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
           <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
@@ -121,64 +115,29 @@ export default async function DashboardPage() {
             {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
         </Link>
-        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
-          <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
-          <div className="text-xl font-semibold text-red-500">{formatThaiMoney(totalExpenseThisMonth)}</div>
-          <div className="text-xs text-gray-400 mt-1">ค่าใช้จ่ายรวม</div>
-        </Link>
       </div>
 
-      {/* เงินคงเหลือ + กราฟวิชา */}
-      <div className="grid grid-cols-3 gap-5 mb-6">
-        <div className="card p-5">
-          <h3 className="font-medium text-gray-800 mb-4">💵 เงินคงเหลือเดือนนี้</h3>
-          <div className={`text-3xl font-bold mb-2 ${netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
-            {netThisMonth >= 0 ? '+' : ''}{formatThaiMoney(netThisMonth)}
-          </div>
-          <div className="text-xs text-gray-400 mb-4">รายรับ - รายจ่าย</div>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-gray-500">ยกมา</span>
-              <span className="font-medium">{formatThaiMoney(carryOver)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">+ รายรับ</span>
-              <span className="font-medium text-brand-600">{formatThaiMoney(revenueThisMonth)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">- รายจ่าย</span>
-              <span className="font-medium text-red-500">{formatThaiMoney(totalExpenseThisMonth)}</span>
-            </div>
-            <div className="flex justify-between border-t border-gray-100 pt-2">
-              <span className="font-medium">คงเหลือ</span>
-              <span className={`font-bold ${(carryOver + netThisMonth) >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
-                {formatThaiMoney(carryOver + netThisMonth)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-span-2 card p-5">
-          <h3 className="font-medium text-gray-800 mb-4">📊 รายได้แยกตามวิชาเดือนนี้</h3>
-          <div className="space-y-3">
-            {subjects.map(s => (
-              <div key={s}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-700 text-xs">{subjectLabels[s]}</span>
-                  <span className="font-medium text-xs" style={{ color: subjectColors[s] }}>
-                    {formatThaiMoney(subjectRevenue[s])}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all"
-                    style={{ width: `${Math.round((subjectRevenue[s] / maxSubject) * 100)}%`, background: subjectColors[s] }} />
-                </div>
-                <div className="text-[10px] text-gray-400 text-right mt-0.5">
-                  {revenueThisMonth > 0 ? Math.round((subjectRevenue[s] / revenueThisMonth) * 100) : 0}%
-                </div>
+      {/* กราฟวิชา (full width) */}
+      <div className="card p-5 mb-6">
+        <h3 className="font-medium text-gray-800 mb-4">📊 รายได้แยกตามวิชาเดือนนี้</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+          {subjects.map(s => (
+            <div key={s}>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-gray-700 text-xs">{subjectLabels[s]}</span>
+                <span className="font-medium text-xs" style={{ color: subjectColors[s] }}>
+                  {formatThaiMoney(subjectRevenue[s])}
+                </span>
               </div>
-            ))}
-          </div>
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all"
+                  style={{ width: `${Math.round((subjectRevenue[s] / maxSubject) * 100)}%`, background: subjectColors[s] }} />
+              </div>
+              <div className="text-[10px] text-gray-400 text-right mt-0.5">
+                {revenueThisMonth > 0 ? Math.round((subjectRevenue[s] / revenueThisMonth) * 100) : 0}%
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -211,14 +170,14 @@ export default async function DashboardPage() {
           <div className={`text-xs mt-1 ${expiring.length > 0 ? 'text-red-500' : 'text-gray-400'}`}>ต้องต่อคอร์ส</div>
         </Link>
 
-        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-500">กำไรสุทธิเดือนนี้</span>
+            <span className="text-xs text-gray-500">รายรับสะสมเดือนนี้</span>
             <span className="text-lg">📊</span>
           </div>
-          <div className="text-2xl font-semibold text-gray-900">{formatThaiMoney(netThisMonth)}</div>
-          <div className={`text-xs mt-1 ${netThisMonth >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
-            {revenueThisMonth > 0 ? Math.round((netThisMonth / revenueThisMonth) * 100) : 0}% margin
+          <div className="text-2xl font-semibold text-gray-900">{formatThaiMoney(revenueThisMonth)}</div>
+          <div className="text-xs mt-1 text-brand-600">
+            {receiptsThisMonth?.length ?? 0} ใบเสร็จ
           </div>
         </Link>
       </div>
