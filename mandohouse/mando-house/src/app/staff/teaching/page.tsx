@@ -382,13 +382,8 @@ export default function TeachingPage() {
       setTeachers(teacherList)
       setIsAdmin(admin)
 
-      // pre-select ครูคนแรก หรือครูที่ชื่อตรงกับ profile
-      if (teacherList.length > 0) {
-        const matched = teacherList.find(t =>
-          t.full_name.toLowerCase() === (profile.full_name ?? '').toLowerCase()
-        )
-        setSelectedTeacherId(matched?.id ?? teacherList[0].id)
-      }
+      // default = แสดงทุกครู (ค่าว่าง)
+      setSelectedTeacherId('')
     })
   }, [])
 
@@ -418,8 +413,8 @@ export default function TeachingPage() {
       .lte('lesson_date', to)
       .order('lesson_date', { ascending: false })
 
-    // filter ตาม teacher_name ถ้าเลือกครูคนใดคนหนึ่ง
-    if (selectedTeacherName) {
+    // filter ตาม teacher_name ถ้าเลือกครูคนใดคนหนึ่ง ถ้าว่าง = ดึงทุกครู
+    if (selectedTeacherId && selectedTeacherName) {
       query = query.eq('teacher_name', selectedTeacherName)
     }
 
@@ -558,18 +553,12 @@ export default function TeachingPage() {
     return m ? `${h}ชม. ${m}น.` : `${h} ชม.`
   }
 
-  const displayTeacher = isAdmin
-    ? teachers.find(t => t.id === selectedTeacherId)?.full_name
-    : currentUser?.full_name
+  const displayTeacher = selectedTeacherId
+    ? (teachers.find(t => t.id === selectedTeacherId)?.full_name ?? currentUser?.full_name)
+    : 'ครูทุกคน'  
 
   return (
     <div className="min-h-screen bg-[#F5F4F0] p-6">
-      {/* Debug bar */}
-      <div className="text-xs bg-yellow-100 border border-yellow-300 rounded-lg p-2 mb-4 text-yellow-800">
-        selectedTeacherId: <b>{selectedTeacherId || '(ว่าง)'}</b> |{' '}
-        teachers: <b>{teachers.length > 0 ? teachers.map(t => t.full_name + '(' + t.id.slice(0,6) + ')').join(', ') : '(ยังไม่โหลด)'}</b> |{' '}
-        logs: <b>{logs.length}</b>
-      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -604,17 +593,16 @@ export default function TeachingPage() {
           ))}
         </select>
 
-        {isAdmin && (
-          <select
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-            value={selectedTeacherId}
-            onChange={e => setSelectedTeacherId(e.target.value)}
-          >
-            {teachers.map(t => (
-              <option key={t.id} value={t.id}>{t.full_name}</option>
-            ))}
-          </select>
-        )}
+        <select
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+          value={selectedTeacherId}
+          onChange={e => setSelectedTeacherId(e.target.value)}
+        >
+          <option value="">ครูทุกคน</option>
+          {teachers.map(t => (
+            <option key={t.id} value={t.id}>{t.full_name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Teacher card + stats */}
