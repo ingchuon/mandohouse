@@ -564,6 +564,12 @@ export default function TeachingPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F4F0] p-6">
+      {/* Debug bar */}
+      <div className="text-xs bg-yellow-100 border border-yellow-300 rounded-lg p-2 mb-4 text-yellow-800">
+        selectedTeacherId: <b>{selectedTeacherId || '(ว่าง)'}</b> |{' '}
+        teachers: <b>{teachers.length > 0 ? teachers.map(t => t.full_name + '(' + t.id.slice(0,6) + ')').join(', ') : '(ยังไม่โหลด)'}</b> |{' '}
+        logs: <b>{logs.length}</b>
+      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
