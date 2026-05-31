@@ -356,6 +356,7 @@ export default function TeachingPage() {
   const [loadingLogs, setLoadingLogs] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [teachersLoaded, setTeachersLoaded] = useState(false)
 
   /* โหลด user + teachers */
   useEffect(() => {
@@ -381,6 +382,7 @@ export default function TeachingPage() {
       const teacherList = (all as Teacher[]) ?? []
       setTeachers(teacherList)
       setIsAdmin(admin)
+      setTeachersLoaded(true)
 
       // default = แสดงทุกครู (ค่าว่าง)
       setSelectedTeacherId('')
@@ -403,7 +405,7 @@ export default function TeachingPage() {
 
   /* โหลด lesson_logs — รันทุกครั้งที่ selectedTeacherId หรือ selectedMonth เปลี่ยน */
   useEffect(() => {
-    if (teachers.length === 0) return  // รอ teachers โหลดก่อน
+    if (!teachersLoaded) return  // รอ teachers โหลดก่อน
 
     async function loadLogs() {
       setLoadingLogs(true)
@@ -439,7 +441,7 @@ export default function TeachingPage() {
     }
 
     loadLogs()
-  }, [selectedTeacherId, selectedMonth, teachers])
+  }, [selectedTeacherId, selectedMonth, teachers, teachersLoaded])
 
   useEffect(() => {
     fetchEnrollments()
