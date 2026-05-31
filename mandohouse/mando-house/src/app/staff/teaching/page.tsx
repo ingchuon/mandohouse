@@ -403,9 +403,10 @@ export default function TeachingPage() {
 
   /* โหลด lesson_logs — รันทุกครั้งที่ selectedTeacherId หรือ selectedMonth เปลี่ยน */
   useEffect(() => {
+    if (teachers.length === 0) return  // รอ teachers โหลดก่อน
+
     async function loadLogs() {
       setLoadingLogs(true)
-      console.log('loadLogs', { selectedTeacherId, selectedMonth, teachersCount: teachers.length, teachers: teachers.map(t => t.full_name) })
 
       const [year, month] = selectedMonth.split('-')
       const from = `${year}-${month}-01`
