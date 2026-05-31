@@ -448,28 +448,89 @@ export default function TeachingPage() {
   })
 
   /* Export Excel */
-  function handleExport() {
-    if (logs.length === 0) { toast.error('ไม่มีข้อมูลให้ Export'); return }
+  async function handleExport() {
+    toast.loading('กำลังดึงข้อมูล...')
 
-    const teacherName = isAdmin
-      ? teachers.find(t => t.id === selectedTeacherId)?.full_name ?? 'ครู'
-      : currentUser?.full_name ?? 'ครู'
+    const [year, month] = selectedMonth.split('-')
+    const from = `${year}-${month}-01`
+    const to   = new Date(+year, +month, 0).toISOString().slice(0, 10)
 
-    const rows = logs.map(l => ({
-      วันที่:       l.lesson_date,
-      นักเรียน:     l.enrollments?.profiles?.full_name ?? '',
-      คอร์ส:        l.enrollments?.courses?.name ?? '',
-      'ครั้งที่':   l.lesson_number,
-      'ชั่วโมง(น.)': l.duration_minutes,
-      หัวข้อ:       l.topic ?? '',
-      การบ้าน:      l.homework ?? '',
-    }))
+    // ดึง log ทุกครูในเดือนนี้
+    const { data: allLogs, error } = await supabase
+      .from('lesson_logs')
+      .select(`
+        id, lesson_date, lesson_number, teacher_name, duration_minutes, topic, homework,
+        enrollments (
+          courses ( name ),
+          students:student_id ( full_name, nickname )
+        )
+      `)
+      .gte('lesson_date', from)
+      .lte('lesson_date', to)
+      .order('teacher_name', { ascending: true })
+      .order('lesson_date', { ascending: true })
 
-    const ws = XLSX.utils.json_to_sheet(rows)
+    toast.dismiss()
+
+    if (error || !allLogs || allLogs.length === 0) {
+      toast.error('ไม่มีข้อมูลให้ Export')
+      return
+    }
+
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'ชั่วโมงการสอน')
-    XLSX.writeFile(wb, `teaching_${teacherName}_${selectedMonth}.xlsx`)
-    toast.success('Export สำเร็จ')
+
+    // แยก log ตามครู
+    const byTeacher: Record<string, any[]> = {}
+    ;(allLogs as any[]).forEach(l => {
+      const name = l.teacher_name ?? 'ไม่ระบุครู'
+      if (!byTeacher[name]) byTeacher[name] = []
+      byTeacher[name].push(l)
+    })
+
+    Object.entries(byTeacher).forEach(([teacherName, tLogs]) => {
+      const totalMin = tLogs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
+      const totalHr  = (totalMin / 60).toFixed(1)
+
+      const rows = tLogs.map(l => ({
+        วันที่:           l.lesson_date,
+        นักเรียน:         (l.enrollments as any)?.students?.nickname || (l.enrollments as any)?.students?.full_name || '—',
+        คอร์ส:            (l.enrollments as any)?.courses?.name ?? '—',
+        'ครั้งที่':       l.lesson_number ?? '',
+        'เวลา(นาที)':     l.duration_minutes ?? 0,
+        'เวลา(ชั่วโมง)':  ((l.duration_minutes ?? 0) / 60).toFixed(2),
+        หัวข้อ:           l.topic ?? '',
+        การบ้าน:          l.homework ?? '',
+      }))
+
+      // แถวสรุป
+      rows.push({} as any)
+      rows.push({
+        วันที่:           'รวมทั้งหมด',
+        นักเรียน:         `${tLogs.length} ครั้ง`,
+        คอร์ส:            '',
+        'ครั้งที่':       '',
+        'เวลา(นาที)':     totalMin,
+        'เวลา(ชั่วโมง)':  totalHr,
+        หัวข้อ:           '',
+        การบ้าน:          '',
+      } as any)
+
+      const ws = XLSX.utils.json_to_sheet(rows)
+
+      // ปรับความกว้างคอลัมน์
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 16 }, { wch: 24 },
+        { wch: 8 },  { wch: 12 }, { wch: 14 },
+        { wch: 24 }, { wch: 24 },
+      ]
+
+      // sheet name ห้ามยาวเกิน 31 ตัว
+      const sheetName = teacherName.slice(0, 31)
+      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    })
+
+    XLSX.writeFile(wb, `teaching_all_${selectedMonth}.xlsx`)
+    toast.success(`Export สำเร็จ ${Object.keys(byTeacher).length} ครู`)
   }
 
   /* formatMinutes */
