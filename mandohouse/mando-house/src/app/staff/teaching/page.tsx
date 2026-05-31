@@ -35,7 +35,8 @@ interface Enrollment {
   lessons_total: number
   status: string
   courses: Course | null
-  profiles: Profile | null          // student
+  profiles: Profile | null
+  students: { id: string; full_name: string; nickname: string | null } | null
 }
 
 interface LessonLog {
@@ -52,7 +53,8 @@ interface LessonLog {
   created_at: string
   enrollments: {
     courses: Course | null
-    profiles: Profile | null        // student
+    profiles: Profile | null
+    students: { id: string; full_name: string; nickname: string | null } | null
   } | null
 }
 
@@ -91,7 +93,7 @@ function LogModal({
         .select(`
           id, student_id, course_id, teacher_id, lessons_used, lessons_total, status,
           courses ( id, name, name_en, type ),
-          profiles:student_id ( id, full_name )
+          students:student_id ( id, full_name, nickname )
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false }),
@@ -261,7 +263,7 @@ function LogModal({
                 <option value="">— เลือกนักเรียน —</option>
                 {enrollments.map(e => (
                   <option key={e.id} value={e.id}>
-                    {e.profiles?.full_name ?? '?'} — {e.courses?.name ?? '?'}
+                    {(e as any).students?.nickname || (e as any).students?.full_name || e.profiles?.full_name || '?'} — {e.courses?.name ?? '?'}
                     {' '}({e.lessons_used}/{e.lessons_total})
                   </option>
                 ))}
@@ -398,7 +400,7 @@ export default function TeachingPage() {
         teacher_id, teacher_name, topic, homework, duration_minutes, created_at,
         enrollments (
           courses ( id, name, name_en, type ),
-          profiles:student_id ( id, full_name )
+          students:student_id ( id, full_name, nickname )
         )
       `)
       .eq('teacher_id', selectedTeacherId)
@@ -418,7 +420,7 @@ export default function TeachingPage() {
       .select(`
         id, student_id, course_id, teacher_id, lessons_used, lessons_total, status,
         courses ( id, name, name_en, type ),
-        profiles:student_id ( id, full_name )
+        students:student_id ( id, full_name, nickname )
       `)
       .eq('status', 'active')
       .order('lessons_used', { ascending: false })
@@ -595,7 +597,7 @@ export default function TeachingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm text-gray-800">
-                          {log.enrollments?.profiles?.full_name ?? '—'}
+                          {(log.enrollments as any)?.students?.nickname || (log.enrollments as any)?.students?.full_name || log.enrollments?.profiles?.full_name ?? '—'}
                         </span>
                         <span className="text-xs text-gray-400">·</span>
                         <span className="text-xs text-gray-500">
@@ -643,7 +645,7 @@ export default function TeachingPage() {
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div>
                           <div className="text-sm font-medium text-gray-800">
-                            {e.profiles?.full_name ?? '—'}
+                            {(e as any).students?.nickname || (e as any).students?.full_name || e.profiles?.full_name || '—'}
                           </div>
                           <div className="text-xs text-gray-400 mt-0.5">
                             {e.courses?.name ?? '—'}
