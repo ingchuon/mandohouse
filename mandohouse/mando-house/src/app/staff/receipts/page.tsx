@@ -137,6 +137,7 @@ export default function ReceiptsPage() {
         .footer{text-align:center;font-size:13px;color:#666;margin-top:24px}
         @media print{@page{margin:20mm}}
       </style></head><body>
+      <div style="text-align:center;margin-bottom:10px"><img src="https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png" style="height:64px;object-fit:contain" alt="Mando House" /></div>
       <div class="logo">Mando House</div>
       <div class="sub">
         สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br>
