@@ -597,7 +597,7 @@ export default function TeachingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm text-gray-800">
-                          {((log.enrollments as any)?.students?.nickname || (log.enrollments as any)?.students?.full_name || log.enrollments?.profiles?.full_name ?? '—') ?? '—'}
+                          {((log.enrollments as any)?.students?.nickname || (log.enrollments as any)?.students?.full_name || (log.enrollments?.profiles?.full_name) || '—')}
                         </span>
                         <span className="text-xs text-gray-400">·</span>
                         <span className="text-xs text-gray-500">
