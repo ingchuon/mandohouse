@@ -380,9 +380,11 @@ export default function TeachingPage() {
         .eq('is_active', true)
         .order('full_name')
       const teacherList = (all as Teacher[]) ?? []
+      console.log('teachers loaded:', teacherList.length, teacherList.map(t => t.full_name))
       setTeachers(teacherList)
       setIsAdmin(admin)
       setTeachersLoaded(true)
+      console.log('teachersLoaded set to true')
 
       // default = แสดงทุกครู (ค่าว่าง)
       setSelectedTeacherId('')
