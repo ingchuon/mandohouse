@@ -63,6 +63,9 @@ function LogModal({
   const [teachers, setTeachers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showAddTeacher, setShowAddTeacher] = useState(false)
+  const [newTeacher, setNewTeacher] = useState({ full_name: '', subject: '' })
+  const [savingTeacher, setSavingTeacher] = useState(false)
 
   const [form, setForm] = useState({
     enrollment_id: '',
@@ -96,6 +99,33 @@ function LogModal({
       setLoading(false)
     })
   }, [])
+
+  async function handleAddTeacher() {
+    if (!newTeacher.full_name.trim()) { toast.error('กรุณากรอกชื่อครู'); return }
+    setSavingTeacher(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: crypto.randomUUID(),
+        full_name: newTeacher.full_name.trim(),
+        role: 'teacher',
+        phone: newTeacher.subject ? `วิชา: ${newTeacher.subject}` : null,
+      })
+      .select('id, full_name')
+      .single()
+
+    if (error) {
+      toast.error('เพิ่มครูไม่สำเร็จ: ' + error.message)
+      setSavingTeacher(false)
+      return
+    }
+    toast.success(`เพิ่มครู ${newTeacher.full_name} แล้ว`)
+    setTeachers(prev => [...prev, data as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name, 'th')))
+    setForm(f => ({ ...f, selected_teacher_id: (data as Profile).id }))
+    setNewTeacher({ full_name: '', subject: '' })
+    setShowAddTeacher(false)
+    setSavingTeacher(false)
+  }
 
   async function handleSave() {
     if (!form.enrollment_id) { toast.error('กรุณาเลือกคอร์ส'); return }
@@ -159,9 +189,18 @@ function LogModal({
           <div className="space-y-4">
             {/* เลือกครู */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                ครูผู้สอน <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  ครูผู้สอน <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddTeacher(v => !v)}
+                  className="text-xs text-brand-500 hover:text-brand-600 font-medium"
+                >
+                  {showAddTeacher ? '✕ ยกเลิก' : '+ เพิ่มครูใหม่'}
+                </button>
+              </div>
               <select
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
                 value={form.selected_teacher_id}
@@ -172,6 +211,34 @@ function LogModal({
                   <option key={t.id} value={t.id}>{t.full_name}</option>
                 ))}
               </select>
+
+              {/* Mini form เพิ่มครูใหม่ */}
+              {showAddTeacher && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                  <input
+                    type="text"
+                    placeholder="ชื่อครู *"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    value={newTeacher.full_name}
+                    onChange={e => setNewTeacher(v => ({ ...v, full_name: e.target.value }))}
+                  />
+                  <input
+                    type="text"
+                    placeholder="วิชาที่สอน เช่น ภาษาจีน, คณิตศาสตร์"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    value={newTeacher.subject}
+                    onChange={e => setNewTeacher(v => ({ ...v, subject: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTeacher}
+                    disabled={savingTeacher}
+                    className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+                  >
+                    {savingTeacher ? 'กำลังเพิ่ม...' : 'เพิ่มครู'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* เลือกคอร์ส/นักเรียน */}
