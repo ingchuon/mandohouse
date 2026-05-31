@@ -95,7 +95,7 @@ function LogModal({
           courses ( id, name, name_en, type ),
           students:student_id ( id, full_name, nickname )
         `)
-        .eq('status', 'active')
+        .in('status', ['active', 'completed'])
         .order('created_at', { ascending: false }),
       supabase
         .from('teachers')
@@ -422,7 +422,7 @@ export default function TeachingPage() {
         courses ( id, name, name_en, type ),
         students:student_id ( id, full_name, nickname )
       `)
-      .eq('status', 'active')
+      .in('status', ['active', 'completed'])
       .order('lessons_used', { ascending: false })
     setEnrollments((data as unknown as Enrollment[]) ?? [])
   }, [])
