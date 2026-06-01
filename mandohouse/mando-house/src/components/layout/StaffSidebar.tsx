@@ -41,6 +41,7 @@ const navItems = [
     group: 'การเงิน',
     items: [
       { href: '/staff/receipts', label: 'ออกใบเสร็จ',   icon: '🧾' },
+      { href: '/staff/expenses', label: 'รายจ่าย',       icon: '📤' },
       { href: '/staff/import',   label: 'Import ข้อมูล', icon: '📥' },
     ],
   },
