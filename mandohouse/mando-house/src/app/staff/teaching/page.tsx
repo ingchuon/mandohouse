@@ -355,10 +355,24 @@ export default function TeachingPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [teachersLoaded, setTeachersLoaded] = useState(false)
 
-  /* โหลด user + teachers */
+  /* โหลด teachers — แยกออกจาก auth */
+  useEffect(() => {
+    supabase
+      .from('teachers')
+      .select('id, full_name, subject, is_active')
+      .eq('is_active', true)
+      .order('full_name')
+      .then(({ data }) => {
+        setTeachers((data as Teacher[]) ?? [])
+        setTeachersLoaded(true)
+      })
+  }, [])
+
+  /* โหลด user profile */
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
@@ -367,27 +381,9 @@ export default function TeachingPage() {
         .select('id, full_name, role')
         .eq('id', user.id)
         .single()
-
       if (!profile) return
       setCurrentUser(profile)
-      const admin = profile.role === 'admin'
-      setIsAdmin(admin)
-
-      // ดึง teachers ทุกคนเสมอ
-      const { data: all } = await supabase
-        .from('teachers')
-        .select('id, full_name, subject, is_active')
-        .eq('is_active', true)
-        .order('full_name')
-      const teacherList = (all as Teacher[]) ?? []
-      console.log('teachers loaded:', teacherList.length, teacherList.map(t => t.full_name))
-      setTeachers(teacherList)
-      setIsAdmin(admin)
-      setTeachersLoaded(true)
-      console.log('teachersLoaded set to true')
-
-      // default = แสดงทุกครู (ค่าว่าง)
-      setSelectedTeacherId('')
+      setIsAdmin(profile.role === 'admin')
     })
   }, [])
 
@@ -660,7 +656,7 @@ export default function TeachingPage() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {logs.map(log => (
-                  <div key={log.id} className="px-5 py-3.5 flex items-start gap-4 hover:bg-gray-50/50 transition-colors">
+                  <div key={log.id} onClick={() => setSelectedLog(log)} className="px-5 py-3.5 flex items-start gap-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
                     {/* date badge */}
                     <div className="flex-shrink-0 text-center w-10">
                       <div className="text-lg font-bold text-gray-700 leading-none">
@@ -754,6 +750,90 @@ export default function TeachingPage() {
           </div>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setSelectedLog(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-800">รายละเอียดการสอน</h2>
+              <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              {/* ครู */}
+              <div className="flex items-center gap-3 p-3 bg-brand-50 rounded-xl">
+                <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-semibold text-sm">
+                  {(selectedLog.teacher_name ?? '?').slice(0, 2)}
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400">ครูผู้สอน</div>
+                  <div className="font-medium text-gray-800">{selectedLog.teacher_name ?? '—'}</div>
+                </div>
+              </div>
+
+              {/* นักเรียน + คอร์ส */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-0.5">นักเรียน</div>
+                  <div className="font-medium text-sm text-gray-800">
+                    {((selectedLog.enrollments as any)?.students?.nickname || (selectedLog.enrollments as any)?.students?.full_name) ?? '—'}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-0.5">คอร์ส</div>
+                  <div className="font-medium text-sm text-gray-800">{selectedLog.enrollments?.courses?.name ?? '—'}</div>
+                </div>
+              </div>
+
+              {/* วันที่ + ครั้งที่ + เวลา */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-0.5">วันที่</div>
+                  <div className="font-medium text-sm text-gray-800">
+                    {new Date(selectedLog.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-0.5">ครั้งที่</div>
+                  <div className="font-medium text-sm text-gray-800">{selectedLog.lesson_number}</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-0.5">ระยะเวลา</div>
+                  <div className="font-medium text-sm text-brand-600">{fmt(selectedLog.duration_minutes)}</div>
+                </div>
+              </div>
+
+              {/* หัวข้อ */}
+              {selectedLog.topic && (
+                <div className="p-3 bg-gray-50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-1">📖 หัวข้อที่สอน</div>
+                  <div className="text-sm text-gray-800">{selectedLog.topic}</div>
+                </div>
+              )}
+
+              {/* การบ้าน */}
+              {selectedLog.homework && (
+                <div className="p-3 bg-amber-50 rounded-xl">
+                  <div className="text-xs text-amber-500 mb-1">📝 การบ้าน</div>
+                  <div className="text-sm text-gray-800">{selectedLog.homework}</div>
+                </div>
+              )}
+
+              {!selectedLog.topic && !selectedLog.homework && (
+                <div className="p-3 bg-gray-50 rounded-xl text-center text-gray-400 text-sm">ไม่มีหัวข้อและการบ้าน</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelectedLog(null)}
+              className="w-full mt-5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              ปิด
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
