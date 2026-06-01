@@ -7,13 +7,14 @@ import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 
 type StudentWithEnrollment = Student & {
-  enrollments: (Enrollment & { course: { name: string } })[]
+  enrollments: (Enrollment & { course: { name: string }; teacher?: { full_name: string } | null })[]
 }
 
 export default function StudentsPage() {
   const supabase = createClient()
   const [students, setStudents] = useState<StudentWithEnrollment[]>([])
   const [courses, setCourses] = useState<any[]>([])
+  const [teachers, setTeachers] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | 'all'>('active')
   const [loading, setLoading] = useState(true)
@@ -25,7 +26,7 @@ export default function StudentsPage() {
   const [detailCheckins, setDetailCheckins] = useState<any[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
   const [enrollForm, setEnrollForm] = useState({
-    course_id: '', lessons_total: 10, lessons_used: 0, price: 0,
+    course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0,
     payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0],
   })
   const [enrollSaving, setEnrollSaving] = useState(false)
@@ -38,7 +39,7 @@ export default function StudentsPage() {
   async function loadStudents() {
     let query = supabase
       .from('students')
-      .select(`*, enrollments(*, course:courses(name))`)
+      .select(`*, enrollments(*, course:courses(name), teacher:teacher_ref_id(full_name))`)
       .order('created_at', { ascending: false })
     if (filterStatus !== 'all') query = query.eq('is_active', filterStatus === 'active')
     const { data } = await query
@@ -51,7 +52,12 @@ export default function StudentsPage() {
     setCourses(data ?? [])
   }
 
-  useEffect(() => { loadStudents(); loadCourses() }, [filterStatus])
+  async function loadTeachers() {
+    const { data } = await supabase.from('teachers').select('id, full_name').eq('is_active', true).order('full_name')
+    setTeachers(data ?? [])
+  }
+
+  useEffect(() => { loadStudents(); loadCourses(); loadTeachers() }, [filterStatus])
 
   async function openDetail(s: StudentWithEnrollment) {
     setDetailStudent(s)
@@ -71,7 +77,7 @@ export default function StudentsPage() {
     if (error) { toast.error('ลบไม่สำเร็จ'); return }
     toast.success('ลบคอร์สแล้ว')
     if (detailStudent) {
-      const { data } = await supabase.from('students').select(`*, enrollments(*, course:courses(name))`).eq('id', detailStudent.id).single()
+      const { data } = await supabase.from('students').select(`*, enrollments(*, course:courses(name), teacher:teacher_ref_id(full_name))`).eq('id', detailStudent.id).single()
       if (data) setDetailStudent(data as StudentWithEnrollment)
     }
     loadStudents()
@@ -82,7 +88,7 @@ export default function StudentsPage() {
     if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
     toast.success(status === 'active' ? 'เปิดใช้งานคอร์สแล้ว' : 'ปิดคอร์สแล้ว')
     if (detailStudent) {
-      const { data } = await supabase.from('students').select(`*, enrollments(*, course:courses(name))`).eq('id', detailStudent.id).single()
+      const { data } = await supabase.from('students').select(`*, enrollments(*, course:courses(name), teacher:teacher_ref_id(full_name))`).eq('id', detailStudent.id).single()
       if (data) setDetailStudent(data as StudentWithEnrollment)
     }
     loadStudents()
@@ -152,11 +158,16 @@ export default function StudentsPage() {
     e.preventDefault()
     if (!showEnrollModal) return
     setEnrollSaving(true)
+
+    // หา teacher_id จาก teachers table
+    const selectedTeacher = teachers.find(t => t.id === enrollForm.teacher_id)
+
     const { data: enroll, error: enrollError } = await supabase
       .from('enrollments')
       .insert([{
         student_id: showEnrollModal.id,
         course_id: enrollForm.course_id || null,
+        teacher_ref_id: enrollForm.teacher_id || null,
         lessons_total: enrollForm.lessons_total,
         lessons_used: enrollForm.lessons_used,
         status: 'active',
@@ -175,7 +186,7 @@ export default function StudentsPage() {
     }
     toast.success('ซื้อคอร์สเรียบร้อย 🎉')
     setShowEnrollModal(null)
-    setEnrollForm({ course_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
+    setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
     setEnrollSaving(false)
     loadStudents()
   }
@@ -187,7 +198,9 @@ export default function StudentsPage() {
         'ลำดับที่': '', 'วันสมัคร': (s as any).enrolled_at ?? '', 'ชื่อ': s.full_name,
         'ชื่อเล่น': s.nickname ?? '', 'โรงเรียน': (s as any).school ?? '',
         'อายุ': s.date_of_birth ? `${new Date().getFullYear() - new Date(s.date_of_birth).getFullYear()} ปี` : '',
-        'วิชาที่เรียน': (activeEnroll?.course as any)?.name ?? '', 'เบอร์โทร': s.parent_phone ?? '',
+        'วิชาที่เรียน': (activeEnroll?.course as any)?.name ?? '',
+        'ครูผู้สอน': (activeEnroll as any)?.teacher?.full_name ?? '',
+        'เบอร์โทร': s.parent_phone ?? '',
         'study type': (s as any).study_type ?? '', 'remark': (s as any).notes ?? '',
         'สถานะ': s.is_active ? 'Active' : 'Inactive',
       }
@@ -279,12 +292,24 @@ export default function StudentsPage() {
       <div className="card overflow-hidden">
         {loading ? <p className="text-center text-gray-400 py-12">กำลังโหลด...</p> : (
           <table className="w-full">
-            <thead><tr><th>นักเรียน</th><th>โรงเรียน</th><th>คอร์สปัจจุบัน</th><th>ความคืบหน้า</th><th>เบอร์โทร</th><th>สถานะ</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>นักเรียน</th>
+                <th>โรงเรียน</th>
+                <th>คอร์สปัจจุบัน</th>
+                <th>ครูผู้สอน</th>
+                <th>ความคืบหน้า</th>
+                <th>เบอร์โทร</th>
+                <th>สถานะ</th>
+                <th></th>
+              </tr>
+            </thead>
             <tbody>
               {filtered.map(s => {
                 const activeEnroll = s.enrollments?.find(e => e.status === 'active')
                 const remaining = activeEnroll ? activeEnroll.lessons_total - activeEnroll.lessons_used : null
                 const pct = activeEnroll ? Math.round((activeEnroll.lessons_used / activeEnroll.lessons_total) * 100) : 0
+                const teacherName = (activeEnroll as any)?.teacher?.full_name ?? null
                 return (
                   <tr key={s.id} className={`table-row-hover ${!s.is_active ? 'opacity-50' : ''}`}>
                     <td>
@@ -299,6 +324,12 @@ export default function StudentsPage() {
                     </td>
                     <td className="text-sm text-gray-500">{(s as any).school || '—'}</td>
                     <td>{activeEnroll ? <span className="text-sm">{(activeEnroll.course as any)?.name}</span> : <span className="text-gray-400 text-xs">ไม่มีคอร์ส</span>}</td>
+                    <td>
+                      {teacherName
+                        ? <span className="text-sm text-gray-700">{teacherName}</span>
+                        : <span className="text-gray-400 text-xs">—</span>
+                      }
+                    </td>
                     <td>
                       {activeEnroll && (
                         <div>
@@ -318,13 +349,13 @@ export default function StudentsPage() {
                     <td>
                       <div className="flex gap-1.5">
                         <button onClick={() => openEdit(s)} className="btn-outline btn-sm">แก้ไข</button>
-                        <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
+                        <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
                       </div>
                     </td>
                   </tr>
                 )
               })}
-              {filtered.length === 0 && <tr><td colSpan={7} className="text-center text-gray-400 py-8">ไม่พบนักเรียน</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={8} className="text-center text-gray-400 py-8">ไม่พบนักเรียน</td></tr>}
             </tbody>
           </table>
         )}
@@ -373,8 +404,13 @@ export default function StudentsPage() {
                     const remaining = enroll.lessons_total - enroll.lessons_used
                     return (
                       <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
+                        <div className="flex items-center justify-between mb-1">
+                          <div>
+                            <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
+                            {enroll.teacher?.full_name && (
+                              <span className="ml-2 text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full">👩‍🏫 {enroll.teacher.full_name}</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => updateEnrollmentStatus(enroll.id, enroll.status === 'active' ? 'completed' : 'active')}
                               className={`badge cursor-pointer hover:opacity-80 transition ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}>
@@ -426,7 +462,7 @@ export default function StudentsPage() {
               </div>
             </div>
             <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
-              <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
+              <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
               <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
               <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
             </div>
@@ -452,6 +488,14 @@ export default function StudentsPage() {
                   onChange={e => { const course = courses.find(c => c.id === e.target.value); setEnrollForm({ ...enrollForm, course_id: e.target.value, lessons_total: course?.total_lessons ?? 10, price: course?.price ?? 0 }) }}>
                   <option value="">— เลือกคอร์ส —</option>
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">ครูผู้สอน</label>
+                <select className="input" value={enrollForm.teacher_id}
+                  onChange={e => setEnrollForm({ ...enrollForm, teacher_id: e.target.value })}>
+                  <option value="">— เลือกครู —</option>
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
