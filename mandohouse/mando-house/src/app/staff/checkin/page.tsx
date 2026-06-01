@@ -12,6 +12,8 @@ export default function CheckinPage() {
   const [selectedStudent, setSelectedStudent] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [customDate, setCustomDate] = useState('')
+  const [isBackdate, setIsBackdate] = useState(false)
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
   const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '', lesson_note: '' })
@@ -41,17 +43,22 @@ export default function CheckinPage() {
 
   async function handleCheckin() {
     if (!selectedStudent) { toast.error('กรุณาเลือกนักเรียน'); return }
+    if (isBackdate && !customDate) { toast.error('กรุณาเลือกวันที่และเวลา'); return }
     setLoading(true)
     const enrollment = enrollments.find(e => e.student_id === selectedStudent)
+    const checkinTime = isBackdate && customDate
+      ? new Date(customDate).toISOString()
+      : new Date().toISOString()
     const { error } = await supabase.from('checkins').insert({
       student_id: selectedStudent,
       enrollment_id: enrollment?.id,
-      check_in_at: new Date().toISOString(),
+      check_in_at: checkinTime,
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
-    toast.success('เช็กอินสำเร็จ!')
+    toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ!' : 'เช็กอินสำเร็จ!')
     setSelectedStudent('')
     setStudentSearch('')
+    setCustomDate('')
     loadData()
     setLoading(false)
   }
@@ -162,12 +169,36 @@ export default function CheckinPage() {
               </div>
             )}
 
+            {/* ย้อนหลัง toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setIsBackdate(!isBackdate); setCustomDate('') }}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isBackdate ? 'bg-brand-500' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isBackdate ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+              <span className="text-sm text-gray-600">บันทึกย้อนหลัง</span>
+            </div>
+
+            {isBackdate && (
+              <div>
+                <label className="label">วันที่และเวลา</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={customDate}
+                  onChange={e => setCustomDate(e.target.value)}
+                  max={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+            )}
+
             <button
               onClick={handleCheckin}
-              disabled={loading || !selectedStudent}
+              disabled={loading || !selectedStudent || (isBackdate && !customDate)}
               className="btn-brand w-full justify-center py-2.5"
             >
-              {loading ? 'กำลังบันทึก...' : '✓ เช็กอิน'}
+              {loading ? 'กำลังบันทึก...' : isBackdate ? '📅 บันทึกย้อนหลัง' : '✓ เช็กอิน'}
             </button>
           </div>
         </div>
