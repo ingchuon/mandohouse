@@ -10,6 +10,7 @@ export default function CheckinPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [todayCheckins, setTodayCheckins] = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState('')
+  const [studentSearch, setStudentSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
@@ -38,17 +39,6 @@ export default function CheckinPage() {
     setTodayCheckins(c ?? [])
   }
 
-  async function getSessionCount(enrollmentId: string, currentCheckinId?: string) {
-    const { data } = await supabase
-      .from('checkins')
-      .select('id')
-      .eq('enrollment_id', enrollmentId)
-      .order('check_in_at', { ascending: true })
-    if (!data) return 1
-    const idx = data.findIndex(c => c.id === currentCheckinId)
-    return idx >= 0 ? idx + 1 : data.length
-  }
-
   async function handleCheckin() {
     if (!selectedStudent) { toast.error('กรุณาเลือกนักเรียน'); return }
     setLoading(true)
@@ -61,17 +51,9 @@ export default function CheckinPage() {
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
     toast.success('เช็กอินสำเร็จ!')
     setSelectedStudent('')
+    setStudentSearch('')
     loadData()
     setLoading(false)
-  }
-
-  async function handleCheckout(checkinId: string) {
-    const { error } = await supabase.from('checkins')
-      .update({ check_out_at: new Date().toISOString() })
-      .eq('id', checkinId)
-    if (error) { toast.error('เช็กเอาท์ไม่สำเร็จ'); return }
-    toast.success('เช็กเอาท์สำเร็จ!')
-    loadData()
   }
 
   async function handleDelete(id: string) {
@@ -123,16 +105,12 @@ export default function CheckinPage() {
     loadData()
   }
 
-  async function getEnrollmentSessionCount(enrollmentId: string, checkinId: string) {
-    const { data } = await supabase
-      .from('checkins')
-      .select('id')
-      .eq('enrollment_id', enrollmentId)
-      .order('check_in_at', { ascending: true })
-    if (!data) return { current: 1, total: 1 }
-    const idx = data.findIndex(c => c.id === checkinId)
-    return { current: idx + 1, total: data.length }
-  }
+  // filter นักเรียนตาม search
+  const filteredStudents = students.filter(s =>
+    !studentSearch ||
+    (s.nickname ?? '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.full_name.toLowerCase().includes(studentSearch.toLowerCase())
+  )
 
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
@@ -150,16 +128,45 @@ export default function CheckinPage() {
               <div className="text-3xl font-semibold text-brand-700">{fmt(now)}</div>
               <div className="text-xs text-brand-600 mt-1">เวลาปัจจุบัน</div>
             </div>
+
             <div>
-              <label className="label">เลือกนักเรียน</label>
-              <select className="input" value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)}>
+              <label className="label">ค้นหานักเรียน</label>
+              <input
+                className="input mb-2"
+                placeholder="พิมพ์ชื่อหรือชื่อเล่น..."
+                value={studentSearch}
+                onChange={e => { setStudentSearch(e.target.value); setSelectedStudent('') }}
+              />
+              <select
+                className="input"
+                value={selectedStudent}
+                onChange={e => setSelectedStudent(e.target.value)}
+                size={Math.min(filteredStudents.length + 1, 6)}
+              >
                 <option value="">— เลือกนักเรียน —</option>
-                {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.nickname || s.full_name}</option>
+                {filteredStudents.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.nickname || s.full_name}
+                    {s.nickname ? ` (${s.full_name})` : ''}
+                  </option>
                 ))}
               </select>
+              {studentSearch && filteredStudents.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1">ไม่พบนักเรียน</p>
+              )}
             </div>
-            <button onClick={handleCheckin} disabled={loading || !selectedStudent} className="btn-brand w-full justify-center py-2.5">
+
+            {selectedStudent && (
+              <div className="bg-brand-50 rounded-xl px-3 py-2 text-sm text-brand-700 font-medium">
+                ✓ {students.find(s => s.id === selectedStudent)?.nickname || students.find(s => s.id === selectedStudent)?.full_name}
+              </div>
+            )}
+
+            <button
+              onClick={handleCheckin}
+              disabled={loading || !selectedStudent}
+              className="btn-brand w-full justify-center py-2.5"
+            >
               {loading ? 'กำลังบันทึก...' : '✓ เช็กอิน'}
             </button>
           </div>
@@ -199,22 +206,19 @@ export default function CheckinPage() {
                       {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                      {!c.check_out_at && (
-                        <button onClick={() => handleCheckout(c.id)} className="btn-outline btn-sm">เช็กเอาท์</button>
-                      )}
-                      {c.check_out_at && <span className="badge badge-gray">ออกแล้ว</span>}
+                      {c.check_out_at
+                        ? <span className="badge badge-gray text-xs">ออกแล้ว</span>
+                        : <span className="badge badge-green text-xs">อยู่</span>
+                      }
                       <button
                         onClick={() => openNote(c)}
                         className={`btn-outline btn-sm px-2 ${c.lesson_note ? 'text-green-600' : 'text-gray-400'}`}
                         title="บันทึกบทเรียน"
-                      >
-                        📝
-                      </button>
+                      >📝</button>
                       <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
                       <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
                     </div>
                   </div>
-                  {/* แสดง lesson note ถ้ามี */}
                   {c.lesson_note && (
                     <div className="mt-2 ml-12 text-xs text-gray-500 bg-yellow-50 rounded-lg px-3 py-2 border border-yellow-100">
                       📖 {c.lesson_note}
