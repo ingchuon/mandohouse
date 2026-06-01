@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatThaiMoney, formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import DashboardExport from '@/components/dashboard/DashboardExport'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
           <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
         <div className="flex gap-2">
+          <DashboardExport />
           <Link href="/staff/settings" className="btn-outline text-sm">⚙️ ตั้งค่ายอดเงิน</Link>
           <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
         </div>
