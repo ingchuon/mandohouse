@@ -356,6 +356,9 @@ export default function TeachingPage() {
   const [loadingLogs, setLoadingLogs] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null)
+  const [editingLog, setEditingLog] = useState<LessonLog | null>(null)
+  const [editForm, setEditForm] = useState({ topic: '', homework: '', duration_minutes: 60 })
+  const [savingEdit, setSavingEdit] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [teachersLoaded, setTeachersLoaded] = useState(false)
 
@@ -753,11 +756,11 @@ export default function TeachingPage() {
 
       {/* Detail Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setSelectedLog(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => { setSelectedLog(null); setEditingLog(null) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-gray-800">รายละเอียดการสอน</h2>
-              <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => { setSelectedLog(null); setEditingLog(null) }} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
             <div className="space-y-3">
@@ -800,37 +803,97 @@ export default function TeachingPage() {
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <div className="text-xs text-gray-400 mb-0.5">ระยะเวลา</div>
-                  <div className="font-medium text-sm text-brand-600">{fmt(selectedLog.duration_minutes)}</div>
+                  {editingLog?.id === selectedLog.id ? (
+                    <div className="flex gap-1 flex-wrap mt-1">
+                      {[30,45,60,90,120].map(m => (
+                        <button key={m} onClick={() => setEditForm(f => ({ ...f, duration_minutes: m }))}
+                          className={`text-xs px-1.5 py-0.5 rounded-lg border transition-all ${editForm.duration_minutes === m ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600'}`}>
+                          {m >= 60 ? `${m/60}ชม.` : `${m}น.`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="font-medium text-sm text-brand-600">{fmt(selectedLog.duration_minutes)}</div>
+                  )}
                 </div>
               </div>
 
               {/* หัวข้อ */}
-              {selectedLog.topic && (
-                <div className="p-3 bg-gray-50 rounded-xl">
-                  <div className="text-xs text-gray-400 mb-1">📖 หัวข้อที่สอน</div>
-                  <div className="text-sm text-gray-800">{selectedLog.topic}</div>
-                </div>
-              )}
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-400 mb-1">📖 หัวข้อที่สอน</div>
+                {editingLog?.id === selectedLog.id ? (
+                  <input type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    value={editForm.topic}
+                    onChange={e => setEditForm(f => ({ ...f, topic: e.target.value }))}
+                    placeholder="หัวข้อที่สอน" />
+                ) : (
+                  <div className="text-sm text-gray-800">{selectedLog.topic || <span className="text-gray-400">ไม่ได้กรอก</span>}</div>
+                )}
+              </div>
 
               {/* การบ้าน */}
-              {selectedLog.homework && (
-                <div className="p-3 bg-amber-50 rounded-xl">
-                  <div className="text-xs text-amber-500 mb-1">📝 การบ้าน</div>
-                  <div className="text-sm text-gray-800">{selectedLog.homework}</div>
-                </div>
-              )}
-
-              {!selectedLog.topic && !selectedLog.homework && (
-                <div className="p-3 bg-gray-50 rounded-xl text-center text-gray-400 text-sm">ไม่มีหัวข้อและการบ้าน</div>
-              )}
+              <div className="p-3 bg-amber-50 rounded-xl">
+                <div className="text-xs text-amber-500 mb-1">📝 การบ้าน</div>
+                {editingLog?.id === selectedLog.id ? (
+                  <input type="text" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    value={editForm.homework}
+                    onChange={e => setEditForm(f => ({ ...f, homework: e.target.value }))}
+                    placeholder="การบ้าน" />
+                ) : (
+                  <div className="text-sm text-gray-800">{selectedLog.homework || <span className="text-amber-400">ไม่ได้กรอก</span>}</div>
+                )}
+              </div>
             </div>
 
-            <button
-              onClick={() => setSelectedLog(null)}
-              className="w-full mt-5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              ปิด
-            </button>
+            {/* ปุ่ม */}
+            {editingLog?.id === selectedLog.id ? (
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={async () => {
+                    setSavingEdit(true)
+                    const { error } = await supabase.from('lesson_logs').update({
+                      topic: editForm.topic || null,
+                      homework: editForm.homework || null,
+                      duration_minutes: editForm.duration_minutes,
+                    }).eq('id', selectedLog.id)
+                    if (error) { toast.error('บันทึกไม่สำเร็จ'); setSavingEdit(false); return }
+                    toast.success('บันทึกแล้ว')
+                    // update local state
+                    setLogs(prev => prev.map(l => l.id === selectedLog.id
+                      ? { ...l, topic: editForm.topic || null, homework: editForm.homework || null, duration_minutes: editForm.duration_minutes }
+                      : l
+                    ))
+                    setSelectedLog(prev => prev ? { ...prev, topic: editForm.topic || null, homework: editForm.homework || null, duration_minutes: editForm.duration_minutes } : null)
+                    setEditingLog(null)
+                    setSavingEdit(false)
+                  }}
+                  disabled={savingEdit}
+                  className="flex-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                >
+                  {savingEdit ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+                <button onClick={() => setEditingLog(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                  ยกเลิก
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={() => {
+                    setEditingLog(selectedLog)
+                    setEditForm({ topic: selectedLog.topic ?? '', homework: selectedLog.homework ?? '', duration_minutes: selectedLog.duration_minutes })
+                  }}
+                  className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                >
+                  ✎ แก้ไข
+                </button>
+                <button onClick={() => setSelectedLog(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                  ปิด
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
