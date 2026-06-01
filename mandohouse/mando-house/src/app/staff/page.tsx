@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatThaiMoney, formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import DashboardExport from '@/components/dashboard/DashboardExport'
+import DashboardExport from '@/components/layout/DashboardExport'
 
 export default async function DashboardPage() {
   const supabase = createClient()
