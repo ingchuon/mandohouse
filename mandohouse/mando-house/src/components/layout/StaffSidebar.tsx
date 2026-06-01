@@ -50,6 +50,7 @@ const navItems = [
     items: [
       { href: '/staff/team',     label: 'จัดการทีม',      icon: '🎓' },
       { href: '/staff/settings', label: 'ตั้งค่ายอดเงิน', icon: '⚙️' },
+      { href: '/staff/help',     label: 'คู่มือการใช้งาน', icon: '📖' },
     ],
   },
 ]
