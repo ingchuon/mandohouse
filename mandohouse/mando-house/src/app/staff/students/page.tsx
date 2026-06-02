@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Student, Enrollment } from '@/types'
 import { getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
 
 type StudentWithEnrollment = Student & {
@@ -12,6 +13,7 @@ type StudentWithEnrollment = Student & {
 
 export default function StudentsPage() {
   const supabase = createClient()
+  const router = useRouter()
   const [students, setStudents] = useState<StudentWithEnrollment[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
@@ -185,6 +187,7 @@ export default function StudentsPage() {
       }])
     }
     toast.success('ซื้อคอร์สเรียบร้อย 🎉')
+    router.refresh()
     setShowEnrollModal(null)
     setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
     setEnrollSaving(false)
@@ -431,7 +434,10 @@ export default function StudentsPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-400 font-medium mb-2">🕐 ประวัติการเรียน ({detailCheckins.length} ครั้ง)</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs text-gray-400 font-medium">🕐 ประวัติการเรียน</div>
+                  <span className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{detailCheckins.length} ครั้ง</span>
+                </div>
                 {detailLoading ? <p className="text-sm text-gray-400">กำลังโหลด...</p> : detailCheckins.length === 0 ? (
                   <p className="text-sm text-gray-400">ยังไม่มีประวัติการเรียน</p>
                 ) : (
@@ -442,16 +448,17 @@ export default function StudentsPage() {
                       const outTime = c.check_out_at ? new Date(c.check_out_at) : null
                       const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
                       return (
-                        <div key={c.id} className="bg-gray-50 rounded-xl p-3">
-                          <div className="flex items-start justify-between">
+                        <div key={c.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                          <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs bg-brand-100 text-brand-700 rounded-full px-2 py-0.5 font-medium flex-shrink-0">ครั้งที่ {sessionNo}</span>
-                              <span className="text-xs text-gray-500">{c.enrollment?.course?.name || '—'}</span>
+                              <span className="text-xs bg-brand-100 text-brand-700 rounded-full px-2 py-0.5 font-semibold flex-shrink-0">#{sessionNo}</span>
+                              <span className="text-xs font-medium text-gray-700">{fmtDate(c.check_in_at)}</span>
                             </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="text-xs font-medium text-gray-700">{fmtDate(c.check_in_at)}</div>
-                              <div className="text-xs text-gray-400">{fmtTime(c.check_in_at)}{outTime ? ` → ${fmtTime(c.check_out_at)}` : ''}{duration ? ` (${duration} นาที)` : ''}</div>
-                            </div>
+                            <span className="text-xs text-brand-600 font-medium">{fmtTime(c.check_in_at)}{outTime ? ` — ${fmtTime(c.check_out_at)}` : ''}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">{c.enrollment?.course?.name || '—'}</span>
+                            {duration && <span className="text-xs text-gray-400">{duration} นาที</span>}
                           </div>
                           {c.lesson_note && <div className="mt-2 text-xs text-gray-600 bg-yellow-50 rounded-lg px-2.5 py-1.5 border border-yellow-100">📖 {c.lesson_note}</div>}
                         </div>
