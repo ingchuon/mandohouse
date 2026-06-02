@@ -566,7 +566,7 @@ export default function TeachingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ชั่วโมงการสอน</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">ชั่วโมงการสอน</h1>
           <p className="text-sm text-gray-500 mt-0.5">ติดตามการสอนของครูและนักเรียนแต่ละคน</p>
         </div>
         <div className="flex gap-2">
@@ -613,7 +613,7 @@ export default function TeachingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
         {/* Left: teacher summary + history */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-1 md:col-span-2 space-y-4">
 
           {/* Teacher stat card */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -627,17 +627,17 @@ export default function TeachingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-gray-800">{totalHours}</div>
+                <div className="text-xl md:text-2xl font-bold text-gray-800">{totalHours}</div>
                 <div className="text-xs text-gray-400 mt-0.5">ชม.</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-800">{totalSessions}</div>
+                <div className="text-xl md:text-2xl font-bold text-gray-800">{totalSessions}</div>
                 <div className="text-xs text-gray-400 mt-0.5">ครั้ง</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-800">{uniqueStudents}</div>
+                <div className="text-xl md:text-2xl font-bold text-gray-800">{uniqueStudents}</div>
                 <div className="text-xs text-gray-400 mt-0.5">นักเรียน</div>
               </div>
             </div>
