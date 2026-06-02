@@ -64,7 +64,7 @@ export default async function DashboardPage() {
     : 0
 
   const subjects = ['chi', 'math', 'eng', 'other']
-  const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน 🇨🇳', math: 'คณิตศาสตร์ 📐', eng: 'อังกฤษ 🇬🇧', other: 'อื่นๆ' }
+  const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน', math: 'คณิตศาสตร์', eng: 'อังกฤษ', other: 'อื่นๆ' }
   const subjectColors: Record<string, string> = { chi: '#0F6E56', math: '#2563eb', eng: '#d97706', other: '#6b7280' }
 
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
