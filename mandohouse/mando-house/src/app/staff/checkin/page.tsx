@@ -122,11 +122,11 @@ export default function CheckinPage() {
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
+    <div className="p-4 md:p-6">
+      <h1 className="text-lg md:text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
       <p className="text-sm text-gray-500 mb-6">บันทึกเวลาเข้าออกของนักเรียน</p>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Quick check-in panel */}
         <div className="card">
           <div className="card-header"><h3 className="font-medium">เช็กอินด่วน</h3></div>
@@ -204,7 +204,7 @@ export default function CheckinPage() {
         </div>
 
         {/* Today's checkins */}
-        <div className="col-span-2 card">
+        <div className="md:col-span-1 md:col-span-2 card">
           <div className="card-header">
             <h3 className="font-medium">รายการวันนี้</h3>
             <span className="badge badge-green">{todayCheckins.length} คน</span>
@@ -236,7 +236,7 @@ export default function CheckinPage() {
                       </div>
                       {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex gap-1 flex-shrink-0 flex-wrap">
                       {c.check_out_at
                         ? <span className="badge badge-gray text-xs">ออกแล้ว</span>
                         : <span className="badge badge-green text-xs">อยู่</span>
