@@ -86,9 +86,9 @@ export default function LessonsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-semibold">นับครั้งการเรียน</h1>
+        <h1 className="text-lg md:text-xl font-semibold">นับครั้งการเรียน</h1>
         <span className="text-sm text-gray-400">{filtered.length} รายการ</span>
       </div>
       <p className="text-sm text-gray-500 mb-4">ติดตามและบันทึกครั้งการเรียนของแต่ละ enrollment</p>
@@ -103,7 +103,7 @@ export default function LessonsPage() {
         />
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         {loading ? <p className="text-center text-gray-400 py-12">กำลังโหลด...</p> : (
           <table className="w-full">
             <thead>
