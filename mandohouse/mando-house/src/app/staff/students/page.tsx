@@ -253,10 +253,10 @@ export default function StudentsPage() {
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">ข้อมูลนักเรียน</h1>
+          <h1 className="text-lg md:text-xl font-semibold">ข้อมูลนักเรียน</h1>
           <p className="text-sm text-gray-500 mt-0.5">{filtered.length} คน</p>
         </div>
         <div className="flex gap-2">
@@ -289,7 +289,7 @@ export default function StudentsPage() {
         💡 ไฟล์ Excel ต้องมี column: <strong>ลำดับที่, วันสมัคร, ชื่อ, โรงเรียน, อายุ, วิชาที่เรียน, เบอร์โทร, study type, remark</strong>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         {loading ? <p className="text-center text-gray-400 py-12">กำลังโหลด...</p> : (
           <table className="w-full">
             <thead>
