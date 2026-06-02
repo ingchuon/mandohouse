@@ -27,6 +27,10 @@ export default function StudentsPage() {
   const [detailStudent, setDetailStudent] = useState<StudentWithEnrollment | null>(null)
   const [detailCheckins, setDetailCheckins] = useState<any[]>([])
   const [detailReceipts, setDetailReceipts] = useState<any[]>([])
+  const [editEnrollId, setEditEnrollId] = useState<string | null>(null)
+  const [editEnrollForm, setEditEnrollForm] = useState<any>({})
+  const [expandedEnrollId, setExpandedEnrollId] = useState<string | null>(null)
+  const [savingEnroll, setSavingEnroll] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [enrollForm, setEnrollForm] = useState({
     course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0,
@@ -261,6 +265,41 @@ export default function StudentsPage() {
     e.target.value = ''
   }
 
+  async function saveEnrollEdit(enrollId: string) {
+    setSavingEnroll(true)
+    const { error } = await supabase.from('enrollments').update({
+      lessons_total: Number(editEnrollForm.lessons_total),
+      lessons_used: Number(editEnrollForm.lessons_used),
+      teacher_ref_id: editEnrollForm.teacher_id || null,
+    }).eq('id', enrollId)
+    if (error) { toast.error('แก้ไขไม่สำเร็จ'); setSavingEnroll(false); return }
+
+    // แก้ receipt ถ้ามี
+    const receipt = detailReceipts.find(r => r.enrollment_id === enrollId)
+    if (receipt && (editEnrollForm.price || editEnrollForm.issued_at)) {
+      await supabase.from('receipts').update({
+        amount: Number(editEnrollForm.price),
+        issued_at: editEnrollForm.issued_at,
+      }).eq('id', receipt.id)
+    }
+    toast.success('แก้ไขแล้ว')
+    setSavingEnroll(false)
+    setEditEnrollId(null)
+    if (detailStudent) {
+      const [{ data: s }, { data: r }] = await Promise.all([
+        supabase.from('students').select('*, enrollments(*, course:courses(name), teacher:teacher_ref_id(full_name))').eq('id', detailStudent.id).single(),
+        supabase.from('receipts').select('*').eq('student_id', detailStudent.id).order('issued_at', { ascending: false }),
+      ])
+      if (s) setDetailStudent(s as StudentWithEnrollment)
+      setDetailReceipts(r ?? [])
+    }
+    loadStudents()
+  }
+
+  function getEnrollCheckins(enrollId: string) {
+    return detailCheckins.filter(c => c.enrollment_id === enrollId)
+  }
+
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
@@ -416,51 +455,142 @@ export default function StudentsPage() {
                     const remaining = enroll.lessons_total - enroll.lessons_used
                     return (
                       <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
+                        {/* Header */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <button onClick={() => updateEnrollmentStatus(enroll.id, enroll.status === 'active' ? 'completed' : 'active')}
                               className={`badge cursor-pointer hover:opacity-80 transition ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}>
                               {enroll.status === 'active' ? 'active' : enroll.status}
                             </button>
-                            <button onClick={() => deleteEnrollment(enroll.id)} className="text-red-400 hover:text-red-600 text-xs hover:bg-red-50 rounded px-1.5 py-0.5 transition">🗑 ลบ</button>
+                            <button
+                              onClick={() => {
+                                setEditEnrollId(enroll.id)
+                                const receipt = detailReceipts.find(r => r.enrollment_id === enroll.id)
+                                setEditEnrollForm({
+                                  lessons_total: enroll.lessons_total,
+                                  lessons_used: enroll.lessons_used,
+                                  teacher_id: enroll.teacher_ref_id ?? '',
+                                  price: receipt ? receipt.amount : '',
+                                  issued_at: receipt ? receipt.issued_at?.split('T')[0] : '',
+                                })
+                              }}
+                              className="text-xs text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded px-1.5 py-0.5 transition">✎</button>
+                            <button onClick={() => deleteEnrollment(enroll.id)} className="text-red-400 hover:text-red-600 text-xs hover:bg-red-50 rounded px-1.5 py-0.5 transition">🗑</button>
                           </div>
                         </div>
-                        {/* รายละเอียดคอร์ส */}
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-2 text-xs">
-                          {enroll.teacher?.full_name && (
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <span className="text-gray-400">👩‍🏫 ครู</span>
-                              <span className="font-medium text-brand-700">{enroll.teacher.full_name}</span>
+
+                        {/* Edit form */}
+                        {editEnrollId === enroll.id ? (
+                          <div className="bg-white rounded-xl p-3 mb-2 border border-brand-100 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-xs text-gray-400 mb-0.5 block">ครูผู้สอน</label>
+                                <select className="input text-xs py-1" value={editEnrollForm.teacher_id}
+                                  onChange={e => setEditEnrollForm({...editEnrollForm, teacher_id: e.target.value})}>
+                                  <option value="">— ไม่ระบุ —</option>
+                                  {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-400 mb-0.5 block">จำนวนครั้งทั้งหมด</label>
+                                <input type="number" className="input text-xs py-1" value={editEnrollForm.lessons_total}
+                                  onChange={e => setEditEnrollForm({...editEnrollForm, lessons_total: e.target.value})} />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-400 mb-0.5 block">ใช้ไปแล้ว</label>
+                                <input type="number" className="input text-xs py-1" value={editEnrollForm.lessons_used}
+                                  onChange={e => setEditEnrollForm({...editEnrollForm, lessons_used: e.target.value})} />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-400 mb-0.5 block">ราคา (฿)</label>
+                                <input type="number" className="input text-xs py-1" value={editEnrollForm.price}
+                                  onChange={e => setEditEnrollForm({...editEnrollForm, price: e.target.value})} />
+                              </div>
+                              <div className="col-span-2">
+                                <label className="text-xs text-gray-400 mb-0.5 block">วันที่ซื้อ</label>
+                                <input type="date" className="input text-xs py-1" value={editEnrollForm.issued_at}
+                                  onChange={e => setEditEnrollForm({...editEnrollForm, issued_at: e.target.value})} />
+                              </div>
                             </div>
-                          )}
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <span className="text-gray-400">📚 จำนวน</span>
-                            <span className="font-medium">{enroll.lessons_total} ครั้ง</span>
+                            <div className="flex gap-2">
+                              <button onClick={() => saveEnrollEdit(enroll.id)} disabled={savingEnroll}
+                                className="btn-brand btn-sm flex-1 justify-center text-xs">
+                                {savingEnroll ? 'กำลังบันทึก...' : 'บันทึก'}
+                              </button>
+                              <button onClick={() => setEditEnrollId(null)}
+                                className="btn-outline btn-sm flex-1 justify-center text-xs">ยกเลิก</button>
+                            </div>
                           </div>
-                          {(() => {
-                            const receipt = detailReceipts.find(r => r.enrollment_id === enroll.id)
-                            return receipt ? (
-                              <>
-                                <div className="flex items-center gap-1 text-gray-500">
-                                  <span className="text-gray-400">💰 ราคา</span>
-                                  <span className="font-medium text-brand-600">{Number(receipt.amount).toLocaleString()} ฿</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-gray-500">
-                                  <span className="text-gray-400">📅 ซื้อ</span>
-                                  <span className="font-medium">{new Date(receipt.issued_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                                </div>
-                              </>
-                            ) : null
-                          })()}
-                        </div>
+                        ) : (
+                          /* Info grid */
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-2 text-xs">
+                            {enroll.teacher?.full_name && (
+                              <div className="flex items-center gap-1 text-gray-500">
+                                <span className="text-gray-400">👩‍🏫</span>
+                                <span className="font-medium text-brand-700">{enroll.teacher.full_name}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <span className="text-gray-400">📚</span>
+                              <span className="font-medium">{enroll.lessons_total} ครั้ง</span>
+                            </div>
+                            {(() => {
+                              const receipt = detailReceipts.find(r => r.enrollment_id === enroll.id)
+                              return receipt ? (
+                                <>
+                                  <div className="flex items-center gap-1 text-gray-500">
+                                    <span className="text-gray-400">💰</span>
+                                    <span className="font-medium text-brand-600">{Number(receipt.amount).toLocaleString()} ฿</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-gray-500">
+                                    <span className="text-gray-400">📅</span>
+                                    <span className="font-medium">{new Date(receipt.issued_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                                  </div>
+                                </>
+                              ) : null
+                            })()}
+                          </div>
+                        )}
+
                         {/* Progress bar */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 mb-2">
                           <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`} style={{ width: `${pct}%` }} />
                           </div>
                           <span className="text-xs text-gray-500 flex-shrink-0">{enroll.lessons_used}/{enroll.lessons_total} · เหลือ <span className={remaining <= 2 ? 'text-red-500 font-medium' : remaining <= 5 ? 'text-amber-500 font-medium' : 'text-brand-600'}>{remaining}</span> ครั้ง</span>
                         </div>
+
+                        {/* ดูประวัติเรียน */}
+                        {(() => {
+                          const enrollCheckins = getEnrollCheckins(enroll.id)
+                          const isExpanded = expandedEnrollId === enroll.id
+                          return enrollCheckins.length > 0 ? (
+                            <div>
+                              <button
+                                onClick={() => setExpandedEnrollId(isExpanded ? null : enroll.id)}
+                                className="text-xs text-brand-600 hover:underline flex items-center gap-1">
+                                🕐 ดูประวัติเรียน ({enrollCheckins.length} ครั้ง) {isExpanded ? '▲' : '▼'}
+                              </button>
+                              {isExpanded && (
+                                <div className="mt-2 space-y-1.5">
+                                  {enrollCheckins.map((c, idx) => (
+                                    <div key={c.id} className="flex items-center justify-between bg-white rounded-lg px-2.5 py-1.5 text-xs border border-gray-100">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-400 font-medium">#{enrollCheckins.length - idx}</span>
+                                        <span className="text-gray-700 font-medium">{fmtDate(c.check_in_at)}</span>
+                                      </div>
+                                      <div className="text-right text-gray-400">
+                                        {fmtTime(c.check_in_at)}
+                                        {c.check_out_at && ` — ${fmtTime(c.check_out_at)}`}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : <p className="text-xs text-gray-300">ยังไม่มีประวัติเรียน</p>
+                        })()}
                       </div>
                     )
                   })}
