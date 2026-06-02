@@ -88,10 +88,10 @@ export default async function DashboardPage() {
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
           <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
         <div className="flex gap-2">
@@ -105,19 +105,19 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
-          <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
+          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
           <div className="text-xs text-gray-400 mt-1">ตั้งแต่เปิดกิจการ</div>
         </div>
         <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">↩️ ยกยอดจากเดือนที่แล้ว</div>
-          <div className="text-xl font-semibold text-gray-700">{formatThaiMoney(carryOver)}</div>
+          <div className="text-lg md:text-xl font-semibold text-gray-700">{formatThaiMoney(carryOver)}</div>
           <div className="text-xs text-gray-400 mt-1">
             <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
           </div>
         </div>
         <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📥 รายรับเดือนนี้</div>
-          <div className="text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
+          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
           <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
             {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 md:mb-6">
         <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500">นักเรียนทั้งหมด</span>
@@ -189,8 +189,8 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
-        <div className="col-span-2 card">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="col-span-1 md:col-span-2 card">
           <div className="card-header">
             <h3 className="font-medium text-gray-800">นักเรียนใกล้หมดคอร์ส</h3>
             <Link href="/staff/alerts" className="text-xs text-brand-600 hover:underline">แจ้งเตือนทั้งหมด →</Link>
