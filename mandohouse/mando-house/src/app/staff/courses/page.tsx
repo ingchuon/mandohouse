@@ -71,31 +71,31 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-xl font-semibold">คอร์สและราคา</h1>
+          <h1 className="text-lg md:text-xl font-semibold">คอร์สและราคา</h1>
           <p className="text-sm text-gray-500 mt-0.5">จัดการคอร์สเรียนทั้งหมด</p>
         </div>
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-brand">+ เพิ่มคอร์ส</button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {courses.map(c => (
-          <div key={c.id} className={`card p-5 ${!c.is_active ? 'opacity-60' : ''}`}>
+          <div key={c.id} className={`card p-4 md:p-5 ${!c.is_active ? 'opacity-60' : ''}`}>
             <div className="flex items-start justify-between mb-3">
               <span className={`badge ${getCourseTypeClass(c.type)}`}>{getCourseTypeLabel(c.type)}</span>
               <span className={`badge ${c.is_active ? 'badge-green' : 'badge-gray'}`}>{c.is_active ? 'เปิดรับ' : 'ปิด'}</span>
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">{c.name}</h3>
-            {c.description && <p className="text-sm text-gray-500 mb-4 line-clamp-2">{c.description}</p>}
-            <div className="text-2xl font-semibold text-brand-600 mb-0.5">{formatThaiMoney(c.price)}</div>
-            <div className="text-xs text-gray-400 mb-4">/ {c.total_lessons} ครั้ง</div>
-            <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-gray-50 pt-3">
+            <h3 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">{c.name}</h3>
+            {c.description && <p className="text-sm text-gray-500 mb-3 line-clamp-2">{c.description}</p>}
+            <div className="text-xl md:text-2xl font-semibold text-brand-600 mb-0.5">{formatThaiMoney(c.price)}</div>
+            <div className="text-xs text-gray-400 mb-3">/ {c.total_lessons} ครั้ง</div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 border-t border-gray-50 pt-3 flex-wrap">
               <span>👥 สูงสุด {c.max_students} คน</span>
               <span>⏱ {c.duration_minutes} นาที/ครั้ง</span>
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-3">
               <button onClick={() => openEdit(c)} className="btn-outline btn-sm flex-1 justify-center">แก้ไข</button>
               <button
                 onClick={() => supabase.from('courses').update({ is_active: !c.is_active }).eq('id', c.id).then(loadCourses)}
@@ -111,8 +111,8 @@ export default function CoursesPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="font-semibold">{editing ? 'แก้ไขคอร์ส' : 'เพิ่มคอร์สใหม่'}</h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400">✕</button>
             </div>
