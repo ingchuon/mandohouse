@@ -26,6 +26,7 @@ export default function StudentsPage() {
   const [importing, setImporting] = useState(false)
   const [detailStudent, setDetailStudent] = useState<StudentWithEnrollment | null>(null)
   const [detailCheckins, setDetailCheckins] = useState<any[]>([])
+  const [detailReceipts, setDetailReceipts] = useState<any[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
   const [enrollForm, setEnrollForm] = useState({
     course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0,
@@ -64,12 +65,20 @@ export default function StudentsPage() {
   async function openDetail(s: StudentWithEnrollment) {
     setDetailStudent(s)
     setDetailLoading(true)
-    const { data } = await supabase
-      .from('checkins')
-      .select('*, enrollment:enrollments(*, course:courses(name))')
-      .eq('student_id', s.id)
-      .order('check_in_at', { ascending: false })
-    setDetailCheckins(data ?? [])
+    const [{ data: checkins }, { data: receipts }] = await Promise.all([
+      supabase
+        .from('checkins')
+        .select('*, enrollment:enrollments(*, course:courses(name))')
+        .eq('student_id', s.id)
+        .order('check_in_at', { ascending: false }),
+      supabase
+        .from('receipts')
+        .select('*')
+        .eq('student_id', s.id)
+        .order('issued_at', { ascending: false }),
+    ])
+    setDetailCheckins(checkins ?? [])
+    setDetailReceipts(receipts ?? [])
     setDetailLoading(false)
   }
 
@@ -407,13 +416,8 @@ export default function StudentsPage() {
                     const remaining = enroll.lessons_total - enroll.lessons_used
                     return (
                       <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <div>
-                            <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
-                            {enroll.teacher?.full_name && (
-                              <span className="ml-2 text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full">👩‍🏫 {enroll.teacher.full_name}</span>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
                           <div className="flex items-center gap-2">
                             <button onClick={() => updateEnrollmentStatus(enroll.id, enroll.status === 'active' ? 'completed' : 'active')}
                               className={`badge cursor-pointer hover:opacity-80 transition ${enroll.status === 'active' ? 'badge-green' : 'badge-gray'}`}>
@@ -422,11 +426,40 @@ export default function StudentsPage() {
                             <button onClick={() => deleteEnrollment(enroll.id)} className="text-red-400 hover:text-red-600 text-xs hover:bg-red-50 rounded px-1.5 py-0.5 transition">🗑 ลบ</button>
                           </div>
                         </div>
+                        {/* รายละเอียดคอร์ส */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-2 text-xs">
+                          {enroll.teacher?.full_name && (
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <span className="text-gray-400">👩‍🏫 ครู</span>
+                              <span className="font-medium text-brand-700">{enroll.teacher.full_name}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <span className="text-gray-400">📚 จำนวน</span>
+                            <span className="font-medium">{enroll.lessons_total} ครั้ง</span>
+                          </div>
+                          {(() => {
+                            const receipt = detailReceipts.find(r => r.enrollment_id === enroll.id)
+                            return receipt ? (
+                              <>
+                                <div className="flex items-center gap-1 text-gray-500">
+                                  <span className="text-gray-400">💰 ราคา</span>
+                                  <span className="font-medium text-brand-600">{Number(receipt.amount).toLocaleString()} ฿</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-gray-500">
+                                  <span className="text-gray-400">📅 ซื้อ</span>
+                                  <span className="font-medium">{new Date(receipt.issued_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                                </div>
+                              </>
+                            ) : null
+                          })()}
+                        </div>
+                        {/* Progress bar */}
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`} style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-xs text-gray-500 flex-shrink-0">{enroll.lessons_used}/{enroll.lessons_total} ครั้ง · เหลือ <span className={remaining <= 2 ? 'text-red-500 font-medium' : remaining <= 5 ? 'text-amber-500 font-medium' : 'text-brand-600'}>{remaining}</span> ครั้ง</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">{enroll.lessons_used}/{enroll.lessons_total} · เหลือ <span className={remaining <= 2 ? 'text-red-500 font-medium' : remaining <= 5 ? 'text-amber-500 font-medium' : 'text-brand-600'}>{remaining}</span> ครั้ง</span>
                         </div>
                       </div>
                     )
