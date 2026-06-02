@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('receipts').select('amount, subject, book_fee').gte('issued_at', firstOfMonth),
+    supabase.from('receipts').select('amount, subject, book_fee, enrollment:enrollments(course:courses(name))').gte('issued_at', firstOfMonth),
     supabase.from('receipts').select('amount').gte('issued_at', firstOfLastMonth).lte('issued_at', lastOfLastMonth),
     supabase.from('enrollments')
       .select('*, student:students(nickname, full_name), course:courses(name)')
@@ -56,7 +56,9 @@ export default async function DashboardPage() {
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const carryOver = (monthlyBalance as any)?.carry_over ?? 0
   const totalCarryOver = Number((monthlyBalance as any)?.total_carry_over ?? 0)
-  const totalAllRevenue = totalCarryOver > 0 ? totalCarryOver : totalAllRevenueFromDB
+  // รายได้ทั้งหมด = total_carry_over (ยอดก่อน import) + รายรับที่บันทึกในระบบหลังจากนั้น
+  // ใช้ totalAllRevenueFromDB เสมอเพราะ receipts table มีข้อมูลครบแล้ว
+  const totalAllRevenue = totalAllRevenueFromDB > totalCarryOver ? totalAllRevenueFromDB : totalCarryOver + revenueThisMonth
   const revenuePct = revenueLastMonth > 0
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
     : 0
@@ -67,12 +69,15 @@ export default async function DashboardPage() {
 
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
   ;(receiptsThisMonth ?? []).forEach((r: any) => {
-    const s = String(r.subject ?? '').toLowerCase()
+    // ดูจาก subject ก่อน ถ้าว่างให้ดูจากชื่อ course
+    const subjectStr = String(r.subject ?? '').toLowerCase()
+    const courseName = String((r.enrollment as any)?.course?.name ?? '').toLowerCase()
+    const s = subjectStr || courseName
     const amt = Number(r.amount ?? 0)
     const book = Number(r.book_fee ?? 0)
-    if (s.includes('chi') || s.includes('จีน')) subjectRevenue.chi += amt
-    else if (s.includes('math') || s.includes('คณิต')) subjectRevenue.math += amt
-    else if (s.includes('eng') || s.includes('อังกฤษ')) subjectRevenue.eng += amt
+    if (s.includes('chi') || s.includes('จีน') || s.includes('hsk') || s.includes('yct') || s.includes('chinese') || s.includes('phonics') || s.includes('conversation')) subjectRevenue.chi += amt
+    else if (s.includes('math') || s.includes('คณิต') || s.includes('maths')) subjectRevenue.math += amt
+    else if (s.includes('eng') || s.includes('อังกฤษ') || s.includes('english')) subjectRevenue.eng += amt
     else subjectRevenue.other += amt
     if (book > 0) subjectRevenue.other += book
   })
