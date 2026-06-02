@@ -167,10 +167,10 @@ export default function ReceiptsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">ใบเสร็จ</h1>
+          <h1 className="text-lg md:text-xl font-semibold">ใบเสร็จ</h1>
           <p className="text-sm text-gray-500 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
         </div>
         <button onClick={() => { setEditReceipt(null); setPreview(null); setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' }); setShowForm(true) }} className="btn-brand">
@@ -178,7 +178,7 @@ export default function ReceiptsPage() {
         </button>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr>
