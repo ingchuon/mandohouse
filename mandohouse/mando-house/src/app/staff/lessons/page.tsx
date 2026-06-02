@@ -7,6 +7,7 @@ export default function LessonsPage() {
   const supabase = createClient()
   const [enrollments, setEnrollments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [adding, setAdding] = useState<string | null>(null)
   const [editEnroll, setEditEnroll] = useState<any>(null)
   const [logForm, setLogForm] = useState({ topic: '', homework: '', lesson_date: new Date().toISOString().split('T')[0] })
@@ -23,6 +24,14 @@ export default function LessonsPage() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  const filtered = enrollments.filter(en => {
+    if (!search) return true
+    const name = (en.student?.nickname || en.student?.full_name || '').toLowerCase()
+    const course = (en.course?.name || '').toLowerCase()
+    const q = search.toLowerCase()
+    return name.includes(q) || course.includes(q)
+  })
 
   async function addLesson(e: any) {
     e.preventDefault()
@@ -68,18 +77,31 @@ export default function LessonsPage() {
     loadData()
   }
 
-async function handleDelete(id: string) {
-  if (!confirm('ปิด enrollment นี้?')) return
-  const { error } = await supabase.from('enrollments').update({ status: 'completed' }).eq('id', id)
-  if (error) { toast.error('ไม่สำเร็จ: ' + error.message); return }
-  toast.success('ปิด enrollment แล้ว')
-  loadData()
-}
+  async function handleDelete(id: string) {
+    if (!confirm('ปิด enrollment นี้?')) return
+    const { error } = await supabase.from('enrollments').update({ status: 'completed' }).eq('id', id)
+    if (error) { toast.error('ไม่สำเร็จ: ' + error.message); return }
+    toast.success('ปิด enrollment แล้ว')
+    loadData()
+  }
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-semibold mb-1">นับครั้งการเรียน</h1>
-      <p className="text-sm text-gray-500 mb-6">ติดตามและบันทึกครั้งการเรียนของแต่ละ enrollment</p>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-xl font-semibold">นับครั้งการเรียน</h1>
+        <span className="text-sm text-gray-400">{filtered.length} รายการ</span>
+      </div>
+      <p className="text-sm text-gray-500 mb-4">ติดตามและบันทึกครั้งการเรียนของแต่ละ enrollment</p>
+
+      {/* ช่องค้นหา */}
+      <div className="mb-4">
+        <input
+          className="input max-w-sm"
+          placeholder="🔍 ค้นหาชื่อนักเรียนหรือคอร์ส..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
 
       <div className="card overflow-hidden">
         {loading ? <p className="text-center text-gray-400 py-12">กำลังโหลด...</p> : (
@@ -95,7 +117,7 @@ async function handleDelete(id: string) {
               </tr>
             </thead>
             <tbody>
-              {enrollments.map(en => {
+              {filtered.map(en => {
                 const remaining = en.lessons_total - en.lessons_used
                 const pct = en.lessons_total > 0 ? Math.round((en.lessons_used / en.lessons_total) * 100) : 0
                 const name = en.student?.nickname || en.student?.full_name
@@ -136,8 +158,10 @@ async function handleDelete(id: string) {
                   </tr>
                 )
               })}
-              {enrollments.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-gray-400 py-8">ไม่มี enrollment ที่กำลังเรียน</td></tr>
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="text-center text-gray-400 py-8">
+                  {search ? `ไม่พบ "${search}"` : 'ไม่มี enrollment ที่กำลังเรียน'}
+                </td></tr>
               )}
             </tbody>
           </table>
