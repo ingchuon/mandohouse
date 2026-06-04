@@ -173,13 +173,17 @@ export default function StudentsPage() {
     e.preventDefault()
     if (!showEnrollModal) return
 
-    // เตือนถ้าราคาเป็น 0
-    if (enrollForm.price <= 0) {
-      const confirm = window.confirm('ราคาเป็น 0 บาท — จะไม่มีการออกใบเสร็จ\nต้องการดำเนินการต่อโดยไม่มีใบเสร็จไหม?')
-      if (!confirm) return
-    }
-
     setEnrollSaving(true)
+
+    // หาราคาจาก course ถ้า enrollForm.price ยังเป็น 0
+    const selectedCourse = courses.find(c => c.id === enrollForm.course_id)
+    const finalPrice = enrollForm.price > 0 ? enrollForm.price : (selectedCourse?.price ?? 0)
+
+    // เตือนถ้าราคายังเป็น 0 หลัง fallback
+    if (finalPrice <= 0) {
+      const ok = window.confirm('ราคาเป็น 0 บาท — จะไม่มีการออกใบเสร็จ\nต้องการดำเนินการต่อโดยไม่มีใบเสร็จไหม?')
+      if (!ok) { setEnrollSaving(false); return }
+    }
 
     const { data: enroll, error: enrollError } = await supabase
       .from('enrollments')
@@ -195,11 +199,11 @@ export default function StudentsPage() {
       .select().single()
     if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
 
-    if (enrollForm.price > 0) {
+    if (finalPrice > 0) {
       const { error: receiptError } = await supabase.from('receipts').insert([{
         student_id: showEnrollModal.id,
         enrollment_id: enroll.id,
-        amount: enrollForm.price,
+        amount: finalPrice,
         payment_method: enrollForm.payment_method,
         issued_at: new Date(enrollForm.purchased_at).toISOString(),
       }])
