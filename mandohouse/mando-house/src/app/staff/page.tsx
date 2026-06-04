@@ -75,9 +75,9 @@ export default async function DashboardPage() {
     const s = subjectStr || courseName
     const amt = Number(r.amount ?? 0)
     const book = Number(r.book_fee ?? 0)
-    if (s.includes('chi') || s.includes('จีน') || s.includes('hsk') || s.includes('yct') || s.includes('chinese') || s.includes('phonics') || s.includes('conversation')) subjectRevenue.chi += amt
+    if (s.includes('chi') || s.includes('จีน') || s.includes('hsk') || s.includes('yct') || s.includes('chinese')) subjectRevenue.chi += amt
     else if (s.includes('math') || s.includes('คณิต') || s.includes('maths')) subjectRevenue.math += amt
-    else if (s.includes('eng') || s.includes('อังกฤษ') || s.includes('english')) subjectRevenue.eng += amt
+    else if (s.includes('eng') || s.includes('อังกฤษ') || s.includes('english') || s.includes('phonics') || s.includes('conversation') || s.includes('basic')) subjectRevenue.eng += amt
     else subjectRevenue.other += amt
     if (book > 0) subjectRevenue.other += book
   })
