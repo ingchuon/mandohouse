@@ -172,10 +172,14 @@ export default function StudentsPage() {
   async function handleEnroll(e: React.FormEvent) {
     e.preventDefault()
     if (!showEnrollModal) return
-    setEnrollSaving(true)
 
-    // หา teacher_id จาก teachers table
-    const selectedTeacher = teachers.find(t => t.id === enrollForm.teacher_id)
+    // เตือนถ้าราคาเป็น 0
+    if (enrollForm.price <= 0) {
+      const confirm = window.confirm('ราคาเป็น 0 บาท — จะไม่มีการออกใบเสร็จ\nต้องการดำเนินการต่อโดยไม่มีใบเสร็จไหม?')
+      if (!confirm) return
+    }
+
+    setEnrollSaving(true)
 
     const { data: enroll, error: enrollError } = await supabase
       .from('enrollments')
@@ -190,16 +194,24 @@ export default function StudentsPage() {
       }])
       .select().single()
     if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
+
     if (enrollForm.price > 0) {
-      await supabase.from('receipts').insert([{
+      const { error: receiptError } = await supabase.from('receipts').insert([{
         student_id: showEnrollModal.id,
         enrollment_id: enroll.id,
         amount: enrollForm.price,
         payment_method: enrollForm.payment_method,
         issued_at: new Date(enrollForm.purchased_at).toISOString(),
       }])
+      if (receiptError) {
+        toast.error('ซื้อคอร์สแล้ว แต่ออกใบเสร็จไม่สำเร็จ: ' + receiptError.message)
+      } else {
+        toast.success('ซื้อคอร์สและออกใบเสร็จเรียบร้อย 🎉')
+      }
+    } else {
+      toast.success('บันทึกคอร์สเรียบร้อย (ไม่มีใบเสร็จ)')
     }
-    toast.success('ซื้อคอร์สเรียบร้อย 🎉')
+
     router.refresh()
     setShowEnrollModal(null)
     setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
@@ -684,8 +696,12 @@ export default function StudentsPage() {
                 <input type="date" className="input" value={enrollForm.purchased_at} onChange={e => setEnrollForm({ ...enrollForm, purchased_at: e.target.value })} />
               </div>
               <div>
-                <label className="label">ราคา (บาท)</label>
-                <input type="number" min={0} className="input" value={enrollForm.price} onChange={e => setEnrollForm({ ...enrollForm, price: Number(e.target.value) })} />
+                <label className="label">ราคา (บาท) *</label>
+                <input type="number" min={0} className={`input ${enrollForm.price <= 0 ? 'border-amber-300 bg-amber-50' : ''}`}
+                  value={enrollForm.price} onChange={e => setEnrollForm({ ...enrollForm, price: Number(e.target.value) })} />
+                {enrollForm.price <= 0 && (
+                  <p className="text-xs text-amber-500 mt-1">⚠️ ราคาเป็น 0 — จะไม่มีการออกใบเสร็จ</p>
+                )}
               </div>
               <div>
                 <label className="label">ช่องทางชำระ</label>
