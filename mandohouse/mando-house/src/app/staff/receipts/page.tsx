@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatThaiMoney } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
 
 export default function ReceiptsPage() {
   const supabase = createClient()
+  const router = useRouter()
   const [receipts, setReceipts] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
@@ -89,7 +91,7 @@ export default function ReceiptsPage() {
         enrollment_id: en.id,
         student_id: en.student_id,
         issued_at: form.issued_at,
-        amount: en.course?.price ?? 0,
+        amount: form.amount > 0 ? form.amount : (en.course?.price ?? 0),
         payment_method: form.payment_method,
         items,
         notes: form.notes || null,
@@ -98,6 +100,7 @@ export default function ReceiptsPage() {
       toast.success('ออกใบเสร็จแล้ว')
     }
 
+    router.refresh()
     setShowForm(false)
     setEditReceipt(null)
     setPreview(null)
@@ -252,6 +255,13 @@ export default function ReceiptsPage() {
                       onChange={e => setForm({...form, amount: Number(e.target.value)})} />
                   </div>
                 )}
+                {!editReceipt && form.enrollment_id && (
+                  <div>
+                    <label className="label">จำนวนเงิน (บาท)</label>
+                    <input type="number" min={0} className="input" value={form.amount}
+                      onChange={e => setForm({...form, amount: Number(e.target.value)})} />
+                  </div>
+                )}
                 <div>
                   <label className="label">วันที่ออกใบเสร็จ</label>
                   <input type="date" className="input" value={form.issued_at}
@@ -299,7 +309,7 @@ export default function ReceiptsPage() {
                       </div>
                       <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200">
                         <span>รวม</span>
-                        <span className="text-brand-600">{formatThaiMoney(preview.course?.price ?? 0)}</span>
+                        <span className="text-brand-600">{formatThaiMoney(form.amount > 0 ? form.amount : (preview.course?.price ?? 0))}</span>
                       </div>
                     </div>
                   ) : (
