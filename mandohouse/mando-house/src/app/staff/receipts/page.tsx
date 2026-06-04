@@ -101,6 +101,7 @@ export default function ReceiptsPage() {
     }
 
     router.refresh()
+    await fetch('/api/revalidate', { method: 'POST' })
     setShowForm(false)
     setEditReceipt(null)
     setPreview(null)
