@@ -213,6 +213,7 @@ export default function StudentsPage() {
     }
 
     router.refresh()
+    await fetch('/api/revalidate', { method: 'POST' })
     setShowEnrollModal(null)
     setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
     setEnrollSaving(false)
