@@ -175,16 +175,15 @@ export default function StudentsPage() {
 
     setEnrollSaving(true)
 
-    // หาราคาจาก course ถ้า enrollForm.price ยังเป็น 0
     const selectedCourse = courses.find(c => c.id === enrollForm.course_id)
     const finalPrice = enrollForm.price > 0 ? enrollForm.price : (selectedCourse?.price ?? 0)
 
-    // เตือนถ้าราคายังเป็น 0 หลัง fallback
     if (finalPrice <= 0) {
       const ok = window.confirm('ราคาเป็น 0 บาท — จะไม่มีการออกใบเสร็จ\nต้องการดำเนินการต่อโดยไม่มีใบเสร็จไหม?')
       if (!ok) { setEnrollSaving(false); return }
     }
 
+    // ✅ บันทึก paid_amount + payment_method ลง enrollments ด้วย
     const { data: enroll, error: enrollError } = await supabase
       .from('enrollments')
       .insert([{
@@ -195,33 +194,75 @@ export default function StudentsPage() {
         lessons_used: enrollForm.lessons_used,
         status: 'active',
         notes: enrollForm.notes || null,
+        paid_amount: finalPrice > 0 ? finalPrice : null,
+        payment_method: finalPrice > 0 ? enrollForm.payment_method : null,
       }])
       .select().single()
-    if (enrollError) { toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message); setEnrollSaving(false); return }
+
+    if (enrollError) {
+      toast.error('บันทึกไม่สำเร็จ: ' + enrollError.message)
+      setEnrollSaving(false)
+      return
+    }
+
+    let receiptId: string | null = null
 
     if (finalPrice > 0) {
-      const { error: receiptError } = await supabase.from('receipts').insert([{
-        student_id: showEnrollModal.id,
-        enrollment_id: enroll.id,
-        amount: finalPrice,
-        payment_method: enrollForm.payment_method,
-        issued_at: new Date(enrollForm.purchased_at).toISOString(),
-      }])
+      const { data: receipt, error: receiptError } = await supabase
+        .from('receipts')
+        .insert([{
+          student_id: showEnrollModal.id,
+          enrollment_id: enroll.id,
+          amount: finalPrice,
+          payment_method: enrollForm.payment_method,
+          issued_at: enrollForm.purchased_at, // ✅ ส่ง "YYYY-MM-DD" ตรงๆ ไม่ผ่าน new Date()
+          items: [{
+            description: selectedCourse?.name ?? 'คอร์สเรียน',
+            amount: finalPrice,
+          }],
+        }])
+        .select('id, receipt_number')
+        .single()
+
       if (receiptError) {
         toast.error('ซื้อคอร์สแล้ว แต่ออกใบเสร็จไม่สำเร็จ: ' + receiptError.message)
       } else {
-        toast.success('ซื้อคอร์สและออกใบเสร็จเรียบร้อย 🎉')
+        receiptId = receipt.id
+        toast.success(
+          (t: any) => (
+            <span>
+              ซื้อคอร์สสำเร็จ 🎉{' '}
+              <button
+                onClick={() => { router.push('/staff/receipts'); toast.dismiss(t.id) }}
+                className="underline font-medium text-brand-600 ml-1"
+              >
+                ดูใบเสร็จ →
+              </button>
+            </span>
+          ),
+          { duration: 6000 }
+        )
       }
     } else {
       toast.success('บันทึกคอร์สเรียบร้อย (ไม่มีใบเสร็จ)')
     }
 
-    router.refresh()
     await fetch('/api/revalidate', { method: 'POST' })
+    router.refresh()
     setShowEnrollModal(null)
-    setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] })
+    setEnrollForm({
+      course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0,
+      price: 0, payment_method: 'transfer', notes: '',
+      purchased_at: new Date().toISOString().split('T')[0],
+    })
     setEnrollSaving(false)
     loadStudents()
+
+    // ✅ ถามว่าจะไปดูใบเสร็จเลยไหม
+    if (receiptId) {
+      const goNow = window.confirm('ออกใบเสร็จสำเร็จ! ไปดูหน้าใบเสร็จเลยไหม?')
+      if (goNow) router.push('/staff/receipts')
+    }
   }
 
   function exportExcel() {
@@ -291,7 +332,6 @@ export default function StudentsPage() {
     }).eq('id', enrollId)
     if (error) { toast.error('แก้ไขไม่สำเร็จ'); setSavingEnroll(false); return }
 
-    // แก้ receipt ถ้ามี
     const receipt = detailReceipts.find(r => r.enrollment_id === enrollId)
     if (receipt && (editEnrollForm.price || editEnrollForm.issued_at)) {
       await supabase.from('receipts').update({
@@ -472,7 +512,6 @@ export default function StudentsPage() {
                     const remaining = enroll.lessons_total - enroll.lessons_used
                     return (
                       <div key={enroll.id} className="bg-gray-50 rounded-xl p-3">
-                        {/* Header */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">{enroll.course?.name || 'ไม่มีชื่อคอร์ส'}</span>
                           <div className="flex items-center gap-1.5">
@@ -497,7 +536,6 @@ export default function StudentsPage() {
                           </div>
                         </div>
 
-                        {/* Edit form */}
                         {editEnrollId === enroll.id ? (
                           <div className="bg-white rounded-xl p-3 mb-2 border border-brand-100 space-y-2">
                             <div className="grid grid-cols-2 gap-2">
@@ -540,7 +578,6 @@ export default function StudentsPage() {
                             </div>
                           </div>
                         ) : (
-                          /* Info grid */
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-2 text-xs">
                             {enroll.teacher?.full_name && (
                               <div className="flex items-center gap-1 text-gray-500">
@@ -570,7 +607,6 @@ export default function StudentsPage() {
                           </div>
                         )}
 
-                        {/* Progress bar */}
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`} style={{ width: `${pct}%` }} />
@@ -578,7 +614,6 @@ export default function StudentsPage() {
                           <span className="text-xs text-gray-500 flex-shrink-0">{enroll.lessons_used}/{enroll.lessons_total} · เหลือ <span className={remaining <= 2 ? 'text-red-500 font-medium' : remaining <= 5 ? 'text-amber-500 font-medium' : 'text-brand-600'}>{remaining}</span> ครั้ง</span>
                         </div>
 
-                        {/* ดูประวัติเรียน */}
                         {(() => {
                           const enrollCheckins = getEnrollCheckins(enroll.id)
                           const isExpanded = expandedEnrollId === enroll.id
@@ -672,7 +707,10 @@ export default function StudentsPage() {
               <div>
                 <label className="label">คอร์ส</label>
                 <select className="input" value={enrollForm.course_id}
-                  onChange={e => { const course = courses.find(c => c.id === e.target.value); setEnrollForm({ ...enrollForm, course_id: e.target.value, lessons_total: course?.total_lessons ?? 10, price: course?.price ?? 0 }) }}>
+                  onChange={e => {
+                    const course = courses.find(c => c.id === e.target.value)
+                    setEnrollForm({ ...enrollForm, course_id: e.target.value, lessons_total: course?.total_lessons ?? 10, price: course?.price ?? 0 })
+                  }}>
                   <option value="">— เลือกคอร์ส —</option>
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -688,29 +726,37 @@ export default function StudentsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">จำนวนครั้งทั้งหมด</label>
-                  <input type="number" min={1} className="input" value={enrollForm.lessons_total} onChange={e => setEnrollForm({ ...enrollForm, lessons_total: Number(e.target.value) })} />
+                  <input type="number" min={1} className="input" value={enrollForm.lessons_total}
+                    onChange={e => setEnrollForm({ ...enrollForm, lessons_total: Number(e.target.value) })} />
                 </div>
                 <div>
                   <label className="label">ใช้ไปแล้ว (ย้อนหลัง)</label>
-                  <input type="number" min={0} className="input" value={enrollForm.lessons_used} onChange={e => setEnrollForm({ ...enrollForm, lessons_used: Number(e.target.value) })} placeholder="0" />
+                  <input type="number" min={0} className="input" value={enrollForm.lessons_used}
+                    onChange={e => setEnrollForm({ ...enrollForm, lessons_used: Number(e.target.value) })} placeholder="0" />
                   <p className="text-xs text-gray-400 mt-1">ใส่ถ้ามีประวัติก่อนใช้ระบบ</p>
                 </div>
               </div>
               <div>
                 <label className="label">วันที่ซื้อคอร์ส</label>
-                <input type="date" className="input" value={enrollForm.purchased_at} onChange={e => setEnrollForm({ ...enrollForm, purchased_at: e.target.value })} />
+                <input type="date" className="input" value={enrollForm.purchased_at}
+                  onChange={e => setEnrollForm({ ...enrollForm, purchased_at: e.target.value })} />
               </div>
               <div>
                 <label className="label">ราคา (บาท) *</label>
-                <input type="number" min={0} className={`input ${enrollForm.price <= 0 ? 'border-amber-300 bg-amber-50' : ''}`}
-                  value={enrollForm.price} onChange={e => setEnrollForm({ ...enrollForm, price: Number(e.target.value) })} />
+                <input
+                  type="number" min={0}
+                  className={`input ${enrollForm.price <= 0 ? 'border-amber-300 bg-amber-50' : ''}`}
+                  value={enrollForm.price}
+                  onChange={e => setEnrollForm({ ...enrollForm, price: Number(e.target.value) })}
+                />
                 {enrollForm.price <= 0 && (
                   <p className="text-xs text-amber-500 mt-1">⚠️ ราคาเป็น 0 — จะไม่มีการออกใบเสร็จ</p>
                 )}
               </div>
               <div>
                 <label className="label">ช่องทางชำระ</label>
-                <select className="input" value={enrollForm.payment_method} onChange={e => setEnrollForm({ ...enrollForm, payment_method: e.target.value })}>
+                <select className="input" value={enrollForm.payment_method}
+                  onChange={e => setEnrollForm({ ...enrollForm, payment_method: e.target.value })}>
                   <option value="transfer">โอนเงิน</option>
                   <option value="cash">เงินสด</option>
                   <option value="promptpay">พร้อมเพย์</option>
@@ -718,10 +764,14 @@ export default function StudentsPage() {
               </div>
               <div>
                 <label className="label">หมายเหตุ</label>
-                <input className="input" placeholder="เช่น ต่อคอร์ส, โปรโมชัน..." value={enrollForm.notes} onChange={e => setEnrollForm({ ...enrollForm, notes: e.target.value })} />
+                <input className="input" placeholder="เช่น ต่อคอร์ส, โปรโมชัน..."
+                  value={enrollForm.notes}
+                  onChange={e => setEnrollForm({ ...enrollForm, notes: e.target.value })} />
               </div>
               <div className="flex gap-2 pt-1">
-                <button type="submit" disabled={enrollSaving} className="btn-brand flex-1 justify-center">{enrollSaving ? 'กำลังบันทึก...' : 'ยืนยันซื้อคอร์ส'}</button>
+                <button type="submit" disabled={enrollSaving} className="btn-brand flex-1 justify-center">
+                  {enrollSaving ? 'กำลังบันทึก...' : 'ยืนยันซื้อคอร์ส'}
+                </button>
                 <button type="button" onClick={() => setShowEnrollModal(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
               </div>
             </form>
