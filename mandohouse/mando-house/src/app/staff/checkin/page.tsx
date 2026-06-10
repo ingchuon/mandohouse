@@ -8,7 +8,7 @@ export default function CheckinPage() {
   const supabase = createClient()
   const [students, setStudents] = useState<Student[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [todayCheckins, setTodayCheckins] = useState<any[]>([])
+  const [checkins, setCheckins] = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,25 +20,42 @@ export default function CheckinPage() {
   const [noteCheckin, setNoteCheckin] = useState<any>(null)
   const [noteText, setNoteText] = useState('')
 
+  // date picker state — default = today
+  const todayStr = new Date().toISOString().split('T')[0]
+  const [selectedDate, setSelectedDate] = useState(todayStr)
+  const isToday = selectedDate === todayStr
+
   useEffect(() => {
-    loadData()
+    loadStudentsAndEnrollments()
     const t = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
 
-  async function loadData() {
-    const today = new Date().toISOString().split('T')[0]
-    const [{ data: s }, { data: e }, { data: c }] = await Promise.all([
+  useEffect(() => {
+    loadCheckins(selectedDate)
+  }, [selectedDate])
+
+  async function loadStudentsAndEnrollments() {
+    const [{ data: s }, { data: e }] = await Promise.all([
       supabase.from('students').select('*').eq('is_active', true).order('nickname'),
       supabase.from('enrollments').select('*, course:courses(name)').eq('status', 'active'),
-      supabase.from('checkins')
-        .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name))')
-        .gte('check_in_at', today + 'T00:00:00')
-        .order('check_in_at', { ascending: false }),
     ])
     setStudents(s ?? [])
     setEnrollments(e ?? [])
-    setTodayCheckins(c ?? [])
+  }
+
+  async function loadCheckins(date: string) {
+    const { data: c } = await supabase
+      .from('checkins')
+      .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name))')
+      .gte('check_in_at', date + 'T00:00:00')
+      .lt('check_in_at', date + 'T23:59:59')
+      .order('check_in_at', { ascending: false })
+    setCheckins(c ?? [])
+  }
+
+  async function loadData() {
+    await Promise.all([loadStudentsAndEnrollments(), loadCheckins(selectedDate)])
   }
 
   async function handleCheckin() {
@@ -59,6 +76,11 @@ export default function CheckinPage() {
     setSelectedStudent('')
     setStudentSearch('')
     setCustomDate('')
+    // ถ้า backdate ให้กระโดดไปดูวันนั้น
+    if (isBackdate && customDate) {
+      const backdateDay = customDate.slice(0, 10)
+      setSelectedDate(backdateDay)
+    }
     loadData()
     setLoading(false)
   }
@@ -68,7 +90,7 @@ export default function CheckinPage() {
     const { error } = await supabase.from('checkins').delete().eq('id', id)
     if (error) { toast.error('ลบไม่สำเร็จ'); return }
     toast.success('ลบแล้ว')
-    loadData()
+    loadCheckins(selectedDate)
   }
 
   function openEdit(c: any) {
@@ -94,7 +116,7 @@ export default function CheckinPage() {
     if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
     toast.success('แก้ไขแล้ว')
     setEditCheckin(null)
-    loadData()
+    loadCheckins(selectedDate)
   }
 
   function openNote(c: any) {
@@ -109,8 +131,29 @@ export default function CheckinPage() {
     if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
     toast.success('บันทึกบทเรียนแล้ว ✅')
     setNoteCheckin(null)
-    loadData()
+    loadCheckins(selectedDate)
   }
+
+  function goDate(offset: number) {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + offset)
+    const next = d.toISOString().split('T')[0]
+    if (next <= todayStr) setSelectedDate(next)
+  }
+
+  function formatDateTH(dateStr: string) {
+    const d = new Date(dateStr + 'T12:00:00')
+    if (dateStr === todayStr) return 'วันนี้'
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (dateStr === yesterday.toISOString().split('T')[0]) return 'เมื่อวาน'
+    return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+
+  // สถิติของวันที่เลือก
+  const presentCount = checkins.length
+  const checkedOutCount = checkins.filter(c => c.check_out_at).length
+  const stillInCount = checkins.filter(c => !c.check_out_at).length
 
   // filter นักเรียนตาม search
   const filteredStudents = students.filter(s =>
@@ -123,7 +166,7 @@ export default function CheckinPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-lg md:text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
+      <h1 className="text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
       <p className="text-sm text-gray-500 mb-6">บันทึกเวลาเข้าออกของนักเรียน</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -203,17 +246,81 @@ export default function CheckinPage() {
           </div>
         </div>
 
-        {/* Today's checkins */}
-        <div className="md:col-span-1 md:col-span-2 card">
-          <div className="card-header">
-            <h3 className="font-medium">รายการวันนี้</h3>
-            <span className="badge badge-green">{todayCheckins.length} คน</span>
+        {/* Attendance panel with date picker */}
+        <div className="md:col-span-2 card">
+          {/* Date navigation */}
+          <div className="card-header gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <button
+                onClick={() => goDate(-1)}
+                className="btn-outline btn-sm px-2.5 py-1"
+              >
+                ←
+              </button>
+              <div className="relative flex-1 max-w-[180px]">
+                <input
+                  type="date"
+                  className="input text-sm py-1.5 pr-8"
+                  value={selectedDate}
+                  max={todayStr}
+                  onChange={e => e.target.value && setSelectedDate(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={() => goDate(1)}
+                disabled={selectedDate >= todayStr}
+                className="btn-outline btn-sm px-2.5 py-1 disabled:opacity-30"
+              >
+                →
+              </button>
+              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                {formatDateTH(selectedDate)}
+              </span>
+              {!isToday && (
+                <button
+                  onClick={() => setSelectedDate(todayStr)}
+                  className="btn-outline btn-sm px-2.5 py-1 text-brand-600 border-brand-200 hover:bg-brand-50"
+                >
+                  วันนี้
+                </button>
+              )}
+            </div>
+            <span className="badge badge-green">{presentCount} คน</span>
           </div>
+
+          {/* Summary stats */}
+          {presentCount > 0 && (
+            <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
+                <span className="text-gray-600">มาเรียน</span>
+                <span className="font-semibold text-brand-700">{presentCount} คน</span>
+              </div>
+              {checkedOutCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
+                  <span className="text-gray-600">ออกแล้ว</span>
+                  <span className="font-semibold text-gray-700">{checkedOutCount} คน</span>
+                </div>
+              )}
+              {stillInCount > 0 && isToday && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+                  <span className="text-gray-600">ยังอยู่</span>
+                  <span className="font-semibold text-yellow-700">{stillInCount} คน</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Checkin list */}
           <div className="divide-y divide-gray-50">
-            {todayCheckins.length === 0 && (
-              <p className="text-center text-gray-400 py-10 text-sm">ยังไม่มีการเช็กอินวันนี้</p>
+            {checkins.length === 0 && (
+              <p className="text-center text-gray-400 py-10 text-sm">
+                {isToday ? 'ยังไม่มีการเช็กอินวันนี้' : `ไม่มีข้อมูลวันที่ ${formatDateTH(selectedDate)}`}
+              </p>
             )}
-            {todayCheckins.map(c => {
+            {checkins.map(c => {
               const name = c.student?.nickname || c.student?.full_name || '?'
               const inTime = new Date(c.check_in_at)
               const outTime = c.check_out_at ? new Date(c.check_out_at) : null
