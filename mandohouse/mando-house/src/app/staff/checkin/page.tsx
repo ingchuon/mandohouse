@@ -10,6 +10,7 @@ export default function CheckinPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [checkins, setCheckins] = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState('')
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [customDate, setCustomDate] = useState('')
@@ -35,10 +36,25 @@ export default function CheckinPage() {
     loadCheckins(selectedDate)
   }, [selectedDate])
 
+  // เมื่อเลือกนักเรียน → หา enrollment ที่ active ของคนนั้น
+  // ถ้ามีแค่ 1 → set อัตโนมัติ / ถ้ามากกว่า 1 → reset ให้ user เลือก
+  useEffect(() => {
+    if (!selectedStudent) {
+      setSelectedEnrollmentId('')
+      return
+    }
+    const studentEnrollments = enrollments.filter(e => e.student_id === selectedStudent)
+    if (studentEnrollments.length === 1) {
+      setSelectedEnrollmentId(studentEnrollments[0].id)
+    } else {
+      setSelectedEnrollmentId('')
+    }
+  }, [selectedStudent, enrollments])
+
   async function loadStudentsAndEnrollments() {
     const [{ data: s }, { data: e }] = await Promise.all([
       supabase.from('students').select('*').eq('is_active', true).order('nickname'),
-      supabase.from('enrollments').select('*, course:courses(name)').eq('status', 'active'),
+      supabase.from('enrollments').select('*, course:courses(name, subject)').eq('status', 'active'),
     ])
     setStudents(s ?? [])
     setEnrollments(e ?? [])
@@ -47,7 +63,7 @@ export default function CheckinPage() {
   async function loadCheckins(date: string) {
     const { data: c } = await supabase
       .from('checkins')
-      .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name))')
+      .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name, subject))')
       .gte('check_in_at', date + 'T00:00:00')
       .lt('check_in_at', date + 'T23:59:59')
       .order('check_in_at', { ascending: false })
@@ -60,26 +76,33 @@ export default function CheckinPage() {
 
   async function handleCheckin() {
     if (!selectedStudent) { toast.error('กรุณาเลือกนักเรียน'); return }
+    const studentEnrollments = enrollments.filter(e => e.student_id === selectedStudent)
+    if (studentEnrollments.length > 1 && !selectedEnrollmentId) {
+      toast.error('กรุณาเลือกคอร์สที่จะเช็กอิน'); return
+    }
     if (isBackdate && !customDate) { toast.error('กรุณาเลือกวันที่และเวลา'); return }
+
     setLoading(true)
-    const enrollment = enrollments.find(e => e.student_id === selectedStudent)
+    const enrollmentId = selectedEnrollmentId || studentEnrollments[0]?.id || null
     const checkinTime = isBackdate && customDate
       ? new Date(customDate).toISOString()
       : new Date().toISOString()
+
     const { error } = await supabase.from('checkins').insert({
       student_id: selectedStudent,
-      enrollment_id: enrollment?.id,
+      enrollment_id: enrollmentId,
       check_in_at: checkinTime,
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
-    toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ!' : 'เช็กอินสำเร็จ!')
+
+    const courseName = enrollments.find(e => e.id === enrollmentId)?.course?.name ?? ''
+    toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ!' : `เช็กอินสำเร็จ! ${courseName}`)
     setSelectedStudent('')
+    setSelectedEnrollmentId('')
     setStudentSearch('')
     setCustomDate('')
-    // ถ้า backdate ให้กระโดดไปดูวันนั้น
     if (isBackdate && customDate) {
-      const backdateDay = customDate.slice(0, 10)
-      setSelectedDate(backdateDay)
+      setSelectedDate(customDate.slice(0, 10))
     }
     loadData()
     setLoading(false)
@@ -150,7 +173,17 @@ export default function CheckinPage() {
     return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
-  // สถิติของวันที่เลือก
+  // subject color badge
+  function subjectColor(subject?: string) {
+    switch (subject) {
+      case 'chinese': return 'bg-red-100 text-red-700'
+      case 'math':    return 'bg-blue-100 text-blue-700'
+      case 'english': return 'bg-yellow-100 text-yellow-700'
+      default:        return 'bg-gray-100 text-gray-600'
+    }
+  }
+
+  // สถิติ
   const presentCount = checkins.length
   const checkedOutCount = checkins.filter(c => c.check_out_at).length
   const stillInCount = checkins.filter(c => !c.check_out_at).length
@@ -162,7 +195,20 @@ export default function CheckinPage() {
     s.full_name.toLowerCase().includes(studentSearch.toLowerCase())
   )
 
+  // enrollment ของนักเรียนที่เลือก
+  const studentEnrollments = selectedStudent
+    ? enrollments.filter(e => e.student_id === selectedStudent)
+    : []
+  const hasMultipleCourses = studentEnrollments.length > 1
+  const autoEnrollment = studentEnrollments.length === 1 ? studentEnrollments[0] : null
+
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+
+  // ปุ่ม checkin ควร disable เมื่อไหร่
+  const checkinDisabled = loading
+    || !selectedStudent
+    || (hasMultipleCourses && !selectedEnrollmentId)
+    || (isBackdate && !customDate)
 
   return (
     <div className="p-4 md:p-6">
@@ -179,18 +225,26 @@ export default function CheckinPage() {
               <div className="text-xs text-brand-600 mt-1">เวลาปัจจุบัน</div>
             </div>
 
+            {/* ค้นหาและเลือกนักเรียน */}
             <div>
               <label className="label">ค้นหานักเรียน</label>
               <input
                 className="input mb-2"
                 placeholder="พิมพ์ชื่อหรือชื่อเล่น..."
                 value={studentSearch}
-                onChange={e => { setStudentSearch(e.target.value); setSelectedStudent('') }}
+                onChange={e => {
+                  setStudentSearch(e.target.value)
+                  setSelectedStudent('')
+                  setSelectedEnrollmentId('')
+                }}
               />
               <select
                 className="input"
                 value={selectedStudent}
-                onChange={e => setSelectedStudent(e.target.value)}
+                onChange={e => {
+                  setSelectedStudent(e.target.value)
+                  setStudentSearch('')
+                }}
                 size={Math.min(filteredStudents.length + 1, 6)}
               >
                 <option value="">— เลือกนักเรียน —</option>
@@ -206,9 +260,85 @@ export default function CheckinPage() {
               )}
             </div>
 
+            {/* แสดงสถานะหลังเลือกนักเรียน */}
             {selectedStudent && (
-              <div className="bg-brand-50 rounded-xl px-3 py-2 text-sm text-brand-700 font-medium">
-                ✓ {students.find(s => s.id === selectedStudent)?.nickname || students.find(s => s.id === selectedStudent)?.full_name}
+              <div className="space-y-3">
+                {/* คอร์สเดียว — auto */}
+                {autoEnrollment && (
+                  <div className="flex items-center gap-2 bg-brand-50 rounded-xl px-3 py-2.5">
+                    <span className="text-brand-600 text-sm">✓</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-brand-700 truncate">
+                        {autoEnrollment.course?.name || 'ไม่มีชื่อคอร์ส'}
+                      </div>
+                      <div className="text-xs text-brand-500">เลือกอัตโนมัติ (คอร์สเดียว)</div>
+                    </div>
+                    {autoEnrollment.course?.subject && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${subjectColor(autoEnrollment.course.subject)}`}>
+                        {autoEnrollment.course.subject === 'chinese' ? '中文' :
+                         autoEnrollment.course.subject === 'math' ? 'คณิต' :
+                         autoEnrollment.course.subject === 'english' ? 'ENG' :
+                         autoEnrollment.course.subject}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* หลายคอร์ส — ให้เลือก */}
+                {hasMultipleCourses && (
+                  <div>
+                    <label className="label flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block"></span>
+                      เลือกคอร์สที่จะเช็กอิน
+                      <span className="text-orange-500 text-xs font-normal">*จำเป็น</span>
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      {studentEnrollments.map(enr => (
+                        <button
+                          key={enr.id}
+                          onClick={() => setSelectedEnrollmentId(enr.id)}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl border-2 transition-all ${
+                            selectedEnrollmentId === enr.id
+                              ? 'border-brand-500 bg-brand-50'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                              selectedEnrollmentId === enr.id ? 'border-brand-500' : 'border-gray-300'
+                            }`}>
+                              {selectedEnrollmentId === enr.id && (
+                                <div className="w-2 h-2 rounded-full bg-brand-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-sm font-medium truncate ${
+                                selectedEnrollmentId === enr.id ? 'text-brand-700' : 'text-gray-700'
+                              }`}>
+                                {enr.course?.name || 'ไม่มีชื่อคอร์ส'}
+                              </div>
+                            </div>
+                            {enr.course?.subject && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${subjectColor(enr.course.subject)}`}>
+                                {enr.course.subject === 'chinese' ? '中文' :
+                                 enr.course.subject === 'math' ? 'คณิต' :
+                                 enr.course.subject === 'english' ? 'ENG' :
+                                 enr.course.subject}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ไม่มีคอร์ส */}
+                {studentEnrollments.length === 0 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-orange-700">
+                    ⚠️ นักเรียนไม่มีคอร์ส active
+                  </div>
+                )}
               </div>
             )}
 
@@ -238,7 +368,7 @@ export default function CheckinPage() {
 
             <button
               onClick={handleCheckin}
-              disabled={loading || !selectedStudent || (isBackdate && !customDate)}
+              disabled={checkinDisabled}
               className="btn-brand w-full justify-center py-2.5"
             >
               {loading ? 'กำลังบันทึก...' : isBackdate ? '📅 บันทึกย้อนหลัง' : '✓ เช็กอิน'}
@@ -251,12 +381,7 @@ export default function CheckinPage() {
           {/* Date navigation */}
           <div className="card-header gap-2 flex-wrap">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <button
-                onClick={() => goDate(-1)}
-                className="btn-outline btn-sm px-2.5 py-1"
-              >
-                ←
-              </button>
+              <button onClick={() => goDate(-1)} className="btn-outline btn-sm px-2.5 py-1">←</button>
               <div className="relative flex-1 max-w-[180px]">
                 <input
                   type="date"
@@ -270,9 +395,7 @@ export default function CheckinPage() {
                 onClick={() => goDate(1)}
                 disabled={selectedDate >= todayStr}
                 className="btn-outline btn-sm px-2.5 py-1 disabled:opacity-30"
-              >
-                →
-              </button>
+              >→</button>
               <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
                 {formatDateTH(selectedDate)}
               </span>
@@ -290,7 +413,7 @@ export default function CheckinPage() {
 
           {/* Summary stats */}
           {presentCount > 0 && (
-            <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm">
+            <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
                 <span className="text-gray-600">มาเรียน</span>
@@ -325,6 +448,7 @@ export default function CheckinPage() {
               const inTime = new Date(c.check_in_at)
               const outTime = c.check_out_at ? new Date(c.check_out_at) : null
               const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
+              const subject = c.enrollment?.course?.subject
 
               return (
                 <div key={c.id} className="px-5 py-3">
@@ -334,7 +458,18 @@ export default function CheckinPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm text-gray-900">{name}</div>
-                      <div className="text-xs text-gray-400">{c.enrollment?.course?.name || 'ไม่มีคอร์ส'}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {subject && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${subjectColor(subject)}`}>
+                            {subject === 'chinese' ? '中文' :
+                             subject === 'math' ? 'คณิต' :
+                             subject === 'english' ? 'ENG' : subject}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400 truncate">
+                          {c.enrollment?.course?.name || 'ไม่มีคอร์ส'}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-sm">
