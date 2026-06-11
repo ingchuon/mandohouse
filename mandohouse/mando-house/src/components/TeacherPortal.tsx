@@ -77,7 +77,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
 
-  /* โหลดรายชื่อครูทั้งหมด */
+  /* โหลดรายชื่อครูทั้งหมด (ไม่รวมชื่อรวม เช่น Aom&Bee) */
   useEffect(() => {
     supabase
       .from('teachers')
@@ -85,7 +85,8 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => {
-        setAllTeachers((data as Teacher[]) ?? [])
+        const list = ((data as Teacher[]) ?? []).filter(t => !t.full_name.includes('&'))
+        setAllTeachers(list)
         setLoadingTeachers(false)
 
         // ถ้ามี initialTeacherId (จากลิงก์เก่า) หรือเคยเลือกไว้แล้ว
@@ -296,7 +297,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                   {t.full_name.slice(0, 2)}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-medium text-sm text-gray-800 truncate">{t.full_name}</div>
+                  <div className="font-medium text-sm text-gray-800 truncate">Teacher {t.full_name}</div>
                   {t.subject && <div className="text-xs text-gray-400 truncate">{t.subject}</div>}
                 </div>
               </button>
