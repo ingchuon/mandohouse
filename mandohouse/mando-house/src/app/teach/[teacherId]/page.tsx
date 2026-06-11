@@ -1,0 +1,502 @@
+'use client'
+// src/app/teach/[teacherId]/page.tsx
+// หน้าสำหรับครูบันทึกชั่วโมงสอนเอง — ไม่ต้อง login ใช้ teacher_id ใน URL + PIN 4 หลัก
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import toast from 'react-hot-toast'
+
+interface Teacher {
+  id: string
+  full_name: string
+  subject: string | null
+  pin: string | null
+}
+
+interface Course {
+  id: string
+  name: string
+  name_en: string | null
+}
+
+interface Enrollment {
+  id: string
+  student_id: string
+  lessons_used: number
+  lessons_total: number
+  status: string
+  courses: Course | null
+  students: { id: string; full_name: string; nickname: string | null } | null
+}
+
+interface LessonLog {
+  id: string
+  enrollment_id: string
+  lesson_date: string
+  lesson_number: number
+  topic: string | null
+  homework: string | null
+  duration_minutes: number
+  enrollments: {
+    courses: Course | null
+    students: { full_name: string; nickname: string | null } | null
+  } | null
+}
+
+const PIN_KEY_PREFIX = 'mando_teach_pin_'
+
+export default function TeacherSelfLogPage() {
+  const params = useParams()
+  const teacherId = params.teacherId as string
+  const supabase = createClient()
+
+  const [teacher, setTeacher] = useState<Teacher | null>(null)
+  const [loadingTeacher, setLoadingTeacher] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  // PIN auth
+  const [unlocked, setUnlocked] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState(false)
+
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [logs, setLogs] = useState<LessonLog[]>([])
+  const [loadingData, setLoadingData] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [form, setForm] = useState({
+    enrollment_id: '',
+    lesson_date: todayStr,
+    duration_minutes: 60,
+    topic: '',
+    homework: '',
+  })
+  const [studentSearch, setStudentSearch] = useState('')
+
+  // เดือนปัจจุบัน สำหรับสรุปยอด
+  const now = new Date()
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+
+  /* โหลดข้อมูลครู */
+  useEffect(() => {
+    if (!teacherId) return
+    supabase
+      .from('teachers')
+      .select('id, full_name, subject, pin')
+      .eq('id', teacherId)
+      .eq('is_active', true)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) { setNotFound(true); setLoadingTeacher(false); return }
+        setTeacher(data as Teacher)
+        setLoadingTeacher(false)
+
+        // เช็ค PIN ที่เคยบันทึกไว้ใน localStorage
+        try {
+          const saved = localStorage.getItem(PIN_KEY_PREFIX + teacherId)
+          if (saved && saved === (data as Teacher).pin) {
+            setUnlocked(true)
+          }
+        } catch {}
+      })
+  }, [teacherId])
+
+  /* โหลดข้อมูลหลังปลดล็อก */
+  useEffect(() => {
+    if (!unlocked || !teacher) return
+    loadAll()
+  }, [unlocked, teacher])
+
+  async function loadAll() {
+    setLoadingData(true)
+    const [{ data: eData }, { data: lData }] = await Promise.all([
+      supabase
+        .from('enrollments')
+        .select(`
+          id, student_id, lessons_used, lessons_total, status,
+          courses ( id, name, name_en ),
+          students:student_id ( id, full_name, nickname )
+        `)
+        .in('status', ['active', 'completed'])
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('lesson_logs')
+        .select(`
+          id, enrollment_id, lesson_date, lesson_number, topic, homework, duration_minutes,
+          enrollments (
+            courses ( id, name, name_en ),
+            students:student_id ( full_name, nickname )
+          )
+        `)
+        .eq('teacher_name', teacher!.full_name)
+        .gte('lesson_date', monthStart)
+        .lte('lesson_date', monthEnd)
+        .order('lesson_date', { ascending: false }),
+    ])
+    setEnrollments((eData as unknown as Enrollment[]) ?? [])
+    setLogs((lData as unknown as LessonLog[]) ?? [])
+    setLoadingData(false)
+  }
+
+  function handlePinSubmit() {
+    if (!teacher) return
+    if (pinInput === teacher.pin) {
+      setUnlocked(true)
+      setPinError(false)
+      try { localStorage.setItem(PIN_KEY_PREFIX + teacherId, pinInput) } catch {}
+    } else {
+      setPinError(true)
+      setPinInput('')
+    }
+  }
+
+  function handlePinDigit(d: string) {
+    if (pinInput.length >= 4) return
+    const next = pinInput + d
+    setPinInput(next)
+    setPinError(false)
+    if (next.length === 4) {
+      // auto-submit
+      setTimeout(() => {
+        if (teacher && next === teacher.pin) {
+          setUnlocked(true)
+          try { localStorage.setItem(PIN_KEY_PREFIX + teacherId, next) } catch {}
+        } else {
+          setPinError(true)
+          setPinInput('')
+        }
+      }, 100)
+    }
+  }
+
+  async function handleSave() {
+    if (!form.enrollment_id) { toast.error('กรุณาเลือกนักเรียน'); return }
+    const enroll = enrollments.find(e => e.id === form.enrollment_id)
+    if (!enroll || !teacher) return
+
+    setSaving(true)
+
+    const { data: last } = await supabase
+      .from('lesson_logs')
+      .select('lesson_number')
+      .eq('enrollment_id', form.enrollment_id)
+      .order('lesson_number', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextLesson = (last?.lesson_number ?? 0) + 1
+
+    const { error } = await supabase.from('lesson_logs').insert({
+      enrollment_id: form.enrollment_id,
+      student_id: enroll.student_id,
+      teacher_name: teacher.full_name,
+      lesson_date: form.lesson_date,
+      lesson_number: nextLesson,
+      duration_minutes: form.duration_minutes,
+      topic: form.topic || null,
+      homework: form.homework || null,
+    })
+
+    if (error) {
+      toast.error('บันทึกไม่สำเร็จ: ' + error.message)
+      setSaving(false)
+      return
+    }
+
+    await supabase
+      .from('enrollments')
+      .update({ lessons_used: enroll.lessons_used + 1 })
+      .eq('id', form.enrollment_id)
+
+    toast.success('บันทึกชั่วโมงสอนสำเร็จ ✅')
+    setForm({
+      enrollment_id: '',
+      lesson_date: todayStr,
+      duration_minutes: 60,
+      topic: '',
+      homework: '',
+    })
+    setStudentSearch('')
+    setSaving(false)
+    loadAll()
+  }
+
+  /* ─── สถิติ ─── */
+  const totalMinutes = logs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
+  const totalHours = (totalMinutes / 60).toFixed(1)
+  const totalSessions = logs.length
+
+  function fmt(min: number) {
+    if (min < 60) return `${min} น.`
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    return m ? `${h}ชม. ${m}น.` : `${h} ชม.`
+  }
+
+  const filteredEnrollments = enrollments.filter(e => {
+    if (!studentSearch) return true
+    const name = (e.students?.nickname || e.students?.full_name || '').toLowerCase()
+    const course = (e.courses?.name || '').toLowerCase()
+    const q = studentSearch.toLowerCase()
+    return name.includes(q) || course.includes(q)
+  })
+
+  /* ─── Loading / Not found ─── */
+  if (loadingTeacher) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0]">
+        <div className="text-gray-400 text-sm">กำลังโหลด...</div>
+      </div>
+    )
+  }
+
+  if (notFound || !teacher) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0] p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center max-w-sm">
+          <div className="text-4xl mb-3">🔍</div>
+          <h1 className="font-semibold text-gray-800 mb-1">ไม่พบลิงก์นี้</h1>
+          <p className="text-sm text-gray-400">กรุณาตรวจสอบลิงก์อีกครั้ง หรือติดต่อแอดมิน</p>
+        </div>
+      </div>
+    )
+  }
+
+  /* ─── PIN screen ─── */
+  if (!unlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0] p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm text-center">
+          <div className="w-14 h-14 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold text-lg mx-auto mb-4">
+            {teacher.full_name.slice(0, 2)}
+          </div>
+          <h1 className="font-semibold text-gray-800 text-lg mb-1">สวัสดีครู {teacher.full_name}</h1>
+          <p className="text-sm text-gray-400 mb-6">กรุณาใส่ PIN 4 หลักเพื่อเข้าใช้งาน</p>
+
+          {/* PIN dots */}
+          <div className="flex justify-center gap-3 mb-6">
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className={`w-4 h-4 rounded-full border-2 transition-all ${
+                  i < pinInput.length
+                    ? pinError ? 'bg-red-400 border-red-400' : 'bg-brand-500 border-brand-500'
+                    : 'border-gray-200'
+                }`}
+              />
+            ))}
+          </div>
+
+          {pinError && (
+            <p className="text-red-400 text-xs mb-4">PIN ไม่ถูกต้อง ลองใหม่อีกครั้ง</p>
+          )}
+
+          {/* Numpad */}
+          <div className="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
+            {['1','2','3','4','5','6','7','8','9'].map(d => (
+              <button
+                key={d}
+                onClick={() => handlePinDigit(d)}
+                className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-xl font-semibold text-gray-700 transition-colors"
+              >
+                {d}
+              </button>
+            ))}
+            <button
+              onClick={() => setPinInput('')}
+              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-sm font-medium text-gray-400 transition-colors"
+            >
+              ล้าง
+            </button>
+            <button
+              onClick={() => handlePinDigit('0')}
+              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-xl font-semibold text-gray-700 transition-colors"
+            >
+              0
+            </button>
+            <button
+              onClick={() => setPinInput(p => p.slice(0, -1))}
+              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-lg text-gray-400 transition-colors"
+            >
+              ⌫
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ─── Main page ─── */
+  return (
+    <div className="min-h-screen bg-[#F5F4F0] p-4 pb-10">
+      {/* Header */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold">
+            {teacher.full_name.slice(0, 2)}
+          </div>
+          <div>
+            <div className="font-semibold text-gray-800">ครู{teacher.full_name}</div>
+            <div className="text-xs text-gray-400">{teacher.subject || 'บันทึกชั่วโมงสอน'}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="bg-brand-50 rounded-xl py-3">
+            <div className="text-2xl font-bold text-brand-700">{totalHours}</div>
+            <div className="text-xs text-brand-500 mt-0.5">ชั่วโมงเดือนนี้</div>
+          </div>
+          <div className="bg-gray-50 rounded-xl py-3">
+            <div className="text-2xl font-bold text-gray-700">{totalSessions}</div>
+            <div className="text-xs text-gray-400 mt-0.5">ครั้งเดือนนี้</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Form บันทึกใหม่ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+        <h2 className="font-semibold text-gray-800 mb-4">+ บันทึกชั่วโมงสอน</h2>
+
+        {/* เลือกนักเรียน */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            นักเรียน / คอร์ส <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="ค้นหาชื่อนักเรียนหรือคอร์ส..."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={studentSearch}
+            onChange={e => setStudentSearch(e.target.value)}
+          />
+          <select
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={form.enrollment_id}
+            onChange={e => setForm(f => ({ ...f, enrollment_id: e.target.value }))}
+            size={Math.min(filteredEnrollments.length + 1, 6)}
+          >
+            <option value="">— เลือกนักเรียน —</option>
+            {filteredEnrollments.map(e => (
+              <option key={e.id} value={e.id}>
+                {(e.students?.nickname || e.students?.full_name || '?')} — {e.courses?.name ?? '?'} ({e.lessons_used}/{e.lessons_total})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* วันที่ */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">วันที่สอน</label>
+          <input
+            type="date"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={form.lesson_date}
+            max={todayStr}
+            onChange={e => setForm(f => ({ ...f, lesson_date: e.target.value }))}
+          />
+        </div>
+
+        {/* ระยะเวลา */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">ระยะเวลา</label>
+          <div className="grid grid-cols-5 gap-2">
+            {[30, 45, 60, 90, 120].map(m => (
+              <button
+                key={m}
+                onClick={() => setForm(f => ({ ...f, duration_minutes: m }))}
+                className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  form.duration_minutes === m
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                }`}
+              >
+                {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* หัวข้อ */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">หัวข้อที่สอน</label>
+          <input
+            type="text"
+            placeholder="เช่น บทที่ 3 คำศัพท์วันละคำ"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={form.topic}
+            onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
+          />
+        </div>
+
+        {/* การบ้าน */}
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-1">การบ้าน</label>
+          <input
+            type="text"
+            placeholder="เช่น ฝึกพินอิน หน้า 20-25"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={form.homework}
+            onChange={e => setForm(f => ({ ...f, homework: e.target.value }))}
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving || !form.enrollment_id}
+          className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl transition-colors text-base"
+        >
+          {saving ? 'กำลังบันทึก...' : '✓ บันทึกชั่วโมงสอน'}
+        </button>
+      </div>
+
+      {/* ประวัติเดือนนี้ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">ประวัติเดือนนี้</h2>
+          <span className="text-xs font-medium bg-brand-50 text-brand-600 px-2.5 py-1 rounded-full">
+            {totalSessions} ครั้ง
+          </span>
+        </div>
+        {loadingData ? (
+          <div className="py-10 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+        ) : logs.length === 0 ? (
+          <div className="py-10 text-center text-gray-400 text-sm">ยังไม่มีบันทึกในเดือนนี้</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {logs.map(log => (
+              <div key={log.id} className="px-5 py-3 flex items-start gap-3">
+                <div className="flex-shrink-0 text-center w-9">
+                  <div className="text-base font-bold text-gray-700 leading-none">
+                    {new Date(log.lesson_date).getDate()}
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {new Date(log.lesson_date).toLocaleDateString('th-TH', { month: 'short' })}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-sm text-gray-800">
+                      {log.enrollments?.students?.nickname || log.enrollments?.students?.full_name || '—'}
+                    </span>
+                    <span className="text-xs text-gray-400">·</span>
+                    <span className="text-xs text-gray-500">{log.enrollments?.courses?.name ?? '—'}</span>
+                  </div>
+                  {log.topic && (
+                    <div className="text-xs text-gray-500 mt-0.5 truncate">📖 {log.topic}</div>
+                  )}
+                </div>
+                <div className="flex-shrink-0 text-sm font-semibold text-brand-600">
+                  {fmt(log.duration_minutes)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="text-center text-xs text-gray-300 mt-6">Mando House — ระบบบันทึกชั่วโมงสอน</p>
+    </div>
+  )
+}
