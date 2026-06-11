@@ -3,6 +3,16 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
+interface LessonLogRow {
+  id: string
+  lesson_date: string
+  lesson_number: number
+  duration_minutes: number | null
+  topic: string | null
+  homework: string | null
+  teacher_name: string | null
+}
+
 export default function LessonsPage() {
   const supabase = createClient()
   const [enrollments, setEnrollments] = useState<any[]>([])
@@ -12,6 +22,11 @@ export default function LessonsPage() {
   const [editEnroll, setEditEnroll] = useState<any>(null)
   const [logForm, setLogForm] = useState({ topic: '', homework: '', lesson_date: new Date().toISOString().split('T')[0] })
   const [editForm, setEditForm] = useState({ lessons_total: 0, lessons_used: 0, status: 'active', notes: '' })
+
+  // รายละเอียดประวัติการเรียน
+  const [detailEnroll, setDetailEnroll] = useState<any>(null)
+  const [detailLogs, setDetailLogs] = useState<LessonLogRow[]>([])
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
   async function loadData() {
     const { data } = await supabase
@@ -47,6 +62,11 @@ export default function LessonsPage() {
       homework: logForm.homework,
     })
     if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
+
+    await supabase.from('enrollments')
+      .update({ lessons_used: enrollment.lessons_used + 1 })
+      .eq('id', adding)
+
     toast.success(`บันทึกครั้งที่ ${enrollment.lessons_used + 1} แล้ว`)
     setAdding(null)
     setLogForm({ topic: '', homework: '', lesson_date: new Date().toISOString().split('T')[0] })
@@ -85,13 +105,39 @@ export default function LessonsPage() {
     loadData()
   }
 
+  // เปิดดูรายละเอียด/ประวัติการเรียนทั้งหมดของ enrollment นี้
+  async function openDetail(en: any) {
+    setDetailEnroll(en)
+    setLoadingDetail(true)
+    const { data } = await supabase
+      .from('lesson_logs')
+      .select('id, lesson_date, lesson_number, duration_minutes, topic, homework, teacher_name')
+      .eq('enrollment_id', en.id)
+      .order('lesson_date', { ascending: false })
+      .order('lesson_number', { ascending: false })
+    setDetailLogs((data as LessonLogRow[]) ?? [])
+    setLoadingDetail(false)
+  }
+
+  function fmtDateTH(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })
+  }
+
+  function fmtDuration(min: number | null) {
+    if (!min) return '—'
+    if (min < 60) return `${min} น.`
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    return m ? `${h}ชม. ${m}น.` : `${h} ชม.`
+  }
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-lg md:text-xl font-semibold">นับครั้งการเรียน</h1>
         <span className="text-sm text-gray-400">{filtered.length} รายการ</span>
       </div>
-      <p className="text-sm text-gray-500 mb-4">ติดตามและบันทึกครั้งการเรียนของแต่ละ enrollment</p>
+      <p className="text-sm text-gray-500 mb-4">ติดตามความคืบหน้าคอร์ส — กดที่แถวเพื่อดูประวัติการเรียนแต่ละครั้ง (ครู/หัวข้อ/การบ้าน)</p>
 
       {/* ช่องค้นหา */}
       <div className="mb-4">
@@ -123,7 +169,11 @@ export default function LessonsPage() {
                 const name = en.student?.nickname || en.student?.full_name
 
                 return (
-                  <tr key={en.id} className="table-row-hover">
+                  <tr
+                    key={en.id}
+                    className="table-row-hover cursor-pointer"
+                    onClick={() => openDetail(en)}
+                  >
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold">
@@ -146,7 +196,7 @@ export default function LessonsPage() {
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">{pct}%</div>
                     </td>
-                    <td>
+                    <td onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1.5">
                         <button onClick={() => setAdding(en.id)} disabled={remaining <= 0} className="btn-brand btn-sm disabled:opacity-40">
                           + บันทึก
@@ -246,6 +296,63 @@ export default function LessonsPage() {
                 <button type="button" onClick={() => setEditEnroll(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detail / History Modal */}
+      {detailEnroll && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setDetailEnroll(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="font-semibold">
+                  {detailEnroll.student?.nickname || detailEnroll.student?.full_name}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {detailEnroll.course?.name} · {detailEnroll.lessons_used}/{detailEnroll.lessons_total} ครั้ง
+                  {' '}(เหลือ {detailEnroll.lessons_total - detailEnroll.lessons_used} ครั้ง)
+                </p>
+              </div>
+              <button onClick={() => setDetailEnroll(null)} className="text-gray-400">✕</button>
+            </div>
+            <div className="overflow-y-auto divide-y divide-gray-50">
+              {loadingDetail ? (
+                <p className="text-center text-gray-400 py-10 text-sm">กำลังโหลด...</p>
+              ) : detailLogs.length === 0 ? (
+                <p className="text-center text-gray-400 py-10 text-sm">ยังไม่มีประวัติการเรียน</p>
+              ) : (
+                detailLogs.map(log => (
+                  <div key={log.id} className="px-5 py-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                          ครั้งที่ {log.lesson_number}
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">{fmtDateTH(log.lesson_date)}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-brand-600">{fmtDuration(log.duration_minutes)}</span>
+                    </div>
+                    {log.teacher_name && (
+                      <div className="text-xs text-gray-400 mb-1">ครู{log.teacher_name}</div>
+                    )}
+                    {log.topic && (
+                      <div className="text-xs text-gray-600 bg-yellow-50 rounded-lg px-2.5 py-1.5 mt-1 border border-yellow-100">
+                        📖 {log.topic}
+                      </div>
+                    )}
+                    {log.homework && (
+                      <div className="text-xs text-gray-600 bg-blue-50 rounded-lg px-2.5 py-1.5 mt-1 border border-blue-100">
+                        ✏️ การบ้าน: {log.homework}
+                      </div>
+                    )}
+                    {!log.topic && !log.homework && !log.teacher_name && (
+                      <div className="text-xs text-gray-300 italic">ไม่มีรายละเอียดเพิ่มเติม</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
