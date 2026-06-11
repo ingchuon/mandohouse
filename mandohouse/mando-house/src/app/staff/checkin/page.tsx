@@ -118,6 +118,39 @@ export default function CheckinPage() {
 
     // 2) ถ้าระบุครู/หัวข้อ/การบ้าน → บันทึกชั่วโมงสอนด้วย (lesson_logs)
     if (enrollmentId && (teacher || topic || homework)) {
+      // ตรวจสอบบันทึกซ้ำ: enrollment นี้ + วันนี้ มีบันทึกอยู่แล้วหรือไม่ (เช่น ครูกรอกที่ /teach ไปแล้ว)
+      const { data: existing } = await supabase
+        .from('lesson_logs')
+        .select('id, teacher_name, duration_minutes')
+        .eq('enrollment_id', enrollmentId)
+        .eq('lesson_date', lessonDate)
+
+      if (existing && existing.length > 0) {
+        const studentName = enroll?.course?.name ?? ''
+        const who = existing[0].teacher_name ? `ครู${existing[0].teacher_name}` : 'staff'
+        const confirmed = confirm(
+          `วันนี้มีบันทึกชั่วโมงสอนของคอร์สนี้อยู่แล้ว (${studentName})\n` +
+          `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+          `ต้องการเช็กอิน + บันทึกชั่วโมงสอนซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = เช็กอินอย่างเดียว ไม่บันทึกชั่วโมงสอนซ้ำ)`
+        )
+        if (!confirmed) {
+          // ข้ามการบันทึก lesson_logs แต่ checkin บันทึกไปแล้ว
+          toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
+          setSelectedStudent('')
+          setSelectedEnrollmentId('')
+          setSelectedTeacherId('')
+          setStudentSearch('')
+          setCustomDate('')
+          setDurationMinutes(60)
+          setTopic('')
+          setHomework('')
+          if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
+          loadData()
+          setLoading(false)
+          return
+        }
+      }
+
       const { data: last } = await supabase
         .from('lesson_logs')
         .select('lesson_number')
