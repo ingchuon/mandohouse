@@ -253,6 +253,15 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       }
     }
 
+    // ตรวจสอบว่ามีการเช็กอินของวันนี้ + enrollment นี้อยู่แล้วหรือไม่ (กันขึ้นซ้ำในรายชื่อ "วันนี้มาเรียน")
+    const { data: existingCheckin } = await supabase
+      .from('checkins')
+      .select('id')
+      .eq('enrollment_id', form.enrollment_id)
+      .gte('check_in_at', form.lesson_date + 'T00:00:00')
+      .lt('check_in_at', form.lesson_date + 'T23:59:59')
+      .limit(1)
+
     const { data: last } = await supabase
       .from('lesson_logs')
       .select('lesson_number')
@@ -284,6 +293,16 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       .from('enrollments')
       .update({ lessons_used: enroll.lessons_used + 1 })
       .eq('id', form.enrollment_id)
+
+    // เพิ่มลงตาราง checkins ด้วย ถ้ายังไม่มีของวันนี้ (ให้ขึ้นใน "วันนี้มาเรียน" ของหน้า staff/checkin)
+    if (!existingCheckin || existingCheckin.length === 0) {
+      const checkInTime = `${form.lesson_date}T12:00:00`
+      await supabase.from('checkins').insert({
+        student_id: enroll.student_id,
+        enrollment_id: form.enrollment_id,
+        check_in_at: new Date(checkInTime).toISOString(),
+      })
+    }
 
     toast.success('บันทึกชั่วโมงสอนสำเร็จ ✅')
     setForm({
