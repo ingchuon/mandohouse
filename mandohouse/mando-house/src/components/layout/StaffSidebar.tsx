@@ -18,7 +18,7 @@ const navItems = [
     group: 'นักเรียน',
     items: [
       { href: '/staff/students',     label: 'ข้อมูลนักเรียน',   icon: '👥' },
-      { href: '/staff/study-hours',  label: 'ชั่วโมงเรียน',     icon: '🕐' },
+      { href: '/staff/checkin',      label: 'เช็กอิน / เช็กเอาท์', icon: '🕐' },
       { href: '/staff/lessons',      label: 'นับครั้งการเรียน', icon: '📅' },
     ],
   },
