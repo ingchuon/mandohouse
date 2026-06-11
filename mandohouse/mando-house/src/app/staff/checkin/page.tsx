@@ -4,13 +4,21 @@ import { createClient } from '@/lib/supabase/client'
 import type { Student, Enrollment } from '@/types'
 import toast from 'react-hot-toast'
 
+interface Teacher {
+  id: string
+  full_name: string
+  subject: string | null
+}
+
 export default function CheckinPage() {
   const supabase = createClient()
   const [students, setStudents] = useState<Student[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [checkins, setCheckins] = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState('')
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState('')
+  const [selectedTeacherId, setSelectedTeacherId] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [customDate, setCustomDate] = useState('')
@@ -21,12 +29,18 @@ export default function CheckinPage() {
   const [noteCheckin, setNoteCheckin] = useState<any>(null)
   const [noteText, setNoteText] = useState('')
 
+  // ฟอร์มบันทึกการสอน (ครู / เวลา / หัวข้อ / การบ้าน)
+  const [durationMinutes, setDurationMinutes] = useState(60)
+  const [topic, setTopic] = useState('')
+  const [homework, setHomework] = useState('')
+
   const todayStr = new Date().toISOString().split('T')[0]
   const [selectedDate, setSelectedDate] = useState(todayStr)
   const isToday = selectedDate === todayStr
 
   useEffect(() => {
     loadStudentsAndEnrollments()
+    loadTeachers()
     const t = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
@@ -53,6 +67,16 @@ export default function CheckinPage() {
     setEnrollments(e ?? [])
   }
 
+  async function loadTeachers() {
+    const { data } = await supabase
+      .from('teachers')
+      .select('id, full_name, subject')
+      .eq('is_active', true)
+      .not('full_name', 'ilike', '%&%')
+      .order('full_name')
+    setTeachers((data as Teacher[]) ?? [])
+  }
+
   async function loadCheckins(date: string) {
     const { data: c } = await supabase
       .from('checkins')
@@ -74,23 +98,66 @@ export default function CheckinPage() {
       toast.error('กรุณาเลือกคอร์สที่จะเช็กอิน'); return
     }
     if (isBackdate && !customDate) { toast.error('กรุณาเลือกวันที่และเวลา'); return }
+
     setLoading(true)
     const enrollmentId = selectedEnrollmentId || list[0]?.id || null
     const checkinTime = isBackdate && customDate
       ? new Date(customDate).toISOString()
       : new Date().toISOString()
+    const lessonDate = checkinTime.slice(0, 10)
+    const enroll = enrollments.find(e => e.id === enrollmentId)
+    const teacher = teachers.find(t => t.id === selectedTeacherId)
+
+    // 1) บันทึกเช็กอิน
     const { error } = await supabase.from('checkins').insert({
       student_id: selectedStudent,
       enrollment_id: enrollmentId,
       check_in_at: checkinTime,
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
-    const courseName = enrollments.find(e => e.id === enrollmentId)?.course?.name ?? ''
+
+    // 2) ถ้าระบุครู/หัวข้อ/การบ้าน → บันทึกชั่วโมงสอนด้วย (lesson_logs)
+    if (enrollmentId && (teacher || topic || homework)) {
+      const { data: last } = await supabase
+        .from('lesson_logs')
+        .select('lesson_number')
+        .eq('enrollment_id', enrollmentId)
+        .order('lesson_number', { ascending: false })
+        .limit(1)
+        .single()
+
+      const nextLesson = (last?.lesson_number ?? 0) + 1
+
+      const { error: logError } = await supabase.from('lesson_logs').insert({
+        enrollment_id: enrollmentId,
+        student_id: selectedStudent,
+        teacher_name: teacher?.full_name ?? null,
+        lesson_date: lessonDate,
+        lesson_number: nextLesson,
+        duration_minutes: durationMinutes,
+        topic: topic || null,
+        homework: homework || null,
+      })
+
+      if (!logError && enroll) {
+        await supabase
+          .from('enrollments')
+          .update({ lessons_used: enroll.lessons_used + 1 })
+          .eq('id', enrollmentId)
+      }
+    }
+
+    const courseName = enroll?.course?.name ?? ''
     toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ!' : `เช็กอินสำเร็จ! ${courseName}`)
+
     setSelectedStudent('')
     setSelectedEnrollmentId('')
+    setSelectedTeacherId('')
     setStudentSearch('')
     setCustomDate('')
+    setDurationMinutes(60)
+    setTopic('')
+    setHomework('')
     if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
     loadData()
     setLoading(false)
@@ -184,10 +251,18 @@ export default function CheckinPage() {
 
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
+  function fmtDuration(min: number | null) {
+    if (!min) return null
+    if (min < 60) return `${min} น.`
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    return m ? `${h}ชม. ${m}น.` : `${h} ชม.`
+  }
+
   return (
     <div className="p-4 md:p-6">
       <h1 className="text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
-      <p className="text-sm text-gray-500 mb-6">บันทึกเวลาเข้าออกของนักเรียน</p>
+      <p className="text-sm text-gray-500 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Quick check-in panel */}
@@ -293,6 +368,63 @@ export default function CheckinPage() {
                     ⚠️ นักเรียนไม่มีคอร์ส active
                   </div>
                 )}
+
+                {/* ครูผู้สอน */}
+                <div>
+                  <label className="label">ครูผู้สอน (ถ้ามี)</label>
+                  <select
+                    className="input"
+                    value={selectedTeacherId}
+                    onChange={e => setSelectedTeacherId(e.target.value)}
+                  >
+                    <option value="">— ไม่ระบุ —</option>
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.full_name}{t.subject ? ` (${t.subject})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ระยะเวลา */}
+                <div>
+                  <label className="label">ระยะเวลาเรียน</label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[30, 45, 60, 90, 120].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setDurationMinutes(m)}
+                        className={`py-2 rounded-lg text-xs font-medium border transition-all ${
+                          durationMinutes === m
+                            ? 'bg-brand-500 text-white border-brand-500'
+                            : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                        }`}
+                      >
+                        {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* หัวข้อที่สอน */}
+                <div>
+                  <label className="label">สอนอะไรบ้าง (ถ้ามี)</label>
+                  <input
+                    className="input"
+                    placeholder="เช่น บทที่ 3 คำศัพท์เรื่องครอบครัว"
+                    value={topic}
+                    onChange={e => setTopic(e.target.value)}
+                  />
+                </div>
+
+                {/* การบ้าน */}
+                <div>
+                  <label className="label">การบ้าน (ถ้ามี)</label>
+                  <input
+                    className="input"
+                    placeholder="เช่น ฝึกพินอิน หน้า 20-25"
+                    value={homework}
+                    onChange={e => setHomework(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
