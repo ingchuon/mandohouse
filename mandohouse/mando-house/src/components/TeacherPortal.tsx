@@ -232,6 +232,27 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
 
     setSaving(true)
 
+    // ตรวจสอบว่ามีบันทึกของวันนี้ + enrollment นี้อยู่แล้วหรือไม่ (กันบันทึกซ้ำ เช่น staff กรอกตอนเช็กอินไปแล้ว)
+    const { data: existing } = await supabase
+      .from('lesson_logs')
+      .select('id, teacher_name, duration_minutes, topic')
+      .eq('enrollment_id', form.enrollment_id)
+      .eq('lesson_date', form.lesson_date)
+
+    if (existing && existing.length > 0) {
+      const studentName = enroll.students?.nickname || enroll.students?.full_name || 'นักเรียนคนนี้'
+      const who = existing[0].teacher_name ? `ครู${existing[0].teacher_name}` : 'staff'
+      const confirmed = confirm(
+        `วันนี้มีบันทึกของ ${studentName} (${enroll.courses?.name ?? ''}) อยู่แล้ว\n` +
+        `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+        `ต้องการบันทึกซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = ไม่บันทึก)`
+      )
+      if (!confirmed) {
+        setSaving(false)
+        return
+      }
+    }
+
     const { data: last } = await supabase
       .from('lesson_logs')
       .select('lesson_number')
