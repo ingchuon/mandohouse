@@ -63,6 +63,11 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   const [loadingData, setLoadingData] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // เปลี่ยน PIN
+  const [showChangePin, setShowChangePin] = useState(false)
+  const [pinForm, setPinForm] = useState({ current: '', next: '', confirm: '' })
+  const [changingPin, setChangingPin] = useState(false)
+
   const todayStr = new Date().toISOString().slice(0, 10)
   const [form, setForm] = useState({
     enrollment_id: '',
@@ -181,6 +186,43 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         }
       }, 100)
     }
+  }
+
+  async function handleChangePin() {
+    if (!teacher) return
+    if (pinForm.current !== teacher.pin) {
+      toast.error('PIN ปัจจุบันไม่ถูกต้อง')
+      return
+    }
+    if (!/^\d{4}$/.test(pinForm.next)) {
+      toast.error('PIN ใหม่ต้องเป็นตัวเลข 4 หลัก')
+      return
+    }
+    if (pinForm.next !== pinForm.confirm) {
+      toast.error('PIN ใหม่ทั้งสองช่องไม่ตรงกัน')
+      return
+    }
+    setChangingPin(true)
+    const { error } = await supabase
+      .from('teachers')
+      .update({ pin: pinForm.next })
+      .eq('id', teacher.id)
+
+    if (error) {
+      toast.error('เปลี่ยน PIN ไม่สำเร็จ: ' + error.message)
+      setChangingPin(false)
+      return
+    }
+
+    const updated = { ...teacher, pin: pinForm.next }
+    setTeacher(updated)
+    setAllTeachers(prev => prev.map(t => t.id === updated.id ? updated : t))
+    try { localStorage.setItem(PIN_KEY_PREFIX + teacher.id, pinForm.next) } catch {}
+
+    toast.success('เปลี่ยน PIN สำเร็จ ✅')
+    setPinForm({ current: '', next: '', confirm: '' })
+    setShowChangePin(false)
+    setChangingPin(false)
   }
 
   async function handleSave() {
@@ -395,6 +437,12 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
             เปลี่ยนครู
           </button>
         </div>
+        <button
+          onClick={() => setShowChangePin(true)}
+          className="text-xs text-brand-500 hover:text-brand-600 font-medium mb-3"
+        >
+          🔑 เปลี่ยน PIN
+        </button>
         <div className="grid grid-cols-2 gap-3 text-center">
           <div className="bg-brand-50 rounded-xl py-3">
             <div className="text-2xl font-bold text-brand-700">{totalHours}</div>
@@ -544,6 +592,57 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       </div>
 
       <p className="text-center text-xs text-gray-300 mt-6">Mando House — ระบบบันทึกชั่วโมงสอน</p>
+
+      {/* Modal: เปลี่ยน PIN */}
+      {showChangePin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowChangePin(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-gray-800">🔑 เปลี่ยน PIN</h2>
+              <button onClick={() => setShowChangePin(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PIN ปัจจุบัน</label>
+                <input
+                  type="tel" inputMode="numeric" maxLength={4}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  value={pinForm.current}
+                  onChange={e => setPinForm(f => ({ ...f, current: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                  placeholder="••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PIN ใหม่ (4 หลัก)</label>
+                <input
+                  type="tel" inputMode="numeric" maxLength={4}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  value={pinForm.next}
+                  onChange={e => setPinForm(f => ({ ...f, next: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                  placeholder="••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยัน PIN ใหม่</label>
+                <input
+                  type="tel" inputMode="numeric" maxLength={4}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  value={pinForm.confirm}
+                  onChange={e => setPinForm(f => ({ ...f, confirm: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                  placeholder="••••"
+                />
+              </div>
+              <button
+                onClick={handleChangePin}
+                disabled={changingPin}
+                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors text-sm mt-2"
+              >
+                {changingPin ? 'กำลังบันทึก...' : 'บันทึก PIN ใหม่'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
