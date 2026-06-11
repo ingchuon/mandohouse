@@ -27,14 +27,7 @@ const navItems = [
     items: [
       { href: '/staff/teaching-report', label: 'รายงานชั่วโมงสอน', icon: '⏱' },
       { href: '/staff/schedule', label: 'ตารางสอน',        icon: '🗓' },
-      { href: '/staff/reviews',  label: 'รีวิวหลังสอน',   icon: '⭐' },
       { href: '/staff/courses',  label: 'คอร์สและราคา',   icon: '📚' },
-    ],
-  },
-  {
-    group: 'การแจ้งเตือน',
-    items: [
-      { href: '/staff/alerts', label: 'แจ้งเตือน LINE', icon: '🔔' },
     ],
   },
   {
