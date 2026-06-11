@@ -24,9 +24,14 @@ export default async function DashboardPage() {
     { data: receiptsLastMonth },
     { data: allActiveEnrollments },
     { data: recentCheckins },
-    { data: recentReviews },
     { data: allReceipts },
     { data: monthlyBalance },
+    { data: expensesThisMonth },
+    { data: bookSalesThisMonth },
+    { data: cashBalanceSettings },
+    { data: receiptsAfterAnchor },
+    { data: bookSalesAfterAnchor },
+    { data: expensesAfterAnchor },
   ] = await Promise.all([
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -40,15 +45,18 @@ export default async function DashboardPage() {
       .gte('check_in_at', today)
       .order('check_in_at', { ascending: false })
       .limit(12),
-    supabase.from('reviews')
-      .select('*, student:students(nickname, full_name)')
-      .order('created_at', { ascending: false })
-      .limit(5),
     supabase.from('receipts').select('amount'),
     supabase.from('monthly_balance')
       .select('carry_over, total_carry_over')
       .eq('month', currentMonth)
       .single(),
+    supabase.from('expenses').select('amount').gte('expense_date', firstOfMonth),
+    supabase.from('book_sales').select('total_amount').gte('sold_at', firstOfMonth),
+    supabase.from('cash_balance_settings').select('anchor_date, anchor_amount').eq('id', 1).single(),
+    // ยอดหลังวัน anchor — ใช้คำนวณเงินคงเหลือปัจจุบัน
+    supabase.from('receipts').select('amount, issued_at'),
+    supabase.from('book_sales').select('total_amount, sold_at'),
+    supabase.from('expenses').select('amount, expense_date'),
   ])
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
@@ -62,6 +70,32 @@ export default async function DashboardPage() {
   const revenuePct = revenueLastMonth > 0
     ? Math.round(((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100)
     : 0
+
+  // รายจ่ายเดือนนี้
+  const expensesTotal = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
+
+  // รายได้จากการขายหนังสือเดือนนี้ (ถือเป็นรายรับ)
+  const bookSalesTotal = bookSalesThisMonth?.reduce((s: number, b: any) => s + Number(b.total_amount), 0) ?? 0
+
+  // รายรับรวมเดือนนี้ (ใบเสร็จ + ขายหนังสือ)
+  const revenueThisMonthWithBooks = revenueThisMonth + bookSalesTotal
+
+  // กำไร/ขาดทุนเดือนนี้
+  const profitThisMonth = revenueThisMonthWithBooks - expensesTotal
+
+  // เงินคงเหลือปัจจุบัน = ยอด anchor + การเปลี่ยนแปลงตั้งแต่วัน anchor
+  const anchorDate = (cashBalanceSettings as any)?.anchor_date ?? today
+  const anchorAmount = Number((cashBalanceSettings as any)?.anchor_amount ?? 0)
+  const receiptsSinceAnchor = (receiptsAfterAnchor ?? [])
+    .filter((r: any) => r.issued_at > anchorDate)
+    .reduce((s: number, r: any) => s + Number(r.amount), 0)
+  const bookSalesSinceAnchor = (bookSalesAfterAnchor ?? [])
+    .filter((b: any) => String(b.sold_at).slice(0, 10) > anchorDate)
+    .reduce((s: number, b: any) => s + Number(b.total_amount), 0)
+  const expensesSinceAnchor = (expensesAfterAnchor ?? [])
+    .filter((e: any) => e.expense_date > anchorDate)
+    .reduce((s: number, e: any) => s + Number(e.amount), 0)
+  const cashBalance = anchorAmount + receiptsSinceAnchor + bookSalesSinceAnchor - expensesSinceAnchor
 
   const subjects = ['chi', 'math', 'eng', 'other']
   const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน', math: 'คณิตศาสตร์', eng: 'อังกฤษ', other: 'อื่นๆ' }
@@ -101,8 +135,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ยอดสรุปการเงิน — 3 card (ตัดรายจ่ายออก) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* ยอดสรุปการเงิน */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
@@ -115,13 +149,41 @@ export default async function DashboardPage() {
             <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
           </div>
         </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">🏦 เงินคงเหลือปัจจุบัน</div>
+          <div className="text-lg md:text-xl font-semibold text-emerald-600">{formatThaiMoney(cashBalance)}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            อ้างอิงยอด {formatThaiMoney(anchorAmount)} ณ {formatDate(anchorDate, 'd MMM yyyy')}
+          </div>
+        </div>
+      </div>
+
+      {/* รายรับ / รายจ่าย / กำไรขาดทุน เดือนนี้ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📥 รายรับเดือนนี้</div>
-          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
-          <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
-            {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
+          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonthWithBooks)}</div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-xs ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
+              {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
+            </span>
+            {bookSalesTotal > 0 && (
+              <span className="text-xs text-gray-400">(รวมขายหนังสือ {formatThaiMoney(bookSalesTotal)})</span>
+            )}
           </div>
         </Link>
+        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
+          <div className="text-lg md:text-xl font-semibold text-red-500">{formatThaiMoney(expensesTotal)}</div>
+          <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
+        </Link>
+        <div className="card p-4" style={{ background: profitThisMonth >= 0 ? '#EFF6FF' : '#FEF2F2' }}>
+          <div className="text-xs text-gray-500 mb-2">{profitThisMonth >= 0 ? '📈' : '📉'} กำไร/ขาดทุนเดือนนี้</div>
+          <div className={`text-lg md:text-xl font-semibold ${profitThisMonth >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+            {profitThisMonth >= 0 ? '+' : ''}{formatThaiMoney(profitThisMonth)}
+          </div>
+          <div className="text-xs text-gray-400 mt-1">รายรับ − รายจ่าย</div>
+        </div>
       </div>
 
       {/* กราฟวิชา (full width) */}
@@ -187,57 +249,6 @@ export default async function DashboardPage() {
             {receiptsThisMonth?.length ?? 0} ใบเสร็จ
           </div>
         </Link>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="col-span-1 md:col-span-2 card">
-          <div className="card-header">
-            <h3 className="font-medium text-gray-800">นักเรียนใกล้หมดคอร์ส</h3>
-            <Link href="/staff/alerts" className="text-xs text-brand-600 hover:underline">แจ้งเตือนทั้งหมด →</Link>
-          </div>
-          <table className="w-full">
-            <thead><tr><th>นักเรียน</th><th>คอร์ส</th><th>เหลือ</th><th>สถานะ</th><th></th></tr></thead>
-            <tbody>
-              {expiring.length === 0 && (
-                <tr><td colSpan={5} className="text-center text-gray-400 py-6 text-sm">ไม่มีนักเรียนใกล้หมดคอร์ส 🎉</td></tr>
-              )}
-              {expiring.map((e: any) => {
-                const rem = e.lessons_total - e.lessons_used
-                return (
-                  <tr key={e.id} className="table-row-hover">
-                    <td className="font-medium text-sm">{e.student?.nickname || e.student?.full_name}</td>
-                    <td className="text-gray-400 text-xs">{e.course?.name}</td>
-                    <td><span className={`font-semibold text-sm ${rem <= 2 ? 'text-red-600' : 'text-amber-600'}`}>{rem} ครั้ง</span></td>
-                    <td><span className={`badge ${rem <= 2 ? 'badge-red' : 'badge-amber'}`}>{rem <= 2 ? 'เร่งด่วน' : 'ใกล้หมด'}</span></td>
-                    <td><Link href="/staff/alerts" className="btn-outline btn-sm">แจ้งเตือน</Link></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3 className="font-medium text-gray-800">รีวิวล่าสุด</h3>
-            <Link href="/staff/reviews" className="text-xs text-brand-600 hover:underline">ดูทั้งหมด →</Link>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {(recentReviews ?? []).slice(0, 4).map((r: any) => (
-              <div key={r.id} className="p-4">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-sm font-medium">{r.student?.nickname || r.student?.full_name}</span>
-                  <span className="text-amber-400 text-xs">{'★'.repeat(r.rating ?? 0)}</span>
-                </div>
-                <p className="text-xs text-gray-500 line-clamp-2">{r.content}</p>
-                <p className="text-xs text-gray-400 mt-1">{formatDate(r.review_date)}</p>
-              </div>
-            ))}
-            {!(recentReviews ?? []).length && (
-              <p className="text-center text-gray-400 text-sm py-6">ยังไม่มีรีวิว</p>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="card mt-5">
