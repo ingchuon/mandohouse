@@ -26,8 +26,8 @@ window.location.assign('https://mandohouse.vercel.app/staff')
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-500 text-white text-2xl font-bold mb-4">
-            曼
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-gray-100 overflow-hidden mb-4">
+            <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Mando House</h1>
           <p className="text-sm text-gray-500 mt-1">ระบบบริหารจัดการสถาบันภาษาจีน</p>
