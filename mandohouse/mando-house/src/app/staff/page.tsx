@@ -30,7 +30,6 @@ export default async function DashboardPage() {
     { data: bookSalesThisMonth },
     { data: cashBalanceSettings },
     { data: receiptsAfterAnchor },
-    { data: bookSalesAfterAnchor },
     { data: expensesAfterAnchor },
   ] = await Promise.all([
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -55,7 +54,6 @@ export default async function DashboardPage() {
     supabase.from('cash_balance_settings').select('anchor_date, anchor_amount').eq('id', 1).single(),
     // ยอดหลังวัน anchor — ใช้คำนวณเงินคงเหลือปัจจุบัน
     supabase.from('receipts').select('amount, issued_at'),
-    supabase.from('book_sales').select('total_amount, sold_at'),
     supabase.from('expenses').select('amount, expense_date'),
   ])
 
@@ -74,11 +72,11 @@ export default async function DashboardPage() {
   // รายจ่ายเดือนนี้
   const expensesTotal = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
 
-  // รายได้จากการขายหนังสือเดือนนี้ (ถือเป็นรายรับ)
+  // รายได้จากการขายหนังสือเดือนนี้ — แสดงผลแยกเฉยๆ (ยอดรวมอยู่ใน receipts แล้ว เพราะออกใบเสร็จด้วย)
   const bookSalesTotal = bookSalesThisMonth?.reduce((s: number, b: any) => s + Number(b.total_amount), 0) ?? 0
 
-  // รายรับรวมเดือนนี้ (ใบเสร็จ + ขายหนังสือ)
-  const revenueThisMonthWithBooks = revenueThisMonth + bookSalesTotal
+  // รายรับรวมเดือนนี้ (จาก receipts ซึ่งรวมยอดขายหนังสือไว้แล้ว)
+  const revenueThisMonthWithBooks = revenueThisMonth
 
   // กำไร/ขาดทุนเดือนนี้
   const profitThisMonth = revenueThisMonthWithBooks - expensesTotal
@@ -89,13 +87,10 @@ export default async function DashboardPage() {
   const receiptsSinceAnchor = (receiptsAfterAnchor ?? [])
     .filter((r: any) => r.issued_at > anchorDate)
     .reduce((s: number, r: any) => s + Number(r.amount), 0)
-  const bookSalesSinceAnchor = (bookSalesAfterAnchor ?? [])
-    .filter((b: any) => String(b.sold_at).slice(0, 10) > anchorDate)
-    .reduce((s: number, b: any) => s + Number(b.total_amount), 0)
   const expensesSinceAnchor = (expensesAfterAnchor ?? [])
     .filter((e: any) => e.expense_date > anchorDate)
     .reduce((s: number, e: any) => s + Number(e.amount), 0)
-  const cashBalance = anchorAmount + receiptsSinceAnchor + bookSalesSinceAnchor - expensesSinceAnchor
+  const cashBalance = anchorAmount + receiptsSinceAnchor - expensesSinceAnchor
 
   const subjects = ['chi', 'math', 'eng', 'other']
   const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน', math: 'คณิตศาสตร์', eng: 'อังกฤษ', other: 'อื่นๆ' }
