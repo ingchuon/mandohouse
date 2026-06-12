@@ -19,7 +19,7 @@ export default function StudentsPage() {
   const [teachers, setTeachers] = useState<any[]>([])
   const [books, setBooks] = useState<any[]>([])
   const [showBookSaleModal, setShowBookSaleModal] = useState<StudentWithEnrollment | null>(null)
-  const [bookSaleForm, setBookSaleForm] = useState({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' })
+  const [bookSaleForm, setBookSaleForm] = useState({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] })
   const [bookSaleSaving, setBookSaleSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | 'all'>('active')
@@ -292,6 +292,7 @@ export default function StudentsPage() {
       total_amount: total,
       payment_method: bookSaleForm.payment_method,
       notes: bookSaleForm.notes || null,
+      sold_at: new Date(bookSaleForm.sold_at).toISOString(),
     }])
 
     if (error) {
@@ -310,7 +311,7 @@ export default function StudentsPage() {
       amount: total,
       book_fee: total,
       payment_method: bookSaleForm.payment_method,
-      issued_at: new Date().toISOString().split('T')[0],
+      issued_at: bookSaleForm.sold_at,
       items: [{
         description: `หนังสือ: ${book.name} x${bookSaleForm.quantity}`,
         amount: total,
@@ -337,7 +338,7 @@ export default function StudentsPage() {
       )
     }
     setShowBookSaleModal(null)
-    setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' })
+    setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] })
     setBookSaleSaving(false)
     loadBooks()
   }
@@ -535,7 +536,7 @@ export default function StudentsPage() {
                       <div className="flex gap-1.5">
                         <button onClick={() => openEdit(s)} className="btn-outline btn-sm">แก้ไข</button>
                         <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
-                        <button onClick={() => { setShowBookSaleModal(s); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' }) }} className="btn-outline btn-sm">ซื้อหนังสือ</button>
+                        <button onClick={() => { setShowBookSaleModal(s); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อหนังสือ</button>
                       </div>
                     </td>
                   </tr>
@@ -763,7 +764,7 @@ export default function StudentsPage() {
             </div>
             <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
               <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
-              <button onClick={() => { setShowBookSaleModal(detailStudent); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' }) }} className="btn-outline flex-1 justify-center text-sm">📚 ซื้อหนังสือ</button>
+              <button onClick={() => { setShowBookSaleModal(detailStudent); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">📚 ซื้อหนังสือ</button>
               <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
               <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
             </div>
@@ -918,6 +919,12 @@ export default function StudentsPage() {
                       <option value="transfer">โอนเงิน</option>
                       <option value="promptpay">พร้อมเพย์</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="label">วันที่ขาย</label>
+                    <input type="date" className="input" value={bookSaleForm.sold_at}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={e => setBookSaleForm({ ...bookSaleForm, sold_at: e.target.value })} />
                   </div>
                   <div>
                     <label className="label">หมายเหตุ</label>
