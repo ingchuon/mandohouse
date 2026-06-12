@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Student, Enrollment } from '@/types'
-import { getInitials } from '@/lib/utils'
+import { getInitials, formatThaiMoney } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
@@ -17,6 +17,10 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentWithEnrollment[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
+  const [books, setBooks] = useState<any[]>([])
+  const [showBookSaleModal, setShowBookSaleModal] = useState<StudentWithEnrollment | null>(null)
+  const [bookSaleForm, setBookSaleForm] = useState({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' })
+  const [bookSaleSaving, setBookSaleSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | 'all'>('active')
   const [loading, setLoading] = useState(true)
@@ -64,7 +68,12 @@ export default function StudentsPage() {
     setTeachers(data ?? [])
   }
 
-  useEffect(() => { loadStudents(); loadCourses(); loadTeachers() }, [filterStatus])
+  async function loadBooks() {
+    const { data } = await supabase.from('books').select('*').eq('is_active', true).gt('stock', 0).order('name')
+    setBooks(data ?? [])
+  }
+
+  useEffect(() => { loadStudents(); loadCourses(); loadTeachers(); loadBooks() }, [filterStatus])
 
   async function openDetail(s: StudentWithEnrollment) {
     setDetailStudent(s)
@@ -265,6 +274,42 @@ export default function StudentsPage() {
     }
   }
 
+  async function handleBookSale(e: React.FormEvent) {
+    e.preventDefault()
+    if (!showBookSaleModal) return
+    const book = books.find(b => b.id === bookSaleForm.book_id)
+    if (!book) { toast.error('กรุณาเลือกหนังสือ'); return }
+    if (bookSaleForm.quantity > book.stock) { toast.error('สต็อกไม่พอ'); return }
+
+    setBookSaleSaving(true)
+    const total = book.price * bookSaleForm.quantity
+
+    const { error } = await supabase.from('book_sales').insert([{
+      book_id: book.id,
+      student_id: showBookSaleModal.id,
+      quantity: bookSaleForm.quantity,
+      unit_price: book.price,
+      total_amount: total,
+      payment_method: bookSaleForm.payment_method,
+      notes: bookSaleForm.notes || null,
+    }])
+
+    if (error) {
+      toast.error('บันทึกไม่สำเร็จ: ' + error.message)
+      setBookSaleSaving(false)
+      return
+    }
+
+    // ลดสต็อก
+    await supabase.from('books').update({ stock: book.stock - bookSaleForm.quantity }).eq('id', book.id)
+
+    toast.success(`ขาย "${book.name}" ให้ ${showBookSaleModal.nickname || showBookSaleModal.full_name} สำเร็จ 🎉 (${formatThaiMoney(total)})`)
+    setShowBookSaleModal(null)
+    setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' })
+    setBookSaleSaving(false)
+    loadBooks()
+  }
+
   function exportExcel() {
     const data = filtered.map(s => {
       const activeEnroll = s.enrollments?.find(e => e.status === 'active')
@@ -458,6 +503,7 @@ export default function StudentsPage() {
                       <div className="flex gap-1.5">
                         <button onClick={() => openEdit(s)} className="btn-outline btn-sm">แก้ไข</button>
                         <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
+                        <button onClick={() => { setShowBookSaleModal(s); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' }) }} className="btn-outline btn-sm">ซื้อหนังสือ</button>
                       </div>
                     </td>
                   </tr>
@@ -685,6 +731,7 @@ export default function StudentsPage() {
             </div>
             <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
               <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
+              <button onClick={() => { setShowBookSaleModal(detailStudent); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' }) }} className="btn-outline flex-1 justify-center text-sm">📚 ซื้อหนังสือ</button>
               <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
               <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
             </div>
@@ -779,7 +826,84 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Add/Edit Student Modal */}
+      {/* Book Sale Modal */}
+      {showBookSaleModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">📚 ซื้อหนังสือ</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {showBookSaleModal.nickname || showBookSaleModal.full_name}
+                </p>
+              </div>
+              <button onClick={() => setShowBookSaleModal(null)} className="text-gray-400">✕</button>
+            </div>
+            <form onSubmit={handleBookSale} className="p-5 space-y-3.5">
+              {books.length === 0 ? (
+                <p className="text-center text-gray-400 text-sm py-6">
+                  ไม่มีหนังสือในสต็อก — เพิ่มได้ที่หน้า <span className="font-medium">จัดการหนังสือ</span>
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <label className="label">เลือกหนังสือ *</label>
+                    <select className="input" required value={bookSaleForm.book_id}
+                      onChange={e => setBookSaleForm({ ...bookSaleForm, book_id: e.target.value })}>
+                      <option value="">— เลือกหนังสือ —</option>
+                      {books.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} — {formatThaiMoney(b.price)} (เหลือ {b.stock} เล่ม)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {bookSaleForm.book_id && (() => {
+                    const book = books.find(b => b.id === bookSaleForm.book_id)
+                    if (!book) return null
+                    return (
+                      <>
+                        <div>
+                          <label className="label">จำนวน (สต็อกเหลือ {book.stock} เล่ม)</label>
+                          <input type="number" min={1} max={book.stock} className="input"
+                            value={bookSaleForm.quantity}
+                            onChange={e => setBookSaleForm({ ...bookSaleForm, quantity: Number(e.target.value) })} />
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <span className="text-sm text-gray-600">รวม</span>
+                          <span className="font-semibold text-brand-600">{formatThaiMoney(book.price * bookSaleForm.quantity)}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
+
+                  <div>
+                    <label className="label">ช่องทางชำระ</label>
+                    <select className="input" value={bookSaleForm.payment_method}
+                      onChange={e => setBookSaleForm({ ...bookSaleForm, payment_method: e.target.value })}>
+                      <option value="cash">เงินสด</option>
+                      <option value="transfer">โอนเงิน</option>
+                      <option value="promptpay">พร้อมเพย์</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">หมายเหตุ</label>
+                    <input className="input" placeholder="(ไม่บังคับ)" value={bookSaleForm.notes}
+                      onChange={e => setBookSaleForm({ ...bookSaleForm, notes: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" disabled={bookSaleSaving || !bookSaleForm.book_id} className="btn-brand flex-1 justify-center disabled:opacity-50">
+                      {bookSaleSaving ? 'กำลังบันทึก...' : 'ยืนยันการขาย'}
+                    </button>
+                    <button type="button" onClick={() => setShowBookSaleModal(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+                  </div>
+                </>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
