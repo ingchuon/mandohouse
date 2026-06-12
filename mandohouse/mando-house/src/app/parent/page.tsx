@@ -38,7 +38,9 @@ export default async function ParentPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold text-sm">曼</div>
+            <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
+            </div>
             <span className="font-semibold text-gray-900">Mando House</span>
           </div>
           <p className="text-sm text-gray-500">สวัสดีครับคุณ{profile?.full_name}</p>
