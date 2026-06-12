@@ -27,7 +27,6 @@ export default async function DashboardPage() {
     { data: allReceipts },
     { data: monthlyBalance },
     { data: expensesThisMonth },
-    { data: bookSalesThisMonth },
     { data: cashBalanceSettings },
     { data: receiptsAfterAnchor },
     { data: expensesAfterAnchor },
@@ -50,7 +49,6 @@ export default async function DashboardPage() {
       .eq('month', currentMonth)
       .single(),
     supabase.from('expenses').select('amount').gte('expense_date', firstOfMonth),
-    supabase.from('book_sales').select('total_amount').gte('sold_at', firstOfMonth),
     supabase.from('cash_balance_settings').select('anchor_date, anchor_amount').eq('id', 1).single(),
     // ยอดหลังวัน anchor — ใช้คำนวณเงินคงเหลือปัจจุบัน
     supabase.from('receipts').select('amount, issued_at'),
@@ -58,6 +56,9 @@ export default async function DashboardPage() {
   ])
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
+  // แยกยอดค่าหนังสือ vs ค่าคอร์ส จากใบเสร็จเดือนนี้ (book_fee = ส่วนที่เป็นค่าหนังสือในใบเสร็จนั้น)
+  const bookRevenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.book_fee ?? 0), 0) ?? 0
+  const courseRevenueThisMonth = revenueThisMonth - bookRevenueThisMonth
   const revenueLastMonth = receiptsLastMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const totalAllRevenueFromDB = allReceipts?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
   const carryOver = (monthlyBalance as any)?.carry_over ?? 0
@@ -72,14 +73,8 @@ export default async function DashboardPage() {
   // รายจ่ายเดือนนี้
   const expensesTotal = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
 
-  // รายได้จากการขายหนังสือเดือนนี้ — แสดงผลแยกเฉยๆ (ยอดรวมอยู่ใน receipts แล้ว เพราะออกใบเสร็จด้วย)
-  const bookSalesTotal = bookSalesThisMonth?.reduce((s: number, b: any) => s + Number(b.total_amount), 0) ?? 0
-
-  // รายรับรวมเดือนนี้ (จาก receipts ซึ่งรวมยอดขายหนังสือไว้แล้ว)
-  const revenueThisMonthWithBooks = revenueThisMonth
-
-  // กำไร/ขาดทุนเดือนนี้
-  const profitThisMonth = revenueThisMonthWithBooks - expensesTotal
+  // กำไร/ขาดทุนเดือนนี้ = รายรับรวม (receipts) - รายจ่าย
+  const profitThisMonth = revenueThisMonth - expensesTotal
 
   // เงินคงเหลือปัจจุบัน = ยอด anchor + การเปลี่ยนแปลงตั้งแต่วัน anchor
   const anchorDate = (cashBalanceSettings as any)?.anchor_date ?? today
@@ -154,18 +149,18 @@ export default async function DashboardPage() {
       </div>
 
       {/* รายรับ / รายจ่าย / กำไรขาดทุน เดือนนี้ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
-          <div className="text-xs text-gray-500 mb-2">📥 รายรับเดือนนี้</div>
-          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonthWithBooks)}</div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-xs ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
-              {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
-            </span>
-            {bookSalesTotal > 0 && (
-              <span className="text-xs text-gray-400">(รวมขายหนังสือ {formatThaiMoney(bookSalesTotal)})</span>
-            )}
+          <div className="text-xs text-gray-500 mb-2">📥 รายรับค่าคอร์ส</div>
+          <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(courseRevenueThisMonth)}</div>
+          <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
+            {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
+        </Link>
+        <Link href="/staff/books" className="card p-4 hover:shadow-md transition cursor-pointer">
+          <div className="text-xs text-gray-500 mb-2">📚 รายรับขายหนังสือ</div>
+          <div className="text-lg md:text-xl font-semibold text-purple-600">{formatThaiMoney(bookRevenueThisMonth)}</div>
+          <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
         <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
