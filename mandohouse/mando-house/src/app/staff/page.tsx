@@ -126,7 +126,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ยอดสรุปการเงิน */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
@@ -137,6 +137,13 @@ export default async function DashboardPage() {
           <div className="text-lg md:text-xl font-semibold text-gray-700">{formatThaiMoney(carryOver)}</div>
           <div className="text-xs text-gray-400 mt-1">
             <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-500 mb-2">📊 รายรับสะสมเดือนนี้</div>
+          <div className="text-lg md:text-xl font-semibold text-sky-600">{formatThaiMoney(revenueThisMonth)}</div>
+          <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-sky-500' : 'text-red-400'}`}>
+            {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
         </div>
         <div className="card p-4">
@@ -153,9 +160,7 @@ export default async function DashboardPage() {
         <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📥 รายรับค่าคอร์ส</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(courseRevenueThisMonth)}</div>
-          <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-red-400'}`}>
-            {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
-          </div>
+          <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
         <Link href="/staff/books" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📚 รายรับขายหนังสือ</div>
