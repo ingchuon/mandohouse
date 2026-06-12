@@ -18,6 +18,9 @@
   .btn-brand {
     @apply btn bg-brand-500 text-white hover:bg-brand-600 focus:ring-brand-500;
   }
+  .btn-accent {
+    @apply btn bg-accent-100 text-accent-800 border border-accent-300 hover:bg-accent-200 focus:ring-accent-500;
+  }
   .btn-outline {
     @apply btn border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 focus:ring-gray-300;
   }
