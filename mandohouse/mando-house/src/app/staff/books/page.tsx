@@ -18,7 +18,8 @@ export default function BooksPage() {
     name: '', price: 0, stock: 0, image_url: '',
   })
   const [saleForm, setSaleForm] = useState({
-    student_id: '', quantity: 1, payment_method: 'cash', notes: ''
+    student_id: '', quantity: 1, payment_method: 'cash', notes: '',
+    sold_at: new Date().toISOString().split('T')[0],
   })
 
   const loadData = useCallback(async () => {
@@ -71,6 +72,7 @@ export default function BooksPage() {
       total_amount: total,
       payment_method: saleForm.payment_method,
       notes: saleForm.notes || null,
+      sold_at: new Date(saleForm.sold_at).toISOString(),
     }])
     if (error) { toast.error('บันทึกไม่สำเร็จ'); setSaving(false); return }
 
@@ -79,7 +81,7 @@ export default function BooksPage() {
 
     toast.success('บันทึกการขายแล้ว 🎉')
     setShowSaleModal(null)
-    setSaleForm({ student_id: '', quantity: 1, payment_method: 'cash', notes: '' })
+    setSaleForm({ student_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] })
     setSaving(false)
     loadData()
   }
@@ -146,7 +148,7 @@ export default function BooksPage() {
             </div>
             <div className="flex gap-1.5 mt-3">
               <button
-                onClick={() => { setShowSaleModal(book); setSaleForm({ student_id: '', quantity: 1, payment_method: 'cash', notes: '' }) }}
+                onClick={() => { setShowSaleModal(book); setSaleForm({ student_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] }) }}
                 disabled={book.stock === 0}
                 className="btn-brand btn-sm flex-1 justify-center disabled:opacity-40"
               >
@@ -277,6 +279,12 @@ export default function BooksPage() {
                   <option value="transfer">โอนเงิน</option>
                   <option value="promptpay">พร้อมเพย์</option>
                 </select>
+              </div>
+              <div>
+                <label className="label">วันที่ขาย</label>
+                <input type="date" className="input" value={saleForm.sold_at}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={e => setSaleForm({ ...saleForm, sold_at: e.target.value })} />
               </div>
               <div>
                 <label className="label">หมายเหตุ</label>
