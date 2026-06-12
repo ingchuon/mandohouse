@@ -172,9 +172,9 @@ export default async function DashboardPage() {
           <div className="text-lg md:text-xl font-semibold text-red-500">{formatThaiMoney(expensesTotal)}</div>
           <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
-        <div className="card p-4" style={{ background: profitThisMonth >= 0 ? '#EAF2FB' : '#FDF1EC' }}>
+        <div className="card p-4" style={{ background: profitThisMonth >= 0 ? '#E1F5FE' : '#FFEEF3' }}>
           <div className="text-xs text-gray-500 mb-2">{profitThisMonth >= 0 ? '📈' : '📉'} กำไร/ขาดทุนเดือนนี้</div>
-          <div className={`text-lg md:text-xl font-semibold ${profitThisMonth >= 0 ? 'text-brand-600' : 'text-accent-700'}`}>
+          <div className={`text-lg md:text-xl font-semibold ${profitThisMonth >= 0 ? 'text-brand-700' : 'text-accent-700'}`}>
             {profitThisMonth >= 0 ? '+' : ''}{formatThaiMoney(profitThisMonth)}
           </div>
           <div className="text-xs text-gray-400 mt-1">รายรับ − รายจ่าย</div>
