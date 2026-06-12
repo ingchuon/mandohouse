@@ -58,29 +58,29 @@ export default function AdminSidebar() {
   const initials = name ? name.slice(0, 2) : '??'
 
   return (
-    <aside className="w-56 flex-shrink-0 bg-gray-900 min-h-screen flex flex-col">
+    <aside className="w-56 flex-shrink-0 bg-brand-500 min-h-screen flex flex-col">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10">
+      <div className="px-5 py-5 border-b border-white/15">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold text-sm">
-            曼
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="text-white font-medium text-sm">Mando House</div>
-            <div className="text-white/40 text-xs">ระบบหลังบ้าน</div>
+            <div className="text-white/60 text-xs">ระบบหลังบ้าน</div>
           </div>
         </div>
       </div>
 
       {/* Role badge */}
       {role && (
-        <div className="px-5 py-3 border-b border-white/10 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/70 text-xs font-medium">
+        <div className="px-5 py-3 border-b border-white/15 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-white/25 flex items-center justify-center text-white text-xs font-medium">
             {initials}
           </div>
           <div className="min-w-0">
-            <div className="text-white/80 text-xs font-medium truncate">{name || 'กำลังโหลด...'}</div>
-            <div className={`text-[10px] ${role === 'admin' ? 'text-purple-400' : 'text-brand-400'}`}>
+            <div className="text-white text-xs font-medium truncate">{name || 'กำลังโหลด...'}</div>
+            <div className={`text-[10px] ${role === 'admin' ? 'text-accent-200' : 'text-cream-200'}`}>
               {role === 'admin' ? '👑 แอดมิน' : '🎓 ครู'}
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function AdminSidebar() {
           if (visibleItems.length === 0) return null
           return (
             <div key={group} className="mb-4">
-              <div className="px-5 py-1 text-[10px] font-medium text-white/30 uppercase tracking-widest">
+              <div className="px-5 py-1 text-[10px] font-medium text-white/50 uppercase tracking-widest">
                 {group}
               </div>
               {visibleItems.map(({ href, label, icon, adminOnly }) => {
@@ -108,14 +108,14 @@ export default function AdminSidebar() {
                     className={cn(
                       'flex items-center gap-2.5 px-5 py-2 text-sm transition-colors',
                       active
-                        ? 'bg-brand-500/20 text-brand-200 border-l-2 border-brand-400'
-                        : 'text-white/60 hover:text-white/90 hover:bg-white/5 border-l-2 border-transparent'
+                        ? 'bg-cream-200 text-brand-700 border-l-2 border-cream-500 font-medium'
+                        : 'text-white/80 hover:text-white hover:bg-white/10 border-l-2 border-transparent'
                     )}
                   >
                     <span className="text-base">{icon}</span>
                     <span className="flex-1">{label}</span>
                     {adminOnly && (
-                      <span className="text-[9px] bg-purple-900/50 text-purple-300 px-1.5 py-0.5 rounded">Admin</span>
+                      <span className="text-[9px] bg-accent-500 text-white px-1.5 py-0.5 rounded">Admin</span>
                     )}
                   </Link>
                 )
@@ -126,10 +126,10 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="px-5 py-4 border-t border-white/10">
+      <div className="px-5 py-4 border-t border-white/15">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors"
+          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
         >
           <span>↩</span> ออกจากระบบ
         </button>
