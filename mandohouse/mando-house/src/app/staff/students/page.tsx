@@ -303,7 +303,39 @@ export default function StudentsPage() {
     // ลดสต็อก
     await supabase.from('books').update({ stock: book.stock - bookSaleForm.quantity }).eq('id', book.id)
 
-    toast.success(`ขาย "${book.name}" ให้ ${showBookSaleModal.nickname || showBookSaleModal.full_name} สำเร็จ 🎉 (${formatThaiMoney(total)})`)
+    // ออกใบเสร็จ (เหมือนซื้อคอร์ส)
+    const { error: receiptError } = await supabase.from('receipts').insert([{
+      student_id: showBookSaleModal.id,
+      enrollment_id: null,
+      amount: total,
+      book_fee: total,
+      payment_method: bookSaleForm.payment_method,
+      issued_at: new Date().toISOString().split('T')[0],
+      items: [{
+        description: `หนังสือ: ${book.name} x${bookSaleForm.quantity}`,
+        amount: total,
+      }],
+      notes: bookSaleForm.notes || null,
+    }])
+
+    if (receiptError) {
+      toast.error('ขายสำเร็จ แต่ออกใบเสร็จไม่สำเร็จ: ' + receiptError.message)
+    } else {
+      toast.success(
+        (t: any) => (
+          <span>
+            ขาย &quot;{book.name}&quot; ให้ {showBookSaleModal.nickname || showBookSaleModal.full_name} สำเร็จ 🎉 ({formatThaiMoney(total)}){' '}
+            <button
+              onClick={() => { router.push('/staff/receipts'); toast.dismiss(t.id) }}
+              className="underline font-medium text-brand-600 ml-1"
+            >
+              ดูใบเสร็จ →
+            </button>
+          </span>
+        ),
+        { duration: 6000 }
+      )
+    }
     setShowBookSaleModal(null)
     setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '' })
     setBookSaleSaving(false)
