@@ -89,7 +89,7 @@ export default async function DashboardPage() {
 
   const subjects = ['chi', 'math', 'eng', 'other']
   const subjectLabels: Record<string, string> = { chi: 'ภาษาจีน', math: 'คณิตศาสตร์', eng: 'อังกฤษ', other: 'อื่นๆ' }
-  const subjectColors: Record<string, string> = { chi: '#0F6E56', math: '#2563eb', eng: '#d97706', other: '#6b7280' }
+  const subjectColors: Record<string, string> = { chi: '#FF82A9', math: '#FF82A9', eng: '#FF82A9', other: '#FF82A9' }
 
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
   ;(receiptsThisMonth ?? []).forEach((r: any) => {
