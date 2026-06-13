@@ -231,11 +231,41 @@ export default function CheckinPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('ลบรายการนี้?')) return
-    const { error } = await supabase.from('checkins').delete().eq('id', id)
-    if (error) { toast.error('ลบไม่สำเร็จ'); return }
-    toast.success('ลบแล้ว')
-    loadCheckins(selectedDate)
+    const item = checkins.find(c => c.id === id)
+    if (!item) return
+
+    setCheckins(prev => prev.filter(c => c.id !== id))
+
+    let undone = false
+    const timeoutId = setTimeout(async () => {
+      if (undone) return
+      const { error } = await supabase.from('checkins').delete().eq('id', id)
+      if (error) { toast.error('ลบไม่สำเร็จ'); loadCheckins(selectedDate) }
+    }, 5000)
+
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          ลบรายการแล้ว
+          <button
+            onClick={() => {
+              undone = true
+              clearTimeout(timeoutId)
+              setCheckins(prev => {
+                if (prev.some(c => c.id === item.id)) return prev
+                return [item, ...prev].sort((a, b) => new Date(b.check_in_at).getTime() - new Date(a.check_in_at).getTime())
+              })
+              toast.dismiss(t.id)
+              toast.success('เลิกทำแล้ว')
+            }}
+            className="font-medium text-brand-600 underline"
+          >
+            เลิกทำ (Undo)
+          </button>
+        </span>
+      ),
+      { duration: 5000 }
+    )
   }
 
   function openEdit(c: any) {
