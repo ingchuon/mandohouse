@@ -98,11 +98,29 @@ export default function LessonsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('ปิด enrollment นี้?')) return
     const { error } = await supabase.from('enrollments').update({ status: 'completed' }).eq('id', id)
     if (error) { toast.error('ไม่สำเร็จ: ' + error.message); return }
-    toast.success('ปิด enrollment แล้ว')
     loadData()
+
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          ปิด enrollment แล้ว
+          <button
+            onClick={async () => {
+              await supabase.from('enrollments').update({ status: 'active' }).eq('id', id)
+              toast.dismiss(t.id)
+              toast.success('เลิกทำแล้ว')
+              loadData()
+            }}
+            className="font-medium text-brand-600 underline"
+          >
+            เลิกทำ (Undo)
+          </button>
+        </span>
+      ),
+      { duration: 6000 }
+    )
   }
 
   // เปิดดูรายละเอียด/ประวัติการเรียนทั้งหมดของ enrollment นี้
