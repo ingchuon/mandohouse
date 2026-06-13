@@ -26,6 +26,7 @@ const navItems = [
     group: 'การสอน',
     items: [
       { href: '/staff/teaching-report', label: 'รายงานชั่วโมงสอน', icon: '⏱' },
+      { href: '/staff/teachers', label: 'จัดการครู',     icon: '🧑‍🏫' },
       { href: '/staff/schedule', label: 'ตารางสอน',        icon: '🗓' },
       { href: '/staff/courses',  label: 'คอร์สและราคา',   icon: '📚' },
     ],
