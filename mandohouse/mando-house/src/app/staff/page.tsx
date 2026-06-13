@@ -111,6 +111,11 @@ export default async function DashboardPage() {
     .filter((e: any) => (e.lessons_total - e.lessons_used) <= 5)
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
 
+  // นักเรียนใกล้หมดคอร์สมาก (เหลือ ≤1 ครั้ง) — โชว์ในหน้าแดชบอร์ด
+  const urgentExpiring = (allActiveEnrollments ?? [])
+    .filter((e: any) => (e.lessons_total - e.lessons_used) <= 1)
+    .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
+
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -269,6 +274,40 @@ export default async function DashboardPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* นักเรียนใกล้หมดคอร์ส (เหลือ ≤1 ครั้ง) */}
+      <div className="card-cream mt-5">
+        <div className="card-header">
+          <h3 className="font-medium text-gray-800">⚠️ ใกล้หมดคอร์ส (เหลือ ≤1 ครั้ง)</h3>
+          <Link href="/staff/lessons" className="text-xs text-brand-600 hover:underline">จัดการ →</Link>
+        </div>
+        {urgentExpiring.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-8">ไม่มีคอร์สที่ใกล้หมด 🎉</p>
+        ) : (
+          <div className="divide-y divide-cream-200">
+            {urgentExpiring.map((e: any) => {
+              const remaining = e.lessons_total - e.lessons_used
+              const name = e.student?.nickname || e.student?.full_name
+              return (
+                <Link href="/staff/lessons" key={e.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-cream-200/50 transition">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xs font-bold flex-shrink-0">
+                      {(name || '?').slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-800 truncate">{name}</div>
+                      <div className="text-xs text-gray-400 truncate">{e.course?.name}</div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-semibold flex-shrink-0 ${remaining <= 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {remaining <= 0 ? 'หมดแล้ว' : `เหลือ ${remaining} ครั้ง`}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
