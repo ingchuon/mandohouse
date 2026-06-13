@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import * as XLSX from 'xlsx'
+import toast from 'react-hot-toast'
 
 interface LessonLog {
   id: string
@@ -28,6 +29,11 @@ export default function TeachingReportPage() {
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(defaultMonth)
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all')
+
+  // แก้ไขชั่วโมงสอน
+  const [editLog, setEditLog] = useState<LessonLog | null>(null)
+  const [editForm, setEditForm] = useState({ lesson_date: '', duration_minutes: 60, topic: '', homework: '' })
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => { loadData() }, [month])
 
@@ -53,6 +59,38 @@ export default function TeachingReportPage() {
 
     setLogs((data as unknown as LessonLog[]) ?? [])
     setLoading(false)
+  }
+
+  function openEdit(log: LessonLog) {
+    setEditLog(log)
+    setEditForm({
+      lesson_date: log.lesson_date,
+      duration_minutes: log.duration_minutes ?? 60,
+      topic: log.topic ?? '',
+      homework: log.homework ?? '',
+    })
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editLog) return
+    setSaving(true)
+    const { error } = await supabase.from('lesson_logs').update({
+      lesson_date: editForm.lesson_date,
+      duration_minutes: editForm.duration_minutes,
+      topic: editForm.topic || null,
+      homework: editForm.homework || null,
+    }).eq('id', editLog.id)
+
+    if (error) {
+      toast.error('แก้ไขไม่สำเร็จ: ' + error.message)
+      setSaving(false)
+      return
+    }
+    toast.success('แก้ไขแล้ว ✅')
+    setEditLog(null)
+    setSaving(false)
+    loadData()
   }
 
   function fmtDateTH(dateStr: string) {
@@ -220,6 +258,7 @@ export default function TeachingReportPage() {
                       <th>ระยะเวลา</th>
                       <th>หัวข้อที่สอน</th>
                       <th>การบ้าน</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -233,6 +272,9 @@ export default function TeachingReportPage() {
                         <td className="text-sm font-semibold text-brand-600 whitespace-nowrap">{fmtDuration(l.duration_minutes)}</td>
                         <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.topic ?? ''}>{l.topic ?? '—'}</td>
                         <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.homework ?? ''}>{l.homework ?? '—'}</td>
+                        <td>
+                          <button onClick={() => openEdit(l)} className="btn-outline btn-sm px-2">✎</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -240,6 +282,66 @@ export default function TeachingReportPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editLog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">แก้ไขชั่วโมงสอน</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {editLog.enrollments?.students?.nickname || editLog.enrollments?.students?.full_name} — {editLog.enrollments?.courses?.name ?? ''}
+                </p>
+              </div>
+              <button onClick={() => setEditLog(null)} className="text-gray-400">✕</button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="p-5 space-y-3">
+              <div>
+                <label className="label">วันที่สอน</label>
+                <input type="date" className="input" value={editForm.lesson_date}
+                  onChange={e => setEditForm({ ...editForm, lesson_date: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">ระยะเวลา</label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[30, 45, 60, 90, 120].map(m => (
+                    <button key={m} type="button"
+                      onClick={() => setEditForm({ ...editForm, duration_minutes: m })}
+                      className={`py-2 rounded-lg text-xs font-medium border transition-all ${
+                        editForm.duration_minutes === m
+                          ? 'bg-brand-500 text-white border-brand-500'
+                          : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                      }`}
+                    >
+                      {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
+                    </button>
+                  ))}
+                </div>
+                <input type="number" min={1} className="input mt-2" placeholder="หรือกำหนดเอง (นาที)"
+                  value={editForm.duration_minutes}
+                  onChange={e => setEditForm({ ...editForm, duration_minutes: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label className="label">หัวข้อที่สอน</label>
+                <input className="input" value={editForm.topic}
+                  onChange={e => setEditForm({ ...editForm, topic: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">การบ้าน</label>
+                <textarea className="input min-h-[70px] resize-none" value={editForm.homework}
+                  onChange={e => setEditForm({ ...editForm, homework: e.target.value })} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={saving} className="btn-brand flex-1 justify-center disabled:opacity-50">
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+                <button type="button" onClick={() => setEditLog(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
