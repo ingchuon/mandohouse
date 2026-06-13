@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 
 interface LessonLog {
   id: string
+  enrollment_id: string | null
   lesson_date: string
   duration_minutes: number | null
   topic: string | null
@@ -46,7 +47,7 @@ export default function TeachingReportPage() {
     const { data } = await supabase
       .from('lesson_logs')
       .select(`
-        id, lesson_date, duration_minutes, topic, homework, teacher_name,
+        id, enrollment_id, lesson_date, duration_minutes, topic, homework, teacher_name,
         enrollments (
           students:student_id ( full_name, nickname ),
           courses ( name )
@@ -90,6 +91,33 @@ export default function TeachingReportPage() {
     toast.success('แก้ไขแล้ว ✅')
     setEditLog(null)
     setSaving(false)
+    loadData()
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('ลบรายการนี้? (จะลดจำนวนครั้งที่ใช้ของคอร์สลง 1 ครั้ง)')) return
+
+    const log = logs.find(l => l.id === id)
+
+    const { error } = await supabase.from('lesson_logs').delete().eq('id', id)
+    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return }
+
+    // ลด lessons_used คืน 1 ครั้ง ถ้ามี enrollment ผูกอยู่
+    if (log?.enrollment_id) {
+      const { data: enroll } = await supabase
+        .from('enrollments')
+        .select('lessons_used')
+        .eq('id', log.enrollment_id)
+        .single()
+      if (enroll && enroll.lessons_used > 0) {
+        await supabase
+          .from('enrollments')
+          .update({ lessons_used: enroll.lessons_used - 1 })
+          .eq('id', log.enrollment_id)
+      }
+    }
+
+    toast.success('ลบแล้ว')
     loadData()
   }
 
@@ -273,7 +301,10 @@ export default function TeachingReportPage() {
                         <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.topic ?? ''}>{l.topic ?? '—'}</td>
                         <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.homework ?? ''}>{l.homework ?? '—'}</td>
                         <td>
-                          <button onClick={() => openEdit(l)} className="btn-outline btn-sm px-2">✎</button>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => openEdit(l)} className="btn-outline btn-sm px-2">✎</button>
+                            <button onClick={() => handleDelete(l.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
