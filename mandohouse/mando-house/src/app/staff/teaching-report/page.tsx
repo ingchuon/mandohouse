@@ -28,7 +28,11 @@ export default function TeachingReportPage() {
   const supabase = createClient()
   const [logs, setLogs] = useState<LessonLog[]>([])
   const [loading, setLoading] = useState(true)
+  const todayStr = now.toISOString().slice(0, 10)
   const [month, setMonth] = useState(defaultMonth)
+  const [filterMode, setFilterMode] = useState<'month' | 'range'>('month')
+  const [dateFrom, setDateFrom] = useState(todayStr)
+  const [dateTo, setDateTo] = useState(todayStr)
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all')
 
   // แก้ไขชั่วโมงสอน
@@ -36,13 +40,21 @@ export default function TeachingReportPage() {
   const [editForm, setEditForm] = useState({ lesson_date: '', duration_minutes: 60, topic: '', homework: '' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { loadData() }, [month])
+  useEffect(() => { loadData() }, [month, filterMode, dateFrom, dateTo])
 
   async function loadData() {
     setLoading(true)
-    const [year, mo] = month.split('-').map(Number)
-    const dateFrom = `${month}-01`
-    const dateTo = new Date(year, mo, 0).toISOString().slice(0, 10) // last day of month
+    let queryFrom: string
+    let queryTo: string
+
+    if (filterMode === 'month') {
+      const [year, mo] = month.split('-').map(Number)
+      queryFrom = `${month}-01`
+      queryTo = new Date(year, mo, 0).toISOString().slice(0, 10) // last day of month
+    } else {
+      queryFrom = dateFrom
+      queryTo = dateTo
+    }
 
     const { data } = await supabase
       .from('lesson_logs')
@@ -53,8 +65,8 @@ export default function TeachingReportPage() {
           courses ( name )
         )
       `)
-      .gte('lesson_date', dateFrom)
-      .lte('lesson_date', dateTo)
+      .gte('lesson_date', queryFrom)
+      .lte('lesson_date', queryTo)
       .not('teacher_name', 'is', null)
       .order('lesson_date', { ascending: true })
 
@@ -196,10 +208,19 @@ export default function TeachingReportPage() {
       XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
     }
 
-    XLSX.writeFile(wb, `รายงานชั่วโมงสอน_${month}.xlsx`)
+    const filenameSuffix = filterMode === 'month' ? month : `${dateFrom}_to_${dateTo}`
+    XLSX.writeFile(wb, `รายงานชั่วโมงสอน_${filenameSuffix}.xlsx`)
   }
 
-  const monthLabel = new Date(`${month}-01`).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+  function fmtDateTHShort(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const periodLabel = filterMode === 'month'
+    ? new Date(`${month}-01`).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+    : dateFrom === dateTo
+      ? fmtDateTHShort(dateFrom)
+      : `${fmtDateTHShort(dateFrom)} - ${fmtDateTHShort(dateTo)}`
 
   return (
     <div className="p-4 md:p-6">
@@ -212,15 +233,53 @@ export default function TeachingReportPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4 items-end">
         <div>
-          <label className="label">เดือน</label>
-          <input
-            type="month"
-            className="input"
-            value={month}
-            max={defaultMonth}
-            onChange={e => setMonth(e.target.value)}
-          />
+          <label className="label">ช่วงเวลา</label>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setFilterMode('month')}
+              className={`btn-sm px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                filterMode === 'month' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-brand-400'
+              }`}
+            >
+              รายเดือน
+            </button>
+            <button
+              onClick={() => setFilterMode('range')}
+              className={`btn-sm px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                filterMode === 'range' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-brand-400'
+              }`}
+            >
+              เลือกวัน
+            </button>
+          </div>
         </div>
+
+        {filterMode === 'month' ? (
+          <div>
+            <label className="label">เดือน</label>
+            <input
+              type="month"
+              className="input"
+              value={month}
+              max={defaultMonth}
+              onChange={e => setMonth(e.target.value)}
+            />
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className="label">ตั้งแต่วันที่</label>
+              <input type="date" className="input" value={dateFrom} max={dateTo}
+                onChange={e => setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">ถึงวันที่</label>
+              <input type="date" className="input" value={dateTo} max={todayStr} min={dateFrom}
+                onChange={e => setDateTo(e.target.value)} />
+            </div>
+          </>
+        )}
+
         <div className="flex-1 min-w-[180px]">
           <label className="label">ครู</label>
           <select className="input" value={selectedTeacher} onChange={e => setSelectedTeacher(e.target.value)}>
@@ -243,7 +302,7 @@ export default function TeachingReportPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
         <div className="card p-4">
           <div className="text-2xl font-bold text-brand-700">{(grandTotalMinutes / 60).toFixed(1)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ชั่วโมงรวม — {monthLabel}</div>
+          <div className="text-xs text-gray-400 mt-0.5">ชั่วโมงรวม — {periodLabel}</div>
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-gray-700">{grandTotalSessions}</div>
