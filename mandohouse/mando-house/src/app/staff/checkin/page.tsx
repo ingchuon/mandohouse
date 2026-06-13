@@ -31,6 +31,7 @@ export default function CheckinPage() {
 
   // ฟอร์มบันทึกการสอน (ครู / เวลา / หัวข้อ / การบ้าน)
   const [durationMinutes, setDurationMinutes] = useState(60)
+  const [subjectName, setSubjectName] = useState('')
   const [topic, setTopic] = useState('')
   const [homework, setHomework] = useState('')
 
@@ -121,33 +122,64 @@ export default function CheckinPage() {
       // ตรวจสอบบันทึกซ้ำ: enrollment นี้ + วันนี้ มีบันทึกอยู่แล้วหรือไม่ (เช่น ครูกรอกที่ /teach ไปแล้ว)
       const { data: existing } = await supabase
         .from('lesson_logs')
-        .select('id, teacher_name, duration_minutes')
+        .select('id, teacher_name, duration_minutes, subject_name')
         .eq('enrollment_id', enrollmentId)
         .eq('lesson_date', lessonDate)
 
+      const courseName = enroll?.course?.name ?? ''
+      const isSpecialCourse = /special/i.test(courseName)
+      let skipLessonCount = false
+
       if (existing && existing.length > 0) {
-        const studentName = enroll?.course?.name ?? ''
         const who = existing[0].teacher_name ? `ครู${existing[0].teacher_name}` : 'staff'
-        const confirmed = confirm(
-          `วันนี้มีบันทึกชั่วโมงสอนของคอร์สนี้อยู่แล้ว (${studentName})\n` +
-          `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
-          `ต้องการเช็กอิน + บันทึกชั่วโมงสอนซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = เช็กอินอย่างเดียว ไม่บันทึกชั่วโมงสอนซ้ำ)`
-        )
-        if (!confirmed) {
-          // ข้ามการบันทึก lesson_logs แต่ checkin บันทึกไปแล้ว
-          toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
-          setSelectedStudent('')
-          setSelectedEnrollmentId('')
-          setSelectedTeacherId('')
-          setStudentSearch('')
-          setCustomDate('')
-          setDurationMinutes(60)
-          setTopic('')
-          setHomework('')
-          if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
-          loadData()
-          setLoading(false)
-          return
+        const prevSubject = existing[0].subject_name ? ` (วิชา${existing[0].subject_name})` : ''
+
+        if (isSpecialCourse) {
+          const confirmed = confirm(
+            `วันนี้มีบันทึกชั่วโมงสอนของคอร์สนี้อยู่แล้ว (${courseName})\n` +
+            `บันทึกโดย: ${who}${prevSubject}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+            `ต้องการเช็กอิน + บันทึกชั่วโมงสอนของวิชานี้เพิ่มหรือไม่?\n` +
+            `(กด ตกลง = บันทึกเพิ่ม โดยไม่หักครั้งเรียนซ้ำ / ยกเลิก = เช็กอินอย่างเดียว)`
+          )
+          if (!confirmed) {
+            toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
+            setSelectedStudent('')
+            setSelectedEnrollmentId('')
+            setSelectedTeacherId('')
+            setStudentSearch('')
+            setCustomDate('')
+            setDurationMinutes(60)
+            setSubjectName('')
+            setTopic('')
+            setHomework('')
+            if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
+            loadData()
+            setLoading(false)
+            return
+          }
+          skipLessonCount = true
+        } else {
+          const confirmed = confirm(
+            `วันนี้มีบันทึกชั่วโมงสอนของคอร์สนี้อยู่แล้ว (${courseName})\n` +
+            `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+            `ต้องการเช็กอิน + บันทึกชั่วโมงสอนซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = เช็กอินอย่างเดียว ไม่บันทึกชั่วโมงสอนซ้ำ)`
+          )
+          if (!confirmed) {
+            toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
+            setSelectedStudent('')
+            setSelectedEnrollmentId('')
+            setSelectedTeacherId('')
+            setStudentSearch('')
+            setCustomDate('')
+            setDurationMinutes(60)
+            setSubjectName('')
+            setTopic('')
+            setHomework('')
+            if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
+            loadData()
+            setLoading(false)
+            return
+          }
         }
       }
 
@@ -168,11 +200,12 @@ export default function CheckinPage() {
         lesson_date: lessonDate,
         lesson_number: nextLesson,
         duration_minutes: durationMinutes,
+        subject_name: subjectName || null,
         topic: topic || null,
         homework: homework || null,
       })
 
-      if (!logError && enroll) {
+      if (!logError && enroll && !skipLessonCount) {
         await supabase
           .from('enrollments')
           .update({ lessons_used: enroll.lessons_used + 1 })
@@ -189,6 +222,7 @@ export default function CheckinPage() {
     setStudentSearch('')
     setCustomDate('')
     setDurationMinutes(60)
+    setSubjectName('')
     setTopic('')
     setHomework('')
     if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
@@ -415,6 +449,29 @@ export default function CheckinPage() {
                       <option key={t.id} value={t.id}>{t.full_name}{t.subject ? ` (${t.subject})` : ''}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* วิชาที่สอน (สำหรับคอร์สพิเศษหลายวิชา) */}
+                <div>
+                  <label className="label">วิชาที่สอน (ถ้ามี)</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {['ภาษาจีน', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์'].map(subj => (
+                      <button
+                        key={subj}
+                        onClick={() => setSubjectName(prev => prev === subj ? '' : subj)}
+                        className={`py-2 rounded-lg text-xs font-medium border transition-all ${
+                          subjectName === subj
+                            ? 'bg-brand-500 text-white border-brand-500'
+                            : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                        }`}
+                      >
+                        {subj}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    ใส่สำหรับคอร์สพิเศษหลายวิชา (Special) เพื่อให้นับชั่วโมงสอนแยกตามวิชา
+                  </p>
                 </div>
 
                 {/* ระยะเวลา */}
