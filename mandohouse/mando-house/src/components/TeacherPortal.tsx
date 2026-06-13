@@ -73,6 +73,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
     enrollment_id: '',
     lesson_date: todayStr,
     duration_minutes: 60,
+    subject_name: '',
     topic: '',
     homework: '',
   })
@@ -232,24 +233,47 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
 
     setSaving(true)
 
-    // ตรวจสอบว่ามีบันทึกของวันนี้ + enrollment นี้อยู่แล้วหรือไม่ (กันบันทึกซ้ำ เช่น staff กรอกตอนเช็กอินไปแล้ว)
+    // ตรวจสอบว่ามีบันทึกของวันนี้ + enrollment นี้อยู่แล้วหรือไม่
     const { data: existing } = await supabase
       .from('lesson_logs')
-      .select('id, teacher_name, duration_minutes, topic')
+      .select('id, teacher_name, duration_minutes, topic, subject_name')
       .eq('enrollment_id', form.enrollment_id)
       .eq('lesson_date', form.lesson_date)
+
+    // คอร์สพิเศษ (Special 2/3 Subject) = หักครั้งเรียนแค่ 1 ครั้ง/วัน ไม่ว่ากี่ครูจะกรอก
+    const courseName = enroll.courses?.name ?? ''
+    const isSpecialCourse = /special/i.test(courseName)
+
+    let skipLessonCount = false
 
     if (existing && existing.length > 0) {
       const studentName = enroll.students?.nickname || enroll.students?.full_name || 'นักเรียนคนนี้'
       const who = existing[0].teacher_name ? `ครู${existing[0].teacher_name}` : 'staff'
-      const confirmed = confirm(
-        `วันนี้มีบันทึกของ ${studentName} (${enroll.courses?.name ?? ''}) อยู่แล้ว\n` +
-        `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
-        `ต้องการบันทึกซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = ไม่บันทึก)`
-      )
-      if (!confirmed) {
-        setSaving(false)
-        return
+      const prevSubject = existing[0].subject_name ? ` (วิชา${existing[0].subject_name})` : ''
+
+      if (isSpecialCourse) {
+        const confirmed = confirm(
+          `วันนี้มีบันทึกของ ${studentName} (${courseName}) อยู่แล้ว\n` +
+          `บันทึกโดย: ${who}${prevSubject}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+          `ต้องการบันทึกชั่วโมงสอนของวิชาตัวเองเพิ่มหรือไม่?\n` +
+          `(กด ตกลง = บันทึกเพิ่ม โดยไม่หักครั้งเรียนซ้ำ / ยกเลิก = ไม่บันทึก)`
+        )
+        if (!confirmed) {
+          setSaving(false)
+          return
+        }
+        // ครั้งถัดไปของวันเดียวกัน ไม่หัก lessons_used ซ้ำ
+        skipLessonCount = true
+      } else {
+        const confirmed = confirm(
+          `วันนี้มีบันทึกของ ${studentName} (${courseName}) อยู่แล้ว\n` +
+          `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
+          `ต้องการบันทึกซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = ไม่บันทึก)`
+        )
+        if (!confirmed) {
+          setSaving(false)
+          return
+        }
       }
     }
 
@@ -279,6 +303,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       lesson_date: form.lesson_date,
       lesson_number: nextLesson,
       duration_minutes: form.duration_minutes,
+      subject_name: form.subject_name || null,
       topic: form.topic || null,
       homework: form.homework || null,
     })
@@ -289,10 +314,12 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       return
     }
 
-    await supabase
-      .from('enrollments')
-      .update({ lessons_used: enroll.lessons_used + 1 })
-      .eq('id', form.enrollment_id)
+    if (!skipLessonCount) {
+      await supabase
+        .from('enrollments')
+        .update({ lessons_used: enroll.lessons_used + 1 })
+        .eq('id', form.enrollment_id)
+    }
 
     // เพิ่มลงตาราง checkins ด้วย ถ้ายังไม่มีของวันนี้ (ให้ขึ้นใน "วันนี้มาเรียน" ของหน้า staff/checkin)
     if (!existingCheckin || existingCheckin.length === 0) {
@@ -304,11 +331,12 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       })
     }
 
-    toast.success('บันทึกชั่วโมงสอนสำเร็จ ✅')
+    toast.success(skipLessonCount ? 'บันทึกชั่วโมงสอนเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)' : 'บันทึกชั่วโมงสอนสำเร็จ ✅')
     setForm({
       enrollment_id: '',
       lesson_date: todayStr,
       duration_minutes: 60,
+      subject_name: '',
       topic: '',
       homework: '',
     })
@@ -552,6 +580,29 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
             max={todayStr}
             onChange={e => setForm(f => ({ ...f, lesson_date: e.target.value }))}
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">วิชาที่สอน (ถ้ามี)</label>
+          <div className="grid grid-cols-2 gap-2">
+            {['ภาษาจีน', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์'].map(subj => (
+              <button
+                key={subj}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, subject_name: f.subject_name === subj ? '' : subj }))}
+                className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  form.subject_name === subj
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                }`}
+              >
+                {subj}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            ใส่ตอนสอนคอร์สพิเศษหลายวิชา เพื่อให้นับชั่วโมงสอนแยกตามวิชาได้ถูกต้อง
+          </p>
         </div>
 
         <div className="mb-4">
