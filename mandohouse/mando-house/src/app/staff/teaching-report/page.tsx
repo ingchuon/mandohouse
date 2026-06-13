@@ -107,30 +107,58 @@ export default function TeachingReportPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('ลบรายการนี้? (จะลดจำนวนครั้งที่ใช้ของคอร์สลง 1 ครั้ง)')) return
-
     const log = logs.find(l => l.id === id)
+    if (!log) return
 
-    const { error } = await supabase.from('lesson_logs').delete().eq('id', id)
-    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return }
+    // ซ่อนแถวออกจาก UI ทันที (optimistic)
+    setLogs(prev => prev.filter(l => l.id !== id))
 
-    // ลด lessons_used คืน 1 ครั้ง ถ้ามี enrollment ผูกอยู่
-    if (log?.enrollment_id) {
-      const { data: enroll } = await supabase
-        .from('enrollments')
-        .select('lessons_used')
-        .eq('id', log.enrollment_id)
-        .single()
-      if (enroll && enroll.lessons_used > 0) {
-        await supabase
+    let undone = false
+    const timeoutId = setTimeout(async () => {
+      if (undone) return
+
+      const { error } = await supabase.from('lesson_logs').delete().eq('id', id)
+      if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); loadData(); return }
+
+      // ลด lessons_used คืน 1 ครั้ง ถ้ามี enrollment ผูกอยู่
+      if (log.enrollment_id) {
+        const { data: enroll } = await supabase
           .from('enrollments')
-          .update({ lessons_used: enroll.lessons_used - 1 })
+          .select('lessons_used')
           .eq('id', log.enrollment_id)
+          .single()
+        if (enroll && enroll.lessons_used > 0) {
+          await supabase
+            .from('enrollments')
+            .update({ lessons_used: enroll.lessons_used - 1 })
+            .eq('id', log.enrollment_id)
+        }
       }
-    }
+    }, 5000)
 
-    toast.success('ลบแล้ว')
-    loadData()
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          ลบรายการแล้ว
+          <button
+            onClick={() => {
+              undone = true
+              clearTimeout(timeoutId)
+              setLogs(prev => {
+                if (prev.some(l => l.id === log.id)) return prev
+                return [...prev, log].sort((a, b) => a.lesson_date < b.lesson_date ? 1 : -1)
+              })
+              toast.dismiss(t.id)
+              toast.success('เลิกทำแล้ว')
+            }}
+            className="font-medium text-brand-600 underline"
+          >
+            เลิกทำ (Undo)
+          </button>
+        </span>
+      ),
+      { duration: 5000 }
+    )
   }
 
   function fmtDateTH(dateStr: string) {
