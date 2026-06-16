@@ -217,11 +217,11 @@ export default function DashboardExport() {
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors shadow-sm"
       >
         <span>📊</span>
         <span>Export</span>
-        <span className="text-gray-400 text-xs">{showMenu ? '▲' : '▼'}</span>
+        <span className="text-white/70 text-xs">{showMenu ? '▲' : '▼'}</span>
       </button>
 
       {showMenu && (
