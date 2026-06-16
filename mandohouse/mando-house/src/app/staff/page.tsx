@@ -123,8 +123,11 @@ export default async function DashboardPage() {
           <h1 className="text-lg md:text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
           <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <DashboardExport />
+          <a href="/teach" target="_blank" rel="noopener noreferrer" className="btn-brand text-sm">
+            🧑‍🏫 หน้าครูกรอกข้อมูล →
+          </a>
           <Link href="/staff/settings" className="btn-outline text-sm">⚙️ ตั้งค่ายอดเงิน</Link>
           <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
         </div>
