@@ -11,7 +11,11 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
 
-  const today = new Date().toISOString().split('T')[0]
+  // วันปัจจุบันในเขตเวลาไทย (UTC+7)
+  const nowTH = new Date(new Date().getTime() + 7 * 60 * 60 * 1000)
+  const today = nowTH.toISOString().split('T')[0]
+  const todayStart = today + 'T00:00:00+07:00'
+  const todayEnd = today + 'T23:59:59+07:00'
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
   const firstOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().split('T')[0]
   const lastOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().split('T')[0]
@@ -40,7 +44,8 @@ export default async function DashboardPage() {
       .eq('status', 'active'),
     supabase.from('checkins')
       .select('*, student:students(nickname, full_name)')
-      .gte('check_in_at', today)
+      .gte('check_in_at', todayStart)
+      .lte('check_in_at', todayEnd)
       .order('check_in_at', { ascending: false })
       .limit(12),
     supabase.from('receipts').select('amount'),
@@ -271,7 +276,7 @@ export default async function DashboardPage() {
                 <div>
                   <div className="text-xs font-medium text-brand-800">{c.student?.nickname || c.student?.full_name}</div>
                   <div className="text-[10px] text-brand-600">
-                    {new Date(c.check_in_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                    {new Date(c.check_in_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })} น.
                     {!c.check_out_at && ' (ยังอยู่)'}
                   </div>
                 </div>
