@@ -343,6 +343,7 @@ export default function CheckinPage() {
 
   const checkinDisabled = loading
     || !selectedStudent
+    || !selectedTeacherId
     || (hasMultipleCourses && !selectedEnrollmentId)
     || (isBackdate && !customDate)
 
@@ -468,7 +469,7 @@ export default function CheckinPage() {
 
                 {/* ครูผู้สอน */}
                 <div>
-                  <label className="label">ครูผู้สอน (ถ้ามี)</label>
+                  <label className="label">ครูผู้สอน <span className="text-red-400">*</span></label>
                   <select
                     className="input"
                     value={selectedTeacherId}
@@ -569,6 +570,12 @@ export default function CheckinPage() {
                   onChange={e => setCustomDate(e.target.value)}
                   max={new Date().toISOString().slice(0, 16)}
                 />
+              </div>
+            )}
+
+            {selectedStudent && !selectedTeacherId && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-sm text-amber-700">
+                ⚠️ กรุณาเลือกครูผู้สอนก่อนกดเช็กอิน
               </div>
             )}
 
