@@ -258,22 +258,32 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
           `ต้องการบันทึกชั่วโมงสอนของวิชาตัวเองเพิ่มหรือไม่?\n` +
           `(กด ตกลง = บันทึกเพิ่ม โดยไม่หักครั้งเรียนซ้ำ / ยกเลิก = ไม่บันทึก)`
         )
-        if (!confirmed) {
-          setSaving(false)
-          return
-        }
-        // ครั้งถัดไปของวันเดียวกัน ไม่หัก lessons_used ซ้ำ
+        if (!confirmed) { setSaving(false); return }
         skipLessonCount = true
       } else {
+        // คอร์สปกติ: staff เช็กอินไปแล้ว ครูแค่เพิ่มหัวข้อ/การบ้านลงในบันทึกเดิม (ไม่สร้างใหม่)
         const confirmed = confirm(
-          `วันนี้มีบันทึกของ ${studentName} (${courseName}) อยู่แล้ว\n` +
-          `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
-          `ต้องการบันทึกซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = ไม่บันทึก)`
+          `วันนี้ ${who} เช็กอินไว้แล้ว (${courseName})\n\n` +
+          `ต้องการเพิ่มหัวข้อที่สอน/การบ้านลงในบันทึกนั้นหรือไม่?\n` +
+          `(กด ตกลง = อัปเดตบันทึกเดิม / ยกเลิก = ไม่ทำอะไร)`
         )
-        if (!confirmed) {
-          setSaving(false)
-          return
-        }
+        if (!confirmed) { setSaving(false); return }
+
+        // UPDATE บันทึกเดิมแทน insert ใหม่
+        await supabase.from('lesson_logs').update({
+          teacher_name: teacher.full_name,
+          duration_minutes: form.duration_minutes,
+          subject_name: form.subject_name || null,
+          topic: form.topic || null,
+          homework: form.homework || null,
+        }).eq('id', existing[0].id)
+
+        toast.success('เพิ่มหัวข้อสอน/การบ้านในบันทึกวันนี้แล้ว ✅')
+        setForm({ enrollment_id: '', lesson_date: todayStr, duration_minutes: 60, subject_name: '', topic: '', homework: '' })
+        setStudentSearch('')
+        setSaving(false)
+        loadAll()
+        return
       }
     }
 
@@ -331,7 +341,9 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       })
     }
 
-    toast.success(skipLessonCount ? 'บันทึกชั่วโมงสอนเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)' : 'บันทึกชั่วโมงสอนสำเร็จ ✅')
+    toast.success(skipLessonCount
+      ? 'บันทึกชั่วโมงสอนวิชาเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)'
+      : 'บันทึกชั่วโมงสอนสำเร็จ ✅ หักครั้งเรียน 1 ครั้ง')
     setForm({
       enrollment_id: '',
       lesson_date: todayStr,
