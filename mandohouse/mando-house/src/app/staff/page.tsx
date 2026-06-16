@@ -133,8 +133,8 @@ export default async function DashboardPage() {
           <a href="/teach" target="_blank" rel="noopener noreferrer" className="btn-brand text-sm">
             🧑‍🏫 หน้าครูกรอกข้อมูล →
           </a>
-          <Link href="/staff/settings" className="btn-outline text-sm">⚙️ ตั้งค่ายอดเงิน</Link>
-          <Link href="/staff/import" className="btn-outline text-sm">📤 Import ข้อมูล</Link>
+          <Link href="/staff/settings" className="btn-brand text-sm">⚙️ ตั้งค่ายอดเงิน</Link>
+          <Link href="/staff/import" className="btn-brand text-sm">📤 Import ข้อมูล</Link>
         </div>
       </div>
 
