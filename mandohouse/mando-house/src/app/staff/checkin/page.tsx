@@ -234,19 +234,57 @@ export default function CheckinPage() {
     const item = checkins.find(c => c.id === id)
     if (!item) return
 
+    // หา lesson_log ที่สร้างพร้อมกับ checkin นี้ (enrollment เดียวกัน + วันเดียวกัน)
+    const lessonDate = item.check_in_at.slice(0, 10)
+    const { data: relatedLogs } = await supabase
+      .from('lesson_logs')
+      .select('id, enrollment_id, lesson_number')
+      .eq('enrollment_id', item.enrollment_id)
+      .eq('lesson_date', lessonDate)
+
+    // ซ่อนออกจาก UI ทันที
     setCheckins(prev => prev.filter(c => c.id !== id))
 
     let undone = false
     const timeoutId = setTimeout(async () => {
       if (undone) return
+
+      // 1) ลบ checkin
       const { error } = await supabase.from('checkins').delete().eq('id', id)
-      if (error) { toast.error('ลบไม่สำเร็จ'); loadCheckins(selectedDate) }
-    }, 5000)
+      if (error) { toast.error('ลบไม่สำเร็จ'); loadCheckins(selectedDate); return }
+
+      // 2) ลบ lesson_logs ที่เกี่ยวข้อง
+      if (relatedLogs && relatedLogs.length > 0) {
+        await supabase.from('lesson_logs').delete()
+          .in('id', relatedLogs.map(l => l.id))
+
+        // 3) คืน lessons_used (ลดลงเท่ากับจำนวน lesson_logs ที่ลบ)
+        if (item.enrollment_id) {
+          const { data: enroll } = await supabase
+            .from('enrollments')
+            .select('lessons_used')
+            .eq('id', item.enrollment_id)
+            .single()
+          if (enroll && enroll.lessons_used > 0) {
+            await supabase
+              .from('enrollments')
+              .update({ lessons_used: Math.max(0, enroll.lessons_used - relatedLogs.length) })
+              .eq('id', item.enrollment_id)
+          }
+        }
+      }
+    }, 6000)
+
+    const studentName = item.student?.nickname || item.student?.full_name || 'นักเรียน'
+    const logCount = relatedLogs?.length ?? 0
 
     toast(
       (t) => (
         <span className="flex items-center gap-3">
-          ลบรายการแล้ว
+          <span>
+            ลบเช็กอิน {studentName} แล้ว
+            {logCount > 0 && <span className="text-xs text-gray-400 ml-1">(คืน {logCount} ครั้ง)</span>}
+          </span>
           <button
             onClick={() => {
               undone = true
@@ -258,13 +296,13 @@ export default function CheckinPage() {
               toast.dismiss(t.id)
               toast.success('เลิกทำแล้ว')
             }}
-            className="font-medium text-brand-600 underline"
+            className="font-medium text-brand-600 underline whitespace-nowrap"
           >
             เลิกทำ (Undo)
           </button>
         </span>
       ),
-      { duration: 5000 }
+      { duration: 6000 }
     )
   }
 
