@@ -360,6 +360,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   const totalMinutes = logs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
   const totalHours = (totalMinutes / 60).toFixed(1)
   const totalSessions = logs.length
+  const todayLogs = logs.filter(l => l.lesson_date === todayStr)
 
   function fmt(min: number) {
     if (min < 60) return `${min} น.`
@@ -533,6 +534,47 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
             <div className="text-xs text-gray-400 mt-0.5">ครั้งเดือนนี้</div>
           </div>
         </div>
+      </div>
+
+      {/* รายชื่อนักเรียนวันนี้ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-800">📋 นักเรียนวันนี้</h2>
+          <span className="text-xs text-gray-400">{todayLogs.length} คน</span>
+        </div>
+        {loadingData ? (
+          <p className="text-xs text-gray-400 text-center py-3">กำลังโหลด...</p>
+        ) : todayLogs.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-3">ยังไม่มีนักเรียนวันนี้ — กรอกด้านล่างได้เลย</p>
+        ) : (
+          <div className="space-y-2">
+            {todayLogs.map(l => {
+              const name = l.enrollments?.students?.nickname || l.enrollments?.students?.full_name || '?'
+              const course = l.enrollments?.courses?.name ?? ''
+              const hasTopic = !!(l.topic || l.homework)
+              return (
+                <div key={l.id} className={`rounded-xl px-3 py-2.5 border ${hasTopic ? 'bg-brand-50 border-brand-100' : 'bg-amber-50 border-amber-100'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 text-[10px] font-bold flex-shrink-0">
+                        {name.slice(0, 2)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-800">{name}</div>
+                        <div className="text-xs text-gray-400">{course}</div>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${hasTopic ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {hasTopic ? '✓ กรอกแล้ว' : '⚠️ ยังไม่กรอก'}
+                    </span>
+                  </div>
+                  {l.topic && <div className="text-xs text-gray-500 mt-1 ml-8">📖 {l.topic}</div>}
+                  {l.homework && <div className="text-xs text-gray-500 mt-0.5 ml-8">✏️ {l.homework}</div>}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Form บันทึกใหม่ */}
