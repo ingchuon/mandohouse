@@ -35,7 +35,7 @@ export default function CheckinPage() {
   const [topic, setTopic] = useState('')
   const [homework, setHomework] = useState('')
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = new Date(new Date().getTime() + 7 * 60 * 60 * 1000).toISOString().split('T')[0]
   const [selectedDate, setSelectedDate] = useState(todayStr)
   const isToday = selectedDate === todayStr
 
@@ -82,8 +82,8 @@ export default function CheckinPage() {
     const { data: c } = await supabase
       .from('checkins')
       .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name))')
-      .gte('check_in_at', date + 'T00:00:00')
-      .lt('check_in_at', date + 'T23:59:59')
+      .gte('check_in_at', date + 'T00:00:00+07:00')
+      .lt('check_in_at', date + 'T23:59:59+07:00')
       .order('check_in_at', { ascending: false })
     setCheckins(c ?? [])
   }
