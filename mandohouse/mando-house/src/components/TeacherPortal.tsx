@@ -331,13 +331,14 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         .eq('id', form.enrollment_id)
     }
 
-    // เพิ่มลงตาราง checkins ด้วย ถ้ายังไม่มีของวันนี้ (ให้ขึ้นใน "วันนี้มาเรียน" ของหน้า staff/checkin)
+    // เพิ่มลงตาราง checkins ด้วย ถ้ายังไม่มีของวันนั้น
     if (!existingCheckin || existingCheckin.length === 0) {
-      const checkInTime = `${form.lesson_date}T12:00:00`
+      // ใช้เวลาเที่ยง (12:00) ของวัน lesson_date ตามเวลาไทย UTC+7
+      const checkInTime = `${form.lesson_date}T12:00:00+07:00`
       await supabase.from('checkins').insert({
         student_id: enroll.student_id,
         enrollment_id: form.enrollment_id,
-        check_in_at: new Date(checkInTime).toISOString(),
+        check_in_at: checkInTime,
       })
     }
 
