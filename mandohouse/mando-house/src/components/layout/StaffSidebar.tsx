@@ -85,8 +85,8 @@ export default function StaffSidebar() {
   const initials = name ? name.slice(0, 2) : '..'
 
   const sidebarContent = (
-    <aside className="w-56 flex-shrink-0 bg-brand-500 min-h-screen flex flex-col">
-      <div className="px-5 py-5 border-b border-white/15">
+    <aside className="w-56 flex-shrink-0 bg-brand-500 dark:bg-[#141b2d] min-h-screen flex flex-col">
+      <div className="px-5 py-5 border-b border-white/15 dark:border-[#2a3245]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
             <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
@@ -98,7 +98,7 @@ export default function StaffSidebar() {
         </div>
       </div>
 
-      <div className="px-4 py-3 border-b border-white/15 flex items-center gap-2.5">
+      <div className="px-4 py-3 border-b border-white/15 dark:border-[#2a3245] flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-full bg-white/25 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
           {initials}
         </div>
@@ -111,7 +111,7 @@ export default function StaffSidebar() {
       <nav className="flex-1 py-3 overflow-y-auto">
         {navItems.map(({ group, items }) => (
           <div key={group} className="mb-3">
-            <div className="px-5 py-1 text-[10px] font-medium text-white/50 uppercase tracking-widest">
+            <div className="px-5 py-1 text-[10px] font-medium text-white/50 dark:text-gray-500 uppercase tracking-widest">
               {group}
             </div>
             {items.map(({ href, label, icon }) => {
@@ -122,8 +122,8 @@ export default function StaffSidebar() {
                   className={cn(
                     'flex items-center gap-2.5 px-5 py-2.5 text-sm transition-all',
                     active
-                      ? 'bg-cream-200 text-brand-700 border-l-2 border-cream-500 font-medium'
-                      : 'text-white/80 hover:text-white hover:bg-white/10 border-l-2 border-transparent'
+                      ? 'bg-cream-200 text-brand-700 border-l-2 border-cream-500 font-medium dark:bg-brand-500/20 dark:text-brand-300 dark:border-brand-400'
+                      : 'text-white/80 hover:text-white hover:bg-white/10 border-l-2 border-transparent dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-[#2a3245]'
                   )}
                 >
                   <span className="text-base w-5 text-center">{icon}</span>
@@ -140,7 +140,7 @@ export default function StaffSidebar() {
         ))}
       </nav>
 
-      <div className="px-5 py-4 border-t border-white/15 space-y-1">
+      <div className="px-5 py-4 border-t border-white/15 dark:border-[#2a3245] space-y-1">
         <ThemeToggle />
         <button onClick={handleLogout}
           className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors w-full">
@@ -159,7 +159,7 @@ export default function StaffSidebar() {
       </div>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-brand-500 flex items-center justify-between px-4 py-3 border-b border-white/15">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-brand-500 dark:bg-[#141b2d] flex items-center justify-between px-4 py-3 border-b border-white/15 dark:border-[#2a3245]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
             <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
