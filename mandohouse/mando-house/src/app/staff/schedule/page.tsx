@@ -176,7 +176,7 @@ export default function SchedulePage() {
 
   const displayDays = selectedDay !== null ? [selectedDay] : [1,2,3,4,5,6,0]
 
-  if (loading) return <div className="p-6 text-gray-400 text-center py-20">กำลังโหลด...</div>
+  if (loading) return <div className="p-6 text-gray-400 dark:text-gray-300 text-center py-20">กำลังโหลด...</div>
 
   return (
     <div className="p-6">
@@ -184,19 +184,19 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold">ตารางสอน</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex rounded-lg border border-gray-200 dark:border-[#3a4560] overflow-hidden">
             <button
               onClick={() => setSelectedDay(null)}
-              className={`px-3 py-1.5 text-xs transition-colors ${selectedDay === null ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 text-xs transition-colors ${selectedDay === null ? 'bg-gray-900 text-white' : 'bg-white dark:bg-[#242d3f] text-gray-500 dark:text-gray-400 dark:text-gray-300 hover:bg-gray-50 dark:bg-[#1e2533]'}`}
             >ทั้งสัปดาห์</button>
             {[1,2,3,4,5,6,0].map(d => (
               <button
                 key={d}
                 onClick={() => setSelectedDay(selectedDay === d ? null : d)}
-                className={`px-3 py-1.5 text-xs transition-colors border-l border-gray-200 ${selectedDay === d ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-xs transition-colors border-l border-gray-200 dark:border-[#3a4560] ${selectedDay === d ? 'bg-gray-900 text-white' : 'bg-white dark:bg-[#242d3f] text-gray-500 dark:text-gray-400 dark:text-gray-300 hover:bg-gray-50 dark:bg-[#1e2533]'}`}
               >{DAYS_SHORT[d]}</button>
             ))}
           </div>
@@ -208,12 +208,12 @@ export default function SchedulePage() {
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[700px] border-collapse">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="w-16 px-3 py-3 text-xs text-gray-400 font-medium border-b border-r border-gray-100">เวลา</th>
+            <tr className="bg-gray-50 dark:bg-[#1e2533]">
+              <th className="w-16 px-3 py-3 text-xs text-gray-400 dark:text-gray-300 font-medium border-b border-r border-gray-100 dark:border-[#3a4560]">เวลา</th>
               {displayDays.map(d => (
-                <th key={d} className={`px-3 py-3 text-xs font-medium border-b border-gray-100 text-center ${selectedDay === d ? 'bg-brand-50 text-brand-700' : 'text-gray-600'}`}>
+                <th key={d} className={`px-3 py-3 text-xs font-medium border-b border-gray-100 dark:border-[#3a4560] text-center ${selectedDay === d ? 'bg-brand-50 text-brand-700' : 'text-gray-600 dark:text-gray-300'}`}>
                   {DAYS[d]}
-                  <div className="text-[10px] font-normal text-gray-400 mt-0.5">
+                  <div className="text-[10px] font-normal text-gray-400 dark:text-gray-300 mt-0.5">
                     {schedules.filter(s => s.day_of_week === d).length} คลาส
                   </div>
                 </th>
@@ -222,8 +222,8 @@ export default function SchedulePage() {
           </thead>
           <tbody>
             {TIME_SLOTS.slice(0, -1).map(time => (
-              <tr key={time} className="hover:bg-gray-50/50">
-                <td className="px-3 py-2 text-xs text-gray-400 border-r border-b border-gray-100 text-center align-top w-16">
+              <tr key={time} className="hover:bg-gray-50 dark:bg-[#1e2533]/50">
+                <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-300 border-r border-b border-gray-100 dark:border-[#3a4560] text-center align-top w-16">
                   {time}
                 </td>
                 {displayDays.map(d => {
@@ -236,16 +236,16 @@ export default function SchedulePage() {
                     .filter(Boolean)
 
                   return (
-                    <td key={d} className="border-b border-gray-100 p-1 align-top min-w-[140px]">
+                    <td key={d} className="border-b border-gray-100 dark:border-[#3a4560] p-1 align-top min-w-[140px]">
                       {slot ? (
                         <div
                           className="rounded-lg p-2 cursor-pointer hover:opacity-80 transition h-full"
                           style={{ background: (room?.color ?? '#ccc') + '22', borderLeft: `3px solid ${room?.color ?? '#ccc'}` }}
                           onClick={() => setShowStudentModal(slot)}
                         >
-                          <div className="font-semibold text-xs text-gray-800 truncate">{slot.course?.name ?? 'ไม่ระบุ'}</div>
-                          <div className="text-[10px] text-gray-400 mt-0.5">{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</div>
-                          <div className="text-[10px] text-gray-400">{room?.name}</div>
+                          <div className="font-semibold text-xs text-gray-800 dark:text-gray-100 truncate">{slot.course?.name ?? 'ไม่ระบุ'}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-300 mt-0.5">{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-300">{room?.name}</div>
                           {/* ชื่อครู */}
                           {slot.teacher?.full_name && (
                             <div className="text-[10px] text-brand-600 mt-0.5 truncate">
@@ -256,21 +256,21 @@ export default function SchedulePage() {
                           {studentNames.length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-0.5">
                               {studentNames.slice(0, 3).map((name, i) => (
-                                <span key={i} className="text-[9px] bg-white/70 rounded px-1 py-0.5 text-gray-600 truncate max-w-[60px]">
+                                <span key={i} className="text-[9px] bg-white dark:bg-[#242d3f]/70 rounded px-1 py-0.5 text-gray-600 dark:text-gray-300 truncate max-w-[60px]">
                                   {name}
                                 </span>
                               ))}
                               {studentNames.length > 3 && (
-                                <span className="text-[9px] text-gray-400">+{studentNames.length - 3}</span>
+                                <span className="text-[9px] text-gray-400 dark:text-gray-300">+{studentNames.length - 3}</span>
                               )}
                             </div>
                           )}
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] text-gray-400">{slot.schedule_students?.length ?? 0}/{room?.capacity ?? '?'} คน</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-300">{slot.schedule_students?.length ?? 0}/{room?.capacity ?? '?'} คน</span>
                             <div className="flex gap-1">
                               <button
                                 onClick={e => { e.stopPropagation(); openEdit(slot) }}
-                                className="text-[10px] text-gray-400 hover:text-gray-600"
+                                className="text-[10px] text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:text-gray-300"
                               >✎</button>
                               <button
                                 onClick={e => { e.stopPropagation(); deleteSchedule(slot.id) }}
@@ -281,7 +281,7 @@ export default function SchedulePage() {
                         </div>
                       ) : (
                         <div
-                          className="h-10 rounded-lg border border-dashed border-gray-100 hover:border-brand-200 hover:bg-brand-50/30 cursor-pointer transition flex items-center justify-center"
+                          className="h-10 rounded-lg border border-dashed border-gray-100 dark:border-[#3a4560] hover:border-brand-200 hover:bg-brand-50/30 cursor-pointer transition flex items-center justify-center"
                           onClick={() => openAdd(d)}
                         >
                           <span className="text-[10px] text-gray-200 hover:text-brand-400">+</span>
@@ -299,10 +299,10 @@ export default function SchedulePage() {
       {/* Add/Edit Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-md shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">{editSchedule ? 'แก้ไขคลาส' : 'เพิ่มคลาสใหม่'}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3.5">
               <div>
@@ -311,7 +311,7 @@ export default function SchedulePage() {
                   {[1,2,3,4,5,6,0].map(d => (
                     <button type="button" key={d}
                       onClick={() => setForm({ ...form, day_of_week: d })}
-                      className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${form.day_of_week === d ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                      className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${form.day_of_week === d ? 'bg-gray-900 text-white border-gray-900' : 'bg-white dark:bg-[#242d3f] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#3a4560] hover:border-gray-400'}`}
                     >{DAYS[d]}</button>
                   ))}
                 </div>
@@ -325,7 +325,7 @@ export default function SchedulePage() {
                       <button type="button" key={room.id}
                         onClick={() => !conflict && setForm({ ...form, room_id: room.id })}
                         disabled={conflict}
-                        className={`p-2 rounded-lg text-xs border text-center transition-all ${form.room_id === room.id ? 'border-current font-semibold' : conflict ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-100 text-gray-400' : 'border-gray-200 hover:border-gray-400'}`}
+                        className={`p-2 rounded-lg text-xs border text-center transition-all ${form.room_id === room.id ? 'border-current font-semibold' : conflict ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-[#1e2533] border-gray-100 dark:border-[#3a4560] text-gray-400 dark:text-gray-300' : 'border-gray-200 dark:border-[#3a4560] hover:border-gray-400'}`}
                         style={form.room_id === room.id ? { borderColor: room.color, color: room.color, background: room.color + '15' } : {}}
                       >
                         <div className="w-2 h-2 rounded-full mx-auto mb-1" style={{ background: room.color }} />
@@ -382,20 +382,20 @@ export default function SchedulePage() {
       {/* Student Modal */}
       {showStudentModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">{showStudentModal.course?.name ?? 'คลาส'}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {DAYS[showStudentModal.day_of_week]} {showStudentModal.start_time.slice(0,5)}–{showStudentModal.end_time.slice(0,5)}
                   {showStudentModal.teacher?.full_name && ` · 👩‍🏫 ${showStudentModal.teacher.full_name}`}
                 </p>
               </div>
-              <button onClick={() => setShowStudentModal(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setShowStudentModal(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <div className="p-4 max-h-52 overflow-y-auto divide-y divide-gray-50">
               {(showStudentModal.schedule_students ?? []).length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">ยังไม่มีนักเรียน</p>
+                <p className="text-sm text-gray-400 dark:text-gray-300 text-center py-4">ยังไม่มีนักเรียน</p>
               )}
               {(showStudentModal.schedule_students ?? []).map((ss, i) => (
                 <div key={i} className="flex items-center justify-between py-2">
@@ -417,7 +417,7 @@ export default function SchedulePage() {
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-gray-100 space-y-3">
+            <div className="p-4 border-t border-gray-100 dark:border-[#3a4560] space-y-3">
               <div>
                 <label className="label">เพิ่มนักเรียน</label>
                 <select className="input"
