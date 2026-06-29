@@ -153,9 +153,9 @@ export default function LessonsPage() {
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-lg md:text-xl font-semibold">นับครั้งการเรียน</h1>
-        <span className="text-sm text-gray-400">{filtered.length} รายการ</span>
+        <span className="text-sm text-gray-400 dark:text-gray-300">{filtered.length} รายการ</span>
       </div>
-      <p className="text-sm text-gray-500 mb-4">ติดตามความคืบหน้าคอร์ส — กดที่แถวเพื่อดูประวัติการเรียนแต่ละครั้ง (ครู/หัวข้อ/การบ้าน)</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">ติดตามความคืบหน้าคอร์ส — กดที่แถวเพื่อดูประวัติการเรียนแต่ละครั้ง (ครู/หัวข้อ/การบ้าน)</p>
 
       {/* ช่องค้นหา */}
       <div className="mb-4">
@@ -168,7 +168,7 @@ export default function LessonsPage() {
       </div>
 
       <div className="card overflow-x-auto">
-        {loading ? <p className="text-center text-gray-400 py-12">กำลังโหลด...</p> : (
+        {loading ? <p className="text-center text-gray-400 dark:text-gray-300 py-12">กำลังโหลด...</p> : (
           <table className="w-full">
             <thead>
               <tr>
@@ -200,7 +200,7 @@ export default function LessonsPage() {
                         <span className="font-medium text-sm">{name}</span>
                       </div>
                     </td>
-                    <td className="text-gray-600 text-sm">{en.course?.name}</td>
+                    <td className="text-gray-600 dark:text-gray-300 text-sm">{en.course?.name}</td>
                     <td className="font-medium text-sm">{en.lessons_used} / {en.lessons_total} ครั้ง</td>
                     <td>
                       <span className={`font-semibold text-sm ${remaining <= 0 ? 'text-red-600' : remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-brand-600'}`}>
@@ -208,11 +208,11 @@ export default function LessonsPage() {
                       </span>
                     </td>
                     <td>
-                      <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-32 h-2 bg-gray-100 dark:bg-[#2a3245] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${pct >= 85 ? 'bg-red-400' : pct >= 65 ? 'bg-amber-400' : 'bg-brand-400'}`}
                           style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{pct}%</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">{pct}%</div>
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1.5">
@@ -227,7 +227,7 @@ export default function LessonsPage() {
                 )
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-gray-400 py-8">
+                <tr><td colSpan={6} className="text-center text-gray-400 dark:text-gray-300 py-8">
                   {search ? `ไม่พบ "${search}"` : 'ไม่มี enrollment ที่กำลังเรียน'}
                 </td></tr>
               )}
@@ -239,10 +239,10 @@ export default function LessonsPage() {
       {/* Add Lesson Modal */}
       {adding && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">บันทึกครั้งเรียน</h2>
-              <button onClick={() => setAdding(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setAdding(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={addLesson} className="p-5 space-y-3">
               <div>
@@ -272,15 +272,15 @@ export default function LessonsPage() {
       {/* Edit Enrollment Modal */}
       {editEnroll && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">แก้ไข Enrollment</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {editEnroll.student?.nickname || editEnroll.student?.full_name} — {editEnroll.course?.name}
                 </p>
               </div>
-              <button onClick={() => setEditEnroll(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setEditEnroll(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -321,24 +321,24 @@ export default function LessonsPage() {
       {/* Detail / History Modal */}
       {detailEnroll && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setDetailEnroll(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="font-semibold">
                   {detailEnroll.student?.nickname || detailEnroll.student?.full_name}
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {detailEnroll.course?.name} · {detailEnroll.lessons_used}/{detailEnroll.lessons_total} ครั้ง
                   {' '}(เหลือ {detailEnroll.lessons_total - detailEnroll.lessons_used} ครั้ง)
                 </p>
               </div>
-              <button onClick={() => setDetailEnroll(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setDetailEnroll(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <div className="overflow-y-auto divide-y divide-gray-50">
               {loadingDetail ? (
-                <p className="text-center text-gray-400 py-10 text-sm">กำลังโหลด...</p>
+                <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">กำลังโหลด...</p>
               ) : detailLogs.length === 0 ? (
-                <p className="text-center text-gray-400 py-10 text-sm">ยังไม่มีประวัติการเรียน</p>
+                <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">ยังไม่มีประวัติการเรียน</p>
               ) : (
                 detailLogs.map(log => (
                   <div key={log.id} className="px-5 py-3">
@@ -347,20 +347,20 @@ export default function LessonsPage() {
                         <span className="text-xs font-semibold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
                           ครั้งที่ {log.lesson_number}
                         </span>
-                        <span className="text-sm font-medium text-gray-800">{fmtDateTH(log.lesson_date)}</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{fmtDateTH(log.lesson_date)}</span>
                       </div>
                       <span className="text-sm font-semibold text-brand-600">{fmtDuration(log.duration_minutes)}</span>
                     </div>
                     {log.teacher_name && (
-                      <div className="text-xs text-gray-400 mb-1">ครู{log.teacher_name}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-300 mb-1">ครู{log.teacher_name}</div>
                     )}
                     {log.topic && (
-                      <div className="text-xs text-gray-600 bg-yellow-50 rounded-lg px-2.5 py-1.5 mt-1 border border-yellow-100">
+                      <div className="text-xs text-gray-600 dark:text-gray-300 bg-yellow-50 rounded-lg px-2.5 py-1.5 mt-1 border border-yellow-100">
                         📖 {log.topic}
                       </div>
                     )}
                     {log.homework && (
-                      <div className="text-xs text-gray-600 bg-blue-50 rounded-lg px-2.5 py-1.5 mt-1 border border-blue-100">
+                      <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 rounded-lg px-2.5 py-1.5 mt-1 border border-blue-100">
                         ✏️ การบ้าน: {log.homework}
                       </div>
                     )}
