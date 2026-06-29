@@ -125,7 +125,7 @@ export default async function DashboardPage() {
     <div className="p-4 md:p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-lg md:text-xl font-semibold text-gray-900">สวัสดีครับ {profile?.full_name} 👋</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">สวัสดีครับ {profile?.full_name} 👋</h1>
           <p className="text-sm text-gray-500 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
@@ -222,25 +222,25 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 md:mb-6">
         <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-500">นักเรียนทั้งหมด</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">นักเรียนทั้งหมด</span>
             <span className="text-lg">👥</span>
           </div>
           <div className="text-2xl font-semibold text-brand-600">{totalStudents ?? 0}</div>
-          <div className="text-xs mt-1 text-gray-400">คน (Active)</div>
+          <div className="text-xs mt-1 text-gray-400 dark:text-gray-500">คน (Active)</div>
         </Link>
 
         <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-500">คอร์สกำลังเรียน</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">คอร์สกำลังเรียน</span>
             <span className="text-lg">📚</span>
           </div>
           <div className="text-2xl font-semibold text-brand-600">{activeEnrollments ?? 0}</div>
-          <div className="text-xs mt-1 text-gray-400">enrollment</div>
+          <div className="text-xs mt-1 text-gray-400 dark:text-gray-500">enrollment</div>
         </Link>
 
         <Link href="/staff/alerts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-500">ใกล้หมดคอร์ส</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">ใกล้หมดคอร์ส</span>
             <span className="text-lg">⚠️</span>
           </div>
           <div className="text-2xl font-semibold text-brand-600">{expiring.length}</div>
@@ -249,7 +249,7 @@ export default async function DashboardPage() {
 
         <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-500">รายรับสะสมเดือนนี้</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">รายรับสะสมเดือนนี้</span>
             <span className="text-lg">📊</span>
           </div>
           <div className="text-2xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
