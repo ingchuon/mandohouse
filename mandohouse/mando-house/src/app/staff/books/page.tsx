@@ -101,14 +101,14 @@ export default function BooksPage() {
 
   const lowStock = books.filter(b => b.stock <= 3)
 
-  if (loading) return <div className="p-6 text-gray-400 text-center py-20">กำลังโหลด...</div>
+  if (loading) return <div className="p-6 text-gray-400 dark:text-gray-300 text-center py-20">กำลังโหลด...</div>
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold">ขายหนังสือ</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{books.length} รายการ</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">{books.length} รายการ</p>
         </div>
         <button onClick={() => { setEditBook(null); setBookForm({ name: '', price: 0, stock: 0, image_url: '' }); setShowBookForm(true) }} className="btn-brand">
           + เพิ่มหนังสือ
@@ -117,10 +117,10 @@ export default function BooksPage() {
 
       {/* แจ้งเตือนสต็อกใกล้หมด */}
       {lowStock.length > 0 && (
-        <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <div className="mb-5 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
           <div className="flex items-center gap-2 mb-2">
             <span>⚠️</span>
-            <span className="font-medium text-amber-800 text-sm">สต็อกใกล้หมด {lowStock.length} รายการ</span>
+            <span className="font-medium text-amber-800 dark:text-amber-300 text-sm">สต็อกใกล้หมด {lowStock.length} รายการ</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {lowStock.map(b => (
@@ -137,12 +137,12 @@ export default function BooksPage() {
             {book.image_url ? (
               <img src={book.image_url} alt={book.name} className="w-full h-36 object-cover rounded-lg mb-3" />
             ) : (
-              <div className="w-full h-36 bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-4xl">📚</div>
+              <div className="w-full h-36 bg-gray-100 dark:bg-[#2a3245] rounded-lg mb-3 flex items-center justify-center text-4xl">📚</div>
             )}
             <div className="flex-1">
-              <div className="font-medium text-sm text-gray-900 mb-1">{book.name}</div>
+              <div className="font-medium text-sm text-gray-900 dark:text-white mb-1">{book.name}</div>
               <div className="text-brand-600 font-semibold text-sm">{formatThaiMoney(book.price)}</div>
-              <div className={`text-xs mt-1 ${book.stock <= 3 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+              <div className={`text-xs mt-1 ${book.stock <= 3 ? 'text-red-500 font-medium' : 'text-gray-400 dark:text-gray-300'}`}>
                 สต็อก: {book.stock} เล่ม {book.stock <= 3 && '⚠️'}
               </div>
             </div>
@@ -180,9 +180,9 @@ export default function BooksPage() {
             <tbody>
               {sales.map(s => (
                 <tr key={s.id} className="table-row-hover">
-                  <td className="text-xs text-gray-500">{formatDate(s.sold_at, 'd MMM yy')}</td>
+                  <td className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300">{formatDate(s.sold_at, 'd MMM yy')}</td>
                   <td className="font-medium text-sm">{s.book?.name}</td>
-                  <td className="text-sm text-gray-500">{s.student?.nickname || s.student?.full_name || '—'}</td>
+                  <td className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300">{s.student?.nickname || s.student?.full_name || '—'}</td>
                   <td className="text-sm">{s.quantity} เล่ม</td>
                   <td className="font-semibold text-brand-600">{formatThaiMoney(s.total_amount)}</td>
                   <td>
@@ -200,10 +200,10 @@ export default function BooksPage() {
       {/* Add/Edit Book Modal */}
       {showBookForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-md shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">{editBook ? 'แก้ไขหนังสือ' : 'เพิ่มหนังสือใหม่'}</h2>
-              <button onClick={() => { setShowBookForm(false); setEditBook(null) }} className="text-gray-400">✕</button>
+              <button onClick={() => { setShowBookForm(false); setEditBook(null) }} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSaveBook} className="p-5 space-y-3.5">
               <div>
@@ -242,13 +242,13 @@ export default function BooksPage() {
       {/* Sale Modal */}
       {showSaleModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">บันทึกการขาย</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{showSaleModal.name} · {formatThaiMoney(showSaleModal.price)}/เล่ม</p>
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">{showSaleModal.name} · {formatThaiMoney(showSaleModal.price)}/เล่ม</p>
               </div>
-              <button onClick={() => setShowSaleModal(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setShowSaleModal(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSale} className="p-5 space-y-3.5">
               <div>
@@ -267,8 +267,8 @@ export default function BooksPage() {
                   value={saleForm.quantity}
                   onChange={e => setSaleForm({ ...saleForm, quantity: Number(e.target.value) })} />
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
-                <span className="text-sm text-gray-600">รวม</span>
+              <div className="p-3 bg-gray-50 dark:bg-[#1e2533] rounded-lg flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-300">รวม</span>
                 <span className="font-semibold text-brand-600">{formatThaiMoney(showSaleModal.price * saleForm.quantity)}</span>
               </div>
               <div>
