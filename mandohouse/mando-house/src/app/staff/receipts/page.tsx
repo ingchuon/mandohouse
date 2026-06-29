@@ -175,7 +175,7 @@ export default function ReceiptsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg md:text-xl font-semibold">ใบเสร็จ</h1>
-          <p className="text-sm text-gray-500 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
         </div>
         <button onClick={() => { setEditReceipt(null); setPreview(null); setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' }); setShowForm(true) }} className="btn-brand">
           + ออกใบเสร็จ
@@ -198,9 +198,9 @@ export default function ReceiptsPage() {
           <tbody>
             {receipts.map(r => (
               <tr key={r.id} className="table-row-hover">
-                <td className="font-mono text-xs text-gray-600">{r.receipt_number ?? '—'}</td>
+                <td className="font-mono text-xs text-gray-600 dark:text-gray-300">{r.receipt_number ?? '—'}</td>
                 <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name || '—'}</td>
-                <td className="text-sm text-gray-500">
+                <td className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300">
                   {r.enrollment?.course?.name ?? r.items?.[0]?.description ?? r.subject ?? '—'}
                 </td>
                 <td className="text-sm">{formatDate(r.issued_at)}</td>
@@ -220,7 +220,7 @@ export default function ReceiptsPage() {
               </tr>
             ))}
             {receipts.length === 0 && (
-              <tr><td colSpan={7} className="text-center text-gray-400 py-8">ยังไม่มีใบเสร็จ</td></tr>
+              <tr><td colSpan={7} className="text-center text-gray-400 dark:text-gray-300 py-8">ยังไม่มีใบเสร็จ</td></tr>
             )}
           </tbody>
         </table>
@@ -228,10 +228,10 @@ export default function ReceiptsPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-2xl shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">{editReceipt ? 'แก้ไขใบเสร็จ' : 'ออกใบเสร็จใหม่'}</h2>
-              <button onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="text-gray-400">✕</button>
+              <button onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <div className={editReceipt ? '' : 'grid grid-cols-2 divide-x divide-gray-100'}>
               <form onSubmit={handleSave} className="p-5 space-y-4">
@@ -292,29 +292,29 @@ export default function ReceiptsPage() {
 
               {!editReceipt && (
                 <div className="p-5">
-                  <p className="text-xs text-gray-400 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-300 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
                   {preview ? (
-                    <div className="border border-gray-100 rounded-xl p-5 font-mono text-sm">
+                    <div className="border border-gray-100 dark:border-[#3a4560] rounded-xl p-5 font-mono text-sm">
                       <div className="text-center mb-2">
                         <div className="text-base font-bold">Mando House</div>
-                        <div className="text-[11px] text-gray-500 leading-relaxed">
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 dark:text-gray-300 leading-relaxed">
                           สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br/>
                           085-0930111 ， 097-1727677
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">ใบเสร็จรับเงิน</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">ใบเสร็จรับเงิน</div>
                       </div>
-                      <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
-                        <div className="flex justify-between"><span className="text-gray-500">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
+                      <div className="space-y-1.5 text-xs border-t border-gray-100 dark:border-[#3a4560] pt-3">
+                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
                       </div>
-                      <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200 dark:border-[#3a4560]">
                         <span>รวม</span>
                         <span className="text-brand-600">{formatThaiMoney(form.amount > 0 ? form.amount : (preview.course?.price ?? 0))}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="border border-dashed border-gray-200 rounded-xl h-40 flex items-center justify-center text-gray-300 text-sm">
+                    <div className="border border-dashed border-gray-200 dark:border-[#3a4560] rounded-xl h-40 flex items-center justify-center text-gray-300 text-sm">
                       เลือกนักเรียนเพื่อดูตัวอย่าง
                     </div>
                   )}
