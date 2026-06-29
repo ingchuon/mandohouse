@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { ThemeToggle } from '@/components/ThemeProvider'
 
 const navItems = [
   {
@@ -139,7 +140,8 @@ export default function StaffSidebar() {
         ))}
       </nav>
 
-      <div className="px-5 py-4 border-t border-white/15">
+      <div className="px-5 py-4 border-t border-white/15 space-y-1">
+        <ThemeToggle />
         <button onClick={handleLogout}
           className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors w-full">
           <span className="text-base">↩</span>
