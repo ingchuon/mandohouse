@@ -254,9 +254,9 @@ export default function TeachingReportPage() {
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-lg md:text-xl font-semibold">รายงานชั่วโมงสอน</h1>
-        <span className="text-sm text-gray-400">{teacherNames.length} ครู</span>
+        <span className="text-sm text-gray-400 dark:text-gray-300">{teacherNames.length} ครู</span>
       </div>
-      <p className="text-sm text-gray-500 mb-4">สรุปชั่วโมงสอนรายเดือนของครูแต่ละคน — Export เป็น Excel แยกชีทต่อครูได้</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">สรุปชั่วโมงสอนรายเดือนของครูแต่ละคน — Export เป็น Excel แยกชีทต่อครูได้</p>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4 items-end">
@@ -266,7 +266,7 @@ export default function TeachingReportPage() {
             <button
               onClick={() => setFilterMode('month')}
               className={`btn-sm px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                filterMode === 'month' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                filterMode === 'month' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
               }`}
             >
               รายเดือน
@@ -274,7 +274,7 @@ export default function TeachingReportPage() {
             <button
               onClick={() => setFilterMode('range')}
               className={`btn-sm px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                filterMode === 'range' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                filterMode === 'range' ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
               }`}
             >
               เลือกวัน
@@ -330,23 +330,23 @@ export default function TeachingReportPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
         <div className="card p-4">
           <div className="text-2xl font-bold text-brand-700">{(grandTotalMinutes / 60).toFixed(1)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ชั่วโมงรวม — {periodLabel}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">ชั่วโมงรวม — {periodLabel}</div>
         </div>
         <div className="card p-4">
-          <div className="text-2xl font-bold text-gray-700">{grandTotalSessions}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ครั้งสอนรวม</div>
+          <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">{grandTotalSessions}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">ครั้งสอนรวม</div>
         </div>
         <div className="card p-4 hidden md:block">
-          <div className="text-2xl font-bold text-gray-700">{teacherNames.length}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ครูที่มีบันทึก</div>
+          <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">{teacherNames.length}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">ครูที่มีบันทึก</div>
         </div>
       </div>
 
       {/* Per-teacher tables */}
       {loading ? (
-        <div className="card py-10 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+        <div className="card py-10 text-center text-gray-400 dark:text-gray-300 text-sm">กำลังโหลด...</div>
       ) : displayedTeachers.length === 0 ? (
-        <div className="card py-10 text-center text-gray-400 text-sm">ไม่มีข้อมูลในเดือนนี้</div>
+        <div className="card py-10 text-center text-gray-400 dark:text-gray-300 text-sm">ไม่มีข้อมูลในเดือนนี้</div>
       ) : (
         <div className="space-y-4">
           {displayedTeachers.map(({ name, logs: teacherLogs, totalMinutes, sessionCount }) => (
@@ -360,7 +360,7 @@ export default function TeachingReportPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold text-brand-600">{(totalMinutes / 60).toFixed(1)} ชม.</div>
-                  <div className="text-xs text-gray-400">{sessionCount} ครั้ง</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-300">{sessionCount} ครั้ง</div>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -383,10 +383,10 @@ export default function TeachingReportPage() {
                         <td className="text-sm font-medium">
                           {l.enrollments?.students?.nickname || l.enrollments?.students?.full_name || '—'}
                         </td>
-                        <td className="text-sm text-gray-600">{l.enrollments?.courses?.name ?? '—'}</td>
+                        <td className="text-sm text-gray-600 dark:text-gray-300">{l.enrollments?.courses?.name ?? '—'}</td>
                         <td className="text-sm font-semibold text-brand-600 whitespace-nowrap">{fmtDuration(l.duration_minutes)}</td>
-                        <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.topic ?? ''}>{l.topic ?? '—'}</td>
-                        <td className="text-sm text-gray-600 max-w-[200px] truncate" title={l.homework ?? ''}>{l.homework ?? '—'}</td>
+                        <td className="text-sm text-gray-600 dark:text-gray-300 max-w-[200px] truncate" title={l.topic ?? ''}>{l.topic ?? '—'}</td>
+                        <td className="text-sm text-gray-600 dark:text-gray-300 max-w-[200px] truncate" title={l.homework ?? ''}>{l.homework ?? '—'}</td>
                         <td>
                           <div className="flex gap-1.5">
                             <button onClick={() => openEdit(l)} className="btn-outline btn-sm px-2">✎</button>
@@ -406,15 +406,15 @@ export default function TeachingReportPage() {
       {/* Edit Modal */}
       {editLog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">แก้ไขชั่วโมงสอน</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {editLog.enrollments?.students?.nickname || editLog.enrollments?.students?.full_name} — {editLog.enrollments?.courses?.name ?? ''}
                 </p>
               </div>
-              <button onClick={() => setEditLog(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setEditLog(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSaveEdit} className="p-5 space-y-3">
               <div>
@@ -431,7 +431,7 @@ export default function TeachingReportPage() {
                       className={`py-2 rounded-lg text-xs font-medium border transition-all ${
                         editForm.duration_minutes === m
                           ? 'bg-brand-500 text-white border-brand-500'
-                          : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                          : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                       }`}
                     >
                       {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
