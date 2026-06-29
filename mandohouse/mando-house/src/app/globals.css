@@ -42,7 +42,7 @@
   }
 
   .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    @apply bg-white rounded-xl border border-brand-200 shadow-sm;
   }
   .card-cream {
     @apply bg-cream-100 rounded-xl border border-cream-200 shadow-sm;
