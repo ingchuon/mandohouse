@@ -47,7 +47,7 @@ export default function SettingsPage() {
     <div className="p-6 max-w-lg">
       <div className="mb-6">
         <h1 className="text-xl font-semibold">⚙️ ตั้งค่ายอดเงิน</h1>
-        <p className="text-sm text-gray-500 mt-0.5">กำหนดยอดยกมาและรายได้สะสม</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">กำหนดยอดยกมาและรายได้สะสม</p>
       </div>
 
       <div className="card p-5">
@@ -59,7 +59,7 @@ export default function SettingsPage() {
               value={form.carry_over}
               onChange={e => setForm({ ...form, carry_over: Number(e.target.value) })}
             />
-            <p className="text-xs text-gray-400 mt-1">เงินคงเหลือที่ยกมาจากเดือนก่อน</p>
+            <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">เงินคงเหลือที่ยกมาจากเดือนก่อน</p>
           </div>
           <div>
             <label className="label">💰 รายได้ทั้งหมดตั้งแต่เปิดกิจการ (บาท)</label>
@@ -68,9 +68,9 @@ export default function SettingsPage() {
               value={form.total_carry_over}
               onChange={e => setForm({ ...form, total_carry_over: Number(e.target.value) })}
             />
-            <p className="text-xs text-gray-400 mt-1">ใส่ยอดรวมก่อนเริ่มใช้ระบบ เช่น 542,294</p>
+            <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">ใส่ยอดรวมก่อนเริ่มใช้ระบบ เช่น 542,294</p>
           </div>
-          <div className="p-3 bg-gray-50 rounded-xl text-xs text-gray-500 space-y-1">
+          <div className="p-3 bg-gray-50 dark:bg-[#1e2533] rounded-xl text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 space-y-1">
             <div className="flex justify-between">
               <span>ยอดยกมา</span>
               <span className="font-medium">{formatThaiMoney(form.carry_over)}</span>
