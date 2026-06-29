@@ -168,7 +168,7 @@ export default function ExpensesPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold">รายจ่าย</h1>
-          <p className="text-sm text-gray-500 mt-0.5">ติดตามค่าใช้จ่ายและกำไรขาดทุน</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">ติดตามค่าใช้จ่ายและกำไรขาดทุน</p>
         </div>
         <div className="flex items-center gap-2">
           <select className="input w-auto text-sm" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
@@ -183,17 +183,17 @@ export default function ExpensesPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         <div className="card p-4">
-          <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">💰 รายได้เดือนนี้</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">💰 รายได้เดือนนี้</div>
           <div className="text-2xl font-semibold text-brand-600">{formatThaiMoney(totalIncome)}</div>
-          <div className="text-xs text-gray-400 mt-1">จากใบเสร็จ</div>
+          <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">จากใบเสร็จ</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">📤 รายจ่ายเดือนนี้</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">📤 รายจ่ายเดือนนี้</div>
           <div className="text-2xl font-semibold text-red-500">{formatThaiMoney(totalExpense)}</div>
-          <div className="text-xs text-gray-400 mt-1">{expenses.length} รายการ</div>
+          <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">{expenses.length} รายการ</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">📊 กำไรสุทธิ</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">📊 กำไรสุทธิ</div>
           <div className={`text-2xl font-semibold ${profit >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
             {profit >= 0 ? '+' : ''}{formatThaiMoney(profit)}
           </div>
@@ -206,8 +206,8 @@ export default function ExpensesPage() {
       {/* 6-month chart */}
       <div className="card p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-medium text-gray-800">รายรับ-รายจ่าย 6 เดือน</h3>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+          <h3 className="font-medium text-gray-800 dark:text-gray-100">รายรับ-รายจ่าย 6 เดือน</h3>
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-blue-400 inline-block"></span>รายได้
             </span>
@@ -231,7 +231,7 @@ export default function ExpensesPage() {
                   title={`รายจ่าย: ${formatThaiMoney(m.expense)}`}
                 />
               </div>
-              <div className="text-[10px] text-gray-400 text-center leading-tight">{m.label}</div>
+              <div className="text-[10px] text-gray-400 dark:text-gray-300 text-center leading-tight">{m.label}</div>
               <div className={`text-[10px] font-medium ${m.profit >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
                 {m.profit >= 0 ? '+' : ''}{Math.round(m.profit / 1000)}k
               </div>
@@ -248,7 +248,7 @@ export default function ExpensesPage() {
             <span className="badge badge-red">{expenses.length} รายการ</span>
           </div>
           {loading ? (
-            <p className="text-center text-gray-400 py-8 text-sm">กำลังโหลด...</p>
+            <p className="text-center text-gray-400 dark:text-gray-300 py-8 text-sm">กำลังโหลด...</p>
           ) : expenses.length === 0 ? (
             <p className="text-center text-gray-300 py-10 text-sm">ยังไม่มีรายจ่าย</p>
           ) : (
@@ -259,13 +259,13 @@ export default function ExpensesPage() {
               <tbody>
                 {expenses.map(exp => (
                   <tr key={exp.id} className="table-row-hover">
-                    <td className="text-xs text-gray-500 whitespace-nowrap">{formatDate(exp.expense_date, 'd MMM')}</td>
+                    <td className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 whitespace-nowrap">{formatDate(exp.expense_date, 'd MMM')}</td>
                     <td>
                       <div className="font-medium text-sm">{exp.title}</div>
                       {exp.is_recurring && (
                         <span className="text-[10px] text-blue-500">🔄 ประจำทุกวันที่ {exp.recurring_day}</span>
                       )}
-                      {exp.notes && <div className="text-xs text-gray-400 truncate max-w-[160px]">{exp.notes}</div>}
+                      {exp.notes && <div className="text-xs text-gray-400 dark:text-gray-300 truncate max-w-[160px]">{exp.notes}</div>}
                     </td>
                     <td>
                       {exp.category ? (
@@ -277,7 +277,7 @@ export default function ExpensesPage() {
                     </td>
                     <td>
                       <span className="font-semibold text-sm text-red-600">-{formatThaiMoney(exp.amount)}</span>
-                      <div className="text-[10px] text-gray-400">{PAYMENT_LABELS[exp.payment_method] ?? exp.payment_method}</div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-300">{PAYMENT_LABELS[exp.payment_method] ?? exp.payment_method}</div>
                     </td>
                     <td>
                       <div className="flex gap-1">
@@ -295,7 +295,7 @@ export default function ExpensesPage() {
         {/* Category breakdown */}
         <div className="space-y-4">
           <div className="card p-5">
-            <h3 className="font-medium text-gray-800 mb-4">แยกตามหมวด</h3>
+            <h3 className="font-medium text-gray-800 dark:text-gray-100 mb-4">แยกตามหมวด</h3>
             {catBreakdown.length === 0 ? (
               <p className="text-sm text-gray-300 text-center py-4">ยังไม่มีข้อมูล</p>
             ) : (
@@ -305,16 +305,16 @@ export default function ExpensesPage() {
                     <div className="flex items-center justify-between text-sm mb-1">
                       <span className="flex items-center gap-1.5">
                         <span>{cat.icon}</span>
-                        <span className="text-gray-700 text-xs">{cat.name}</span>
+                        <span className="text-gray-700 dark:text-gray-200 text-xs">{cat.name}</span>
                       </span>
                       <span className="font-medium text-xs" style={{ color: cat.color }}>
                         {formatThaiMoney(cat.total)}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-gray-100 dark:bg-[#2a3245] rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${Math.round((cat.total / totalExpense) * 100)}%`, background: cat.color }} />
                     </div>
-                    <div className="text-[10px] text-gray-400 text-right mt-0.5">
+                    <div className="text-[10px] text-gray-400 dark:text-gray-300 text-right mt-0.5">
                       {Math.round((cat.total / totalExpense) * 100)}%
                     </div>
                   </div>
@@ -325,14 +325,14 @@ export default function ExpensesPage() {
 
           {expenses.some(e => e.is_recurring) && (
             <div className="card p-4">
-              <h3 className="font-medium text-gray-800 text-sm mb-3">🔄 รายจ่ายประจำ</h3>
+              <h3 className="font-medium text-gray-800 dark:text-gray-100 text-sm mb-3">🔄 รายจ่ายประจำ</h3>
               <div className="space-y-2">
                 {expenses.filter(e => e.is_recurring).map(exp => (
                   <div key={exp.id} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">{exp.title}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{exp.title}</span>
                     <div className="text-right">
                       <div className="font-medium text-red-500">-{formatThaiMoney(exp.amount)}</div>
-                      <div className="text-gray-400">ทุกวันที่ {exp.recurring_day}</div>
+                      <div className="text-gray-400 dark:text-gray-300">ทุกวันที่ {exp.recurring_day}</div>
                     </div>
                   </div>
                 ))}
@@ -345,10 +345,10 @@ export default function ExpensesPage() {
       {/* Add/Edit Expense Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between sticky top-0 bg-white dark:bg-[#242d3f]">
               <h2 className="font-semibold">{editExpense ? 'แก้ไขรายจ่าย' : 'บันทึกรายจ่าย'}</h2>
-              <button onClick={() => { setShowForm(false); setEditExpense(null) }} className="text-gray-400">✕</button>
+              <button onClick={() => { setShowForm(false); setEditExpense(null) }} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-4">
               <div>
@@ -357,7 +357,7 @@ export default function ExpensesPage() {
                   {categories.map(cat => (
                     <button type="button" key={cat.id}
                       onClick={() => setForm({ ...form, category_id: cat.id })}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg text-xs border text-left transition-all ${form.category_id === cat.id ? 'font-semibold border-current' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg text-xs border text-left transition-all ${form.category_id === cat.id ? 'font-semibold border-current' : 'border-gray-200 dark:border-[#3a4560] hover:border-gray-300 text-gray-600 dark:text-gray-300'}`}
                       style={form.category_id === cat.id ? { borderColor: cat.color, color: cat.color, background: cat.color + '15' } : {}}
                     >
                       <span className="text-base">{cat.icon}</span>
@@ -389,7 +389,7 @@ export default function ExpensesPage() {
                   {Object.entries(PAYMENT_LABELS).map(([v, l]) => (
                     <button type="button" key={v}
                       onClick={() => setForm({ ...form, payment_method: v })}
-                      className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${form.payment_method === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                      className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${form.payment_method === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white dark:bg-[#242d3f] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#3a4560] hover:border-gray-400'}`}>
                       {l}
                     </button>
                   ))}
@@ -398,7 +398,7 @@ export default function ExpensesPage() {
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={form.is_recurring}
                   onChange={e => setForm({ ...form, is_recurring: e.target.checked })} />
-                <span className="text-sm text-gray-700">🔄 รายจ่ายประจำทุกเดือน</span>
+                <span className="text-sm text-gray-700 dark:text-gray-200">🔄 รายจ่ายประจำทุกเดือน</span>
               </label>
               {form.is_recurring && (
                 <div>
