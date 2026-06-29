@@ -40,7 +40,7 @@ module.exports = {
           600: '#E0B73E',
           700: '#B8932F',
         },
-        surface: '#FFFDF3',
+        surface: '#FFFFFF',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
