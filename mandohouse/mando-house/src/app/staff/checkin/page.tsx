@@ -81,7 +81,7 @@ export default function CheckinPage() {
   async function loadCheckins(date: string) {
     // Auto-close checkins ที่ค้างข้ามวัน (ตั้ง check_out_at = 20:00 ของวันนั้น)
     if (date === todayStr) {
-      await supabase.rpc('close_overnight_checkins').catch(() => {})
+      try { await supabase.rpc('close_overnight_checkins') } catch (_) {}
     }
 
     const { data: c } = await supabase
