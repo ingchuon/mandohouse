@@ -116,7 +116,7 @@ export default function TeachersPage() {
         <h1 className="text-lg md:text-xl font-semibold">จัดการครู</h1>
         <button onClick={openAdd} className="btn-brand">+ เพิ่มครู</button>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">
         เพิ่ม/แก้ไขข้อมูลครู ตั้งวิชาที่สอน และดู/รีเซ็ต PIN สำหรับเข้าหน้า{' '}
         <code className="text-xs bg-cream-100 px-1 rounded">/teach</code>
       </p>
@@ -137,19 +137,19 @@ export default function TeachersPage() {
               className={`btn-sm px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                 filterActive === f
                   ? 'bg-brand-500 text-white border-brand-500'
-                  : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                  : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
               }`}
             >
               {f === 'active' ? 'ใช้งานอยู่' : f === 'inactive' ? 'ปิดใช้งาน' : 'ทั้งหมด'}
             </button>
           ))}
         </div>
-        <span className="text-sm text-gray-400 ml-auto">{filtered.length} คน</span>
+        <span className="text-sm text-gray-400 dark:text-gray-300 ml-auto">{filtered.length} คน</span>
       </div>
 
       <div className="card-cream overflow-x-auto">
         {loading ? (
-          <p className="text-center text-gray-400 py-12">กำลังโหลด...</p>
+          <p className="text-center text-gray-400 dark:text-gray-300 py-12">กำลังโหลด...</p>
         ) : (
           <table className="w-full">
             <thead>
@@ -171,11 +171,11 @@ export default function TeachersPage() {
                       </div>
                       <span className="font-medium text-sm">{t.full_name}</span>
                       {isComboName(t.full_name) && (
-                        <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">ชื่อรวม</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-300 bg-gray-100 dark:bg-[#2a3245] px-1.5 py-0.5 rounded">ชื่อรวม</span>
                       )}
                     </div>
                   </td>
-                  <td className="text-sm text-gray-600">{t.subject ?? '—'}</td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{t.subject ?? '—'}</td>
                   <td className="text-sm font-mono tracking-widest">{t.pin ?? '—'}</td>
                   <td>
                     <span className={`badge ${t.is_active ? 'badge-green' : 'badge-gray'}`}>
@@ -197,7 +197,7 @@ export default function TeachersPage() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="text-center text-gray-400 py-8">
+                <tr><td colSpan={5} className="text-center text-gray-400 dark:text-gray-300 py-8">
                   {search ? `ไม่พบ "${search}"` : 'ไม่มีรายการ'}
                 </td></tr>
               )}
@@ -209,10 +209,10 @@ export default function TeachersPage() {
       {/* Add/Edit Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">{editTeacher ? `แก้ไขครู${editTeacher.full_name}` : 'เพิ่มครูใหม่'}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3">
               <div>
@@ -220,7 +220,7 @@ export default function TeachersPage() {
                 <input className="input" required placeholder="เช่น Bee, Aom"
                   value={form.full_name}
                   onChange={e => setForm({ ...form, full_name: e.target.value })} />
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
                   ใส่ชื่อเดี่ยวๆ (ไม่มี &amp;) เพื่อให้ขึ้นในหน้า /teach อัตโนมัติ
                 </p>
               </div>
@@ -240,7 +240,7 @@ export default function TeachersPage() {
                     🎲 สุ่มใหม่
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
                   ครูใช้ PIN นี้เข้าหน้า /teach ครั้งแรก (เปลี่ยนเองได้ทีหลัง)
                 </p>
               </div>
