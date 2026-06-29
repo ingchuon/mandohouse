@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="Mando House" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${notoSansThai.variable} font-sans bg-surface dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased`}>
+      <body className={`${notoSansThai.variable} font-sans bg-surface dark:bg-[#1a2030] text-gray-900 dark:text-gray-100 antialiased`}>
         <ThemeProvider>
           {children}
           <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
