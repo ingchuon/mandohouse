@@ -386,7 +386,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   if (loadingTeachers) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0]">
-        <div className="text-gray-400 text-sm">กำลังโหลด...</div>
+        <div className="text-gray-400 dark:text-gray-300 text-sm">กำลังโหลด...</div>
       </div>
     )
   }
@@ -395,17 +395,17 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   if (!teacher) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0] p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 w-full max-w-sm">
+        <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-6 w-full max-w-sm">
           <div className="text-center mb-5">
             <div className="text-3xl mb-2">👋</div>
-            <h1 className="font-semibold text-gray-800 text-lg">บันทึกชั่วโมงสอน</h1>
-            <p className="text-sm text-gray-400 mt-1">เลือกชื่อของคุณเพื่อเริ่มต้น</p>
+            <h1 className="font-semibold text-gray-800 dark:text-gray-100 text-lg">บันทึกชั่วโมงสอน</h1>
+            <p className="text-sm text-gray-400 dark:text-gray-300 mt-1">เลือกชื่อของคุณเพื่อเริ่มต้น</p>
           </div>
 
           <input
             type="text"
             placeholder="ค้นหาชื่อครู..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={teacherSearch}
             onChange={e => setTeacherSearch(e.target.value)}
           />
@@ -415,19 +415,19 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
               <button
                 key={t.id}
                 onClick={() => selectTeacher(t)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-brand-300 hover:bg-brand-50/50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-[#3a4560] hover:border-brand-300 hover:bg-brand-50/50 transition-colors text-left"
               >
                 <div className="w-9 h-9 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold text-sm flex-shrink-0">
                   {t.full_name.slice(0, 2)}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-medium text-sm text-gray-800 truncate">Teacher {t.full_name}</div>
-                  {t.subject && <div className="text-xs text-gray-400 truncate">{t.subject}</div>}
+                  <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">Teacher {t.full_name}</div>
+                  {t.subject && <div className="text-xs text-gray-400 dark:text-gray-300 truncate">{t.subject}</div>}
                 </div>
               </button>
             ))}
             {filteredTeachers.length === 0 && (
-              <p className="text-center text-gray-400 text-sm py-6">ไม่พบชื่อครู</p>
+              <p className="text-center text-gray-400 dark:text-gray-300 text-sm py-6">ไม่พบชื่อครู</p>
             )}
           </div>
         </div>
@@ -439,15 +439,15 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   if (!unlocked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F4F0] p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm text-center">
-          <button onClick={backToTeacherList} className="text-xs text-gray-400 hover:text-gray-600 mb-3">
+        <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-8 w-full max-w-sm text-center">
+          <button onClick={backToTeacherList} className="text-xs text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:text-gray-300 mb-3">
             ← เปลี่ยนชื่อ
           </button>
           <div className="w-14 h-14 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold text-lg mx-auto mb-4">
             {teacher.full_name.slice(0, 2)}
           </div>
-          <h1 className="font-semibold text-gray-800 text-lg mb-1">สวัสดีครู {teacher.full_name}</h1>
-          <p className="text-sm text-gray-400 mb-6">กรุณาใส่ PIN 4 หลักเพื่อเข้าใช้งาน</p>
+          <h1 className="font-semibold text-gray-800 dark:text-gray-100 text-lg mb-1">สวัสดีครู {teacher.full_name}</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-300 mb-6">กรุณาใส่ PIN 4 หลักเพื่อเข้าใช้งาน</p>
 
           <div className="flex justify-center gap-3 mb-6">
             {[0, 1, 2, 3].map(i => (
@@ -456,7 +456,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                 className={`w-4 h-4 rounded-full border-2 transition-all ${
                   i < pinInput.length
                     ? pinError ? 'bg-red-400 border-red-400' : 'bg-brand-500 border-brand-500'
-                    : 'border-gray-200'
+                    : 'border-gray-200 dark:border-[#3a4560]'
                 }`}
               />
             ))}
@@ -471,26 +471,26 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
               <button
                 key={d}
                 onClick={() => handlePinDigit(d)}
-                className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-xl font-semibold text-gray-700 transition-colors"
+                className="aspect-square rounded-2xl bg-gray-50 dark:bg-[#1e2533] hover:bg-gray-100 dark:bg-[#2a3245] active:bg-gray-200 text-xl font-semibold text-gray-700 dark:text-gray-200 transition-colors"
               >
                 {d}
               </button>
             ))}
             <button
               onClick={() => setPinInput('')}
-              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-sm font-medium text-gray-400 transition-colors"
+              className="aspect-square rounded-2xl bg-gray-50 dark:bg-[#1e2533] hover:bg-gray-100 dark:bg-[#2a3245] active:bg-gray-200 text-sm font-medium text-gray-400 dark:text-gray-300 transition-colors"
             >
               ล้าง
             </button>
             <button
               onClick={() => handlePinDigit('0')}
-              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-xl font-semibold text-gray-700 transition-colors"
+              className="aspect-square rounded-2xl bg-gray-50 dark:bg-[#1e2533] hover:bg-gray-100 dark:bg-[#2a3245] active:bg-gray-200 text-xl font-semibold text-gray-700 dark:text-gray-200 transition-colors"
             >
               0
             </button>
             <button
               onClick={() => setPinInput(p => p.slice(0, -1))}
-              className="aspect-square rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-lg text-gray-400 transition-colors"
+              className="aspect-square rounded-2xl bg-gray-50 dark:bg-[#1e2533] hover:bg-gray-100 dark:bg-[#2a3245] active:bg-gray-200 text-lg text-gray-400 dark:text-gray-300 transition-colors"
             >
               ⌫
             </button>
@@ -504,18 +504,18 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   return (
     <div className="min-h-screen bg-[#F5F4F0] p-4 pb-10">
       {/* Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-600 font-bold">
               {teacher.full_name.slice(0, 2)}
             </div>
             <div>
-              <div className="font-semibold text-gray-800">ครู{teacher.full_name}</div>
-              <div className="text-xs text-gray-400">{teacher.subject || 'บันทึกชั่วโมงสอน'}</div>
+              <div className="font-semibold text-gray-800 dark:text-gray-100">ครู{teacher.full_name}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-300">{teacher.subject || 'บันทึกชั่วโมงสอน'}</div>
             </div>
           </div>
-          <button onClick={backToTeacherList} className="text-xs text-gray-400 hover:text-gray-600">
+          <button onClick={backToTeacherList} className="text-xs text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:text-gray-300">
             เปลี่ยนครู
           </button>
         </div>
@@ -530,23 +530,23 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
             <div className="text-2xl font-bold text-brand-700">{totalHours}</div>
             <div className="text-xs text-brand-500 mt-0.5">ชั่วโมงเดือนนี้</div>
           </div>
-          <div className="bg-gray-50 rounded-xl py-3">
-            <div className="text-2xl font-bold text-gray-700">{totalSessions}</div>
-            <div className="text-xs text-gray-400 mt-0.5">ครั้งเดือนนี้</div>
+          <div className="bg-gray-50 dark:bg-[#1e2533] rounded-xl py-3">
+            <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">{totalSessions}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">ครั้งเดือนนี้</div>
           </div>
         </div>
       </div>
 
       {/* รายชื่อนักเรียนวันนี้ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-800">📋 นักเรียนวันนี้</h2>
-          <span className="text-xs text-gray-400">{todayLogs.length} คน</span>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">📋 นักเรียนวันนี้</h2>
+          <span className="text-xs text-gray-400 dark:text-gray-300">{todayLogs.length} คน</span>
         </div>
         {loadingData ? (
-          <p className="text-xs text-gray-400 text-center py-3">กำลังโหลด...</p>
+          <p className="text-xs text-gray-400 dark:text-gray-300 text-center py-3">กำลังโหลด...</p>
         ) : todayLogs.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-3">ยังไม่มีนักเรียนวันนี้ — กรอกด้านล่างได้เลย</p>
+          <p className="text-xs text-gray-400 dark:text-gray-300 text-center py-3">ยังไม่มีนักเรียนวันนี้ — กรอกด้านล่างได้เลย</p>
         ) : (
           <div className="space-y-2">
             {todayLogs.map(l => {
@@ -561,16 +561,16 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                         {name.slice(0, 2)}
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-800">{name}</div>
-                        <div className="text-xs text-gray-400">{course}</div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{name}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-300">{course}</div>
                       </div>
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${hasTopic ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}`}>
                       {hasTopic ? '✓ กรอกแล้ว' : '⚠️ ยังไม่กรอก'}
                     </span>
                   </div>
-                  {l.topic && <div className="text-xs text-gray-500 mt-1 ml-8">📖 {l.topic}</div>}
-                  {l.homework && <div className="text-xs text-gray-500 mt-0.5 ml-8">✏️ {l.homework}</div>}
+                  {l.topic && <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-1 ml-8">📖 {l.topic}</div>}
+                  {l.homework && <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5 ml-8">✏️ {l.homework}</div>}
                 </div>
               )
             })}
@@ -579,25 +579,25 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       </div>
 
       {/* Form บันทึกใหม่ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
-        <h2 className="font-semibold text-gray-800 mb-4">+ บันทึกชั่วโมงสอน</h2>
+      <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-5 mb-4">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">+ บันทึกชั่วโมงสอน</h2>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             นักเรียน / คอร์ส <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             placeholder="ค้นหาชื่อนักเรียนหรือคอร์ส..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={studentSearch}
             onChange={e => setStudentSearch(e.target.value)}
           />
 
           {/* รายชื่อนักเรียนแบบกดเลือก */}
-          <div className="border border-gray-200 rounded-xl max-h-60 overflow-y-auto divide-y divide-gray-50">
+          <div className="border border-gray-200 dark:border-[#3a4560] rounded-xl max-h-60 overflow-y-auto divide-y divide-gray-50">
             {filteredEnrollments.length === 0 && (
-              <p className="text-center text-gray-400 text-sm py-4">ไม่พบนักเรียน</p>
+              <p className="text-center text-gray-400 dark:text-gray-300 text-sm py-4">ไม่พบนักเรียน</p>
             )}
             {filteredEnrollments.map(e => {
               const selected = form.enrollment_id === e.id
@@ -608,14 +608,14 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                   type="button"
                   onClick={() => setForm(f => ({ ...f, enrollment_id: e.id }))}
                   className={`w-full text-left px-3 py-2.5 transition-colors flex items-center justify-between gap-2 ${
-                    selected ? 'bg-brand-50' : 'hover:bg-gray-50'
+                    selected ? 'bg-brand-50' : 'hover:bg-gray-50 dark:bg-[#1e2533]'
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className={`text-sm font-medium truncate ${selected ? 'text-brand-700' : 'text-gray-800'}`}>
+                    <div className={`text-sm font-medium truncate ${selected ? 'text-brand-700' : 'text-gray-800 dark:text-gray-100'}`}>
                       {name}
                     </div>
-                    <div className="text-xs text-gray-400 truncate">
+                    <div className="text-xs text-gray-400 dark:text-gray-300 truncate">
                       {e.courses?.name ?? '?'} ({e.lessons_used}/{e.lessons_total})
                     </div>
                   </div>
@@ -627,10 +627,10 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">วันที่สอน</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">วันที่สอน</label>
           <input
             type="date"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={form.lesson_date}
             max={todayStr}
             onChange={e => setForm(f => ({ ...f, lesson_date: e.target.value }))}
@@ -638,7 +638,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">วิชาที่สอน (ถ้ามี)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">วิชาที่สอน (ถ้ามี)</label>
           <div className="grid grid-cols-2 gap-2">
             {['ภาษาจีน', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์'].map(subj => (
               <button
@@ -648,20 +648,20 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                 className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
                   form.subject_name === subj
                     ? 'bg-brand-500 text-white border-brand-500'
-                    : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                    : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                 }`}
               >
                 {subj}
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
             ใส่ตอนสอนคอร์สพิเศษหลายวิชา เพื่อให้นับชั่วโมงสอนแยกตามวิชาได้ถูกต้อง
           </p>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">ระยะเวลา</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">ระยะเวลา</label>
           <div className="grid grid-cols-5 gap-2">
             {[30, 45, 60, 90, 120].map(m => (
               <button
@@ -670,7 +670,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                 className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
                   form.duration_minutes === m
                     ? 'bg-brand-500 text-white border-brand-500'
-                    : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                    : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                 }`}
               >
                 {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
@@ -680,22 +680,22 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">หัวข้อที่สอน</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">หัวข้อที่สอน</label>
           <input
             type="text"
             placeholder="เช่น บทที่ 3 คำศัพท์วันละคำ"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={form.topic}
             onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
           />
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium text-gray-700 mb-1">การบ้าน</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">การบ้าน</label>
           <input
             type="text"
             placeholder="เช่น ฝึกพินอิน หน้า 20-25"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={form.homework}
             onChange={e => setForm(f => ({ ...f, homework: e.target.value }))}
           />
@@ -711,39 +711,39 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       </div>
 
       {/* ประวัติเดือนนี้ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">ประวัติเดือนนี้</h2>
+      <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">ประวัติเดือนนี้</h2>
           <span className="text-xs font-medium bg-brand-50 text-brand-600 px-2.5 py-1 rounded-full">
             {totalSessions} ครั้ง
           </span>
         </div>
         {loadingData ? (
-          <div className="py-10 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+          <div className="py-10 text-center text-gray-400 dark:text-gray-300 text-sm">กำลังโหลด...</div>
         ) : logs.length === 0 ? (
-          <div className="py-10 text-center text-gray-400 text-sm">ยังไม่มีบันทึกในเดือนนี้</div>
+          <div className="py-10 text-center text-gray-400 dark:text-gray-300 text-sm">ยังไม่มีบันทึกในเดือนนี้</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {logs.map(log => (
               <div key={log.id} className="px-5 py-3 flex items-start gap-3">
                 <div className="flex-shrink-0 text-center w-9">
-                  <div className="text-base font-bold text-gray-700 leading-none">
+                  <div className="text-base font-bold text-gray-700 dark:text-gray-200 leading-none">
                     {new Date(log.lesson_date).getDate()}
                   </div>
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[10px] text-gray-400 dark:text-gray-300">
                     {new Date(log.lesson_date).toLocaleDateString('th-TH', { month: 'short' })}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-sm text-gray-800">
+                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
                       {log.enrollments?.students?.nickname || log.enrollments?.students?.full_name || '—'}
                     </span>
-                    <span className="text-xs text-gray-400">·</span>
-                    <span className="text-xs text-gray-500">{log.enrollments?.courses?.name ?? '—'}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-300">·</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300">{log.enrollments?.courses?.name ?? '—'}</span>
                   </div>
                   {log.topic && (
-                    <div className="text-xs text-gray-500 mt-0.5 truncate">📖 {log.topic}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5 truncate">📖 {log.topic}</div>
                   )}
                 </div>
                 <div className="flex-shrink-0 text-sm font-semibold text-brand-600">
@@ -760,37 +760,37 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       {/* Modal: เปลี่ยน PIN */}
       {showChangePin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowChangePin(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">🔑 เปลี่ยน PIN</h2>
-              <button onClick={() => setShowChangePin(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <h2 className="font-semibold text-gray-800 dark:text-gray-100">🔑 เปลี่ยน PIN</h2>
+              <button onClick={() => setShowChangePin(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:text-gray-300 text-xl">✕</button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">PIN ปัจจุบัน</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">PIN ปัจจุบัน</label>
                 <input
                   type="tel" inputMode="numeric" maxLength={4}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
                   value={pinForm.current}
                   onChange={e => setPinForm(f => ({ ...f, current: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
                   placeholder="••••"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">PIN ใหม่ (4 หลัก)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">PIN ใหม่ (4 หลัก)</label>
                 <input
                   type="tel" inputMode="numeric" maxLength={4}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
                   value={pinForm.next}
                   onChange={e => setPinForm(f => ({ ...f, next: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
                   placeholder="••••"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยัน PIN ใหม่</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">ยืนยัน PIN ใหม่</label>
                 <input
                   type="tel" inputMode="numeric" maxLength={4}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-brand-400"
                   value={pinForm.confirm}
                   onChange={e => setPinForm(f => ({ ...f, confirm: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
                   placeholder="••••"
