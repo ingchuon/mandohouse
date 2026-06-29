@@ -288,7 +288,7 @@ export default function CheckinPage() {
         <span className="flex items-center gap-3">
           <span>
             ลบเช็กอิน {studentName} แล้ว
-            {logCount > 0 && <span className="text-xs text-gray-400 ml-1">(คืน {logCount} ครั้ง)</span>}
+            {logCount > 0 && <span className="text-xs text-gray-400 dark:text-gray-300 ml-1">(คืน {logCount} ครั้ง)</span>}
           </span>
           <button
             onClick={() => {
@@ -403,7 +403,7 @@ export default function CheckinPage() {
   return (
     <div className="p-4 md:p-6">
       <h1 className="text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
-      <p className="text-sm text-gray-500 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Quick check-in panel */}
@@ -445,7 +445,7 @@ export default function CheckinPage() {
                 ))}
               </select>
               {studentSearch && filteredStudents.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1">ไม่พบนักเรียน</p>
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">ไม่พบนักเรียน</p>
               )}
             </div>
 
@@ -480,7 +480,7 @@ export default function CheckinPage() {
                           className={`w-full text-left px-3 py-2.5 rounded-xl border-2 transition-all ${
                             selectedEnrollmentId === enr.id
                               ? 'border-brand-500 bg-brand-50'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                              : 'border-gray-200 dark:border-[#3a4560] hover:border-gray-300 bg-white dark:bg-[#242d3f]'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
@@ -492,7 +492,7 @@ export default function CheckinPage() {
                               )}
                             </div>
                             <span className={`text-sm font-medium truncate ${
-                              selectedEnrollmentId === enr.id ? 'text-brand-700' : 'text-gray-700'
+                              selectedEnrollmentId === enr.id ? 'text-brand-700' : 'text-gray-700 dark:text-gray-200'
                             }`}>
                               {enr.course?.name || 'ไม่มีชื่อคอร์ส'}
                             </span>
@@ -536,14 +536,14 @@ export default function CheckinPage() {
                         className={`py-2 rounded-lg text-xs font-medium border transition-all ${
                           subjectName === subj
                             ? 'bg-brand-500 text-white border-brand-500'
-                            : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                            : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                         }`}
                       >
                         {subj}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
                     ใส่สำหรับคอร์สพิเศษหลายวิชา (Special) เพื่อให้นับชั่วโมงสอนแยกตามวิชา
                   </p>
                 </div>
@@ -559,7 +559,7 @@ export default function CheckinPage() {
                         className={`py-2 rounded-lg text-xs font-medium border transition-all ${
                           durationMinutes === m
                             ? 'bg-brand-500 text-white border-brand-500'
-                            : 'border-gray-200 text-gray-600 hover:border-brand-400'
+                            : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                         }`}
                       >
                         {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
@@ -598,9 +598,9 @@ export default function CheckinPage() {
                 onClick={() => { setIsBackdate(!isBackdate); setCustomDate('') }}
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isBackdate ? 'bg-brand-500' : 'bg-gray-200'}`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isBackdate ? 'translate-x-4' : 'translate-x-0'}`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[#242d3f] shadow transition-transform ${isBackdate ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
-              <span className="text-sm text-gray-600">บันทึกย้อนหลัง</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">บันทึกย้อนหลัง</span>
             </div>
 
             {isBackdate && (
@@ -651,7 +651,7 @@ export default function CheckinPage() {
                 disabled={selectedDate >= todayStr}
                 className="btn-outline btn-sm px-2.5 py-1 disabled:opacity-30"
               >→</button>
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
                 {formatDateTH(selectedDate)}
               </span>
               {!isToday && (
@@ -668,20 +668,20 @@ export default function CheckinPage() {
             <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
-                <span className="text-gray-600">มาเรียน</span>
+                <span className="text-gray-600 dark:text-gray-300">มาเรียน</span>
                 <span className="font-semibold text-brand-700">{presentCount} คน</span>
               </div>
               {checkedOutCount > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
-                  <span className="text-gray-600">ออกแล้ว</span>
-                  <span className="font-semibold text-gray-700">{checkedOutCount} คน</span>
+                  <span className="text-gray-600 dark:text-gray-300">ออกแล้ว</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-200">{checkedOutCount} คน</span>
                 </div>
               )}
               {stillInCount > 0 && isToday && (
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                  <span className="text-gray-600">ยังอยู่</span>
+                  <span className="text-gray-600 dark:text-gray-300">ยังอยู่</span>
                   <span className="font-semibold text-yellow-700">{stillInCount} คน</span>
                 </div>
               )}
@@ -690,7 +690,7 @@ export default function CheckinPage() {
 
           <div className="divide-y divide-gray-50">
             {checkins.length === 0 && (
-              <p className="text-center text-gray-400 py-10 text-sm">
+              <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
                 {isToday ? 'ยังไม่มีการเช็กอินวันนี้' : `ไม่มีข้อมูลวันที่ ${formatDateTH(selectedDate)}`}
               </p>
             )}
@@ -706,17 +706,17 @@ export default function CheckinPage() {
                       {name.slice(0, 2)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-900">{name}</div>
-                      <div className="text-xs text-gray-400 truncate">
+                      <div className="font-medium text-sm text-gray-900 dark:text-white">{name}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-300 truncate">
                         {c.enrollment?.course?.name || 'ไม่มีคอร์ส'}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-sm">
                         <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
-                        {outTime && <span className="text-gray-400"> → {fmt(outTime)}</span>}
+                        {outTime && <span className="text-gray-400 dark:text-gray-300"> → {fmt(outTime)}</span>}
                       </div>
-                      {duration && <div className="text-xs text-gray-400">{duration} นาที</div>}
+                      {duration && <div className="text-xs text-gray-400 dark:text-gray-300">{duration} นาที</div>}
                     </div>
                     <div className="flex gap-1 flex-shrink-0 flex-wrap">
                       {c.check_out_at
@@ -725,7 +725,7 @@ export default function CheckinPage() {
                       }
                       <button
                         onClick={() => openNote(c)}
-                        className={`btn-outline btn-sm px-2 ${c.lesson_note ? 'text-green-600' : 'text-gray-400'}`}
+                        className={`btn-outline btn-sm px-2 ${c.lesson_note ? 'text-green-600' : 'text-gray-400 dark:text-gray-300'}`}
                         title="บันทึกบทเรียน"
                       >📝</button>
                       <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
@@ -733,7 +733,7 @@ export default function CheckinPage() {
                     </div>
                   </div>
                   {c.lesson_note && (
-                    <div className="mt-2 ml-12 text-xs text-gray-500 bg-yellow-50 rounded-lg px-3 py-2 border border-yellow-100">
+                    <div className="mt-2 ml-12 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 bg-yellow-50 rounded-lg px-3 py-2 border border-yellow-100">
                       📖 {c.lesson_note}
                     </div>
                   )}
@@ -747,15 +747,15 @@ export default function CheckinPage() {
       {/* Lesson Note Modal */}
       {noteCheckin && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">📝 บันทึกบทเรียน</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {noteCheckin.student?.nickname || noteCheckin.student?.full_name} — {noteCheckin.enrollment?.course?.name || 'ไม่มีคอร์ส'}
                 </p>
               </div>
-              <button onClick={() => setNoteCheckin(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setNoteCheckin(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <div className="p-5 space-y-3">
               <label className="label">เนื้อหาที่สอนวันนี้</label>
@@ -777,10 +777,10 @@ export default function CheckinPage() {
       {/* Edit Modal */}
       {editCheckin && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">แก้ไขเวลา</h2>
-              <button onClick={() => setEditCheckin(null)} className="text-gray-400">✕</button>
+              <button onClick={() => setEditCheckin(null)} className="text-gray-400 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-3">
               <div>
