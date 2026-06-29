@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_Thai } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import './globals.css'
 
 const notoSansThai = Noto_Sans_Thai({
@@ -39,9 +40,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="Mando House" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${notoSansThai.variable} font-sans bg-surface text-gray-900 antialiased`}>
-        {children}
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <body className={`${notoSansThai.variable} font-sans bg-surface dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased`}>
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        </ThemeProvider>
       </body>
     </html>
   )
