@@ -140,26 +140,26 @@ export default async function DashboardPage() {
 
       {/* ยอดสรุปการเงิน */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-        <div className="card-cream p-4">
+        <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">💰 รายได้ทั้งหมด</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(totalAllRevenue)}</div>
           <div className="text-xs text-gray-400 mt-1">ตั้งแต่เปิดกิจการ</div>
         </div>
-        <div className="card-cream p-4">
+        <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">↩️ ยกยอดจากเดือนที่แล้ว</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(carryOver)}</div>
           <div className="text-xs text-gray-400 mt-1">
             <Link href="/staff/settings" className="text-brand-500 hover:underline">แก้ไข →</Link>
           </div>
         </div>
-        <div className="card-cream p-4">
+        <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">📊 รายรับสะสมเดือนนี้</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(revenueThisMonth)}</div>
           <div className={`text-xs mt-1 ${revenuePct >= 0 ? 'text-brand-500' : 'text-accent-700'}`}>
             {revenuePct >= 0 ? '↑' : '↓'} {Math.abs(revenuePct)}% จากเดือนก่อน
           </div>
         </div>
-        <div className="card-cream p-4">
+        <div className="card p-4">
           <div className="text-xs text-gray-500 mb-2">🏦 เงินคงเหลือปัจจุบัน</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(cashBalance)}</div>
           <div className="text-xs text-gray-400 mt-1">
@@ -170,22 +170,22 @@ export default async function DashboardPage() {
 
       {/* รายรับ / รายจ่าย / กำไรขาดทุน เดือนนี้ */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Link href="/staff/receipts" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📥 รายรับค่าคอร์ส</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(courseRevenueThisMonth)}</div>
           <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
-        <Link href="/staff/books" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/books" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📚 รายรับขายหนังสือ</div>
           <div className="text-lg md:text-xl font-semibold text-brand-600">{formatThaiMoney(bookRevenueThisMonth)}</div>
           <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
-        <Link href="/staff/expenses" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/expenses" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="text-xs text-gray-500 mb-2">📤 รายจ่ายเดือนนี้</div>
           <div className="text-lg md:text-xl font-semibold text-red-500">{formatThaiMoney(expensesTotal)}</div>
           <div className="text-xs text-gray-400 mt-1">{currentMonth}</div>
         </Link>
-        <div className="card-cream p-4" style={{ background: profitThisMonth >= 0 ? '#ECFDF5' : '#FEF2F2' }}>
+        <div className="card p-4" style={{ background: profitThisMonth >= 0 ? '#ECFDF5' : '#FEF2F2' }}>
           <div className="text-xs text-gray-500 mb-2">{profitThisMonth >= 0 ? '📈' : '📉'} กำไร/ขาดทุนเดือนนี้</div>
           <div className={`text-lg md:text-xl font-semibold ${profitThisMonth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
             {profitThisMonth >= 0 ? '+' : ''}{formatThaiMoney(profitThisMonth)}
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* กราฟวิชา (full width) */}
-      <div className="card-cream p-5 mb-6">
+      <div className="card p-5 mb-6">
         <h3 className="font-medium text-gray-800 mb-4">📊 รายได้แยกตามวิชาเดือนนี้</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
           {subjects.map(s => (
@@ -220,7 +220,7 @@ export default async function DashboardPage() {
 
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 md:mb-6">
-        <Link href="/staff/students" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500">นักเรียนทั้งหมด</span>
             <span className="text-lg">👥</span>
@@ -229,7 +229,7 @@ export default async function DashboardPage() {
           <div className="text-xs mt-1 text-gray-400">คน (Active)</div>
         </Link>
 
-        <Link href="/staff/students" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/students" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500">คอร์สกำลังเรียน</span>
             <span className="text-lg">📚</span>
@@ -238,7 +238,7 @@ export default async function DashboardPage() {
           <div className="text-xs mt-1 text-gray-400">enrollment</div>
         </Link>
 
-        <Link href="/staff/alerts" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/alerts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500">ใกล้หมดคอร์ส</span>
             <span className="text-lg">⚠️</span>
@@ -247,7 +247,7 @@ export default async function DashboardPage() {
           <div className={`text-xs mt-1 ${expiring.length > 0 ? 'text-red-500' : 'text-gray-400'}`}>ต้องต่อคอร์ส</div>
         </Link>
 
-        <Link href="/staff/receipts" className="card-cream p-4 hover:shadow-md transition cursor-pointer">
+        <Link href="/staff/receipts" className="card p-4 hover:shadow-md transition cursor-pointer">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500">รายรับสะสมเดือนนี้</span>
             <span className="text-lg">📊</span>
@@ -259,7 +259,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="card-cream mt-5">
+      <div className="card mt-5">
         <div className="card-header">
           <h3 className="font-medium text-gray-800">เช็กอินวันนี้</h3>
           <Link href="/staff/checkin" className="text-xs text-brand-600 hover:underline">จัดการ →</Link>
@@ -287,7 +287,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* นักเรียนใกล้หมดคอร์ส (เหลือ ≤1 ครั้ง) */}
-      <div className="card-cream mt-5">
+      <div className="card mt-5">
         <div className="card-header">
           <h3 className="font-medium text-gray-800">⚠️ ใกล้หมดคอร์ส (เหลือ ≤1 ครั้ง)</h3>
           <Link href="/staff/lessons" className="text-xs text-brand-600 hover:underline">จัดการ →</Link>
