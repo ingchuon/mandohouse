@@ -83,3 +83,33 @@
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 .dark ::-webkit-scrollbar-thumb { background: #3a4560; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ===================================================================
+   Dark Mode — เพิ่มความสว่างให้ตัวหนังสือสีเทาที่อ่านยาก
+   แก้ที่เดียว ครอบคลุมทุกหน้า (override gray-400/500/600 ใน dark)
+   =================================================================== */
+.dark .text-gray-400,
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .text-zinc-400,
+.dark .text-zinc-500,
+.dark .text-neutral-400,
+.dark .text-neutral-500 {
+  color: #e5e7eb !important;   /* เทาอ่อนมาก เกือบขาว อ่านง่ายบนพื้นมืด */
+}
+
+/* label และ subtitle ที่จางเป็นพิเศษ → ขาวนวล */
+.dark .label,
+.dark th {
+  color: #d1d5db !important;
+}
+
+/* ข้อความรองที่ต้องชัดสุด (ชื่อรายการ, วันที่) */
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-gray-900 {
+  color: #f3f4f6 !important;
+}
