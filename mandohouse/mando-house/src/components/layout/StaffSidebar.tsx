@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ThemeToggle } from '@/components/ThemeProvider'
+import { SCHOOL_CONFIG } from '@/lib/config'
 
 const navItems = [
   {
@@ -89,10 +90,10 @@ export default function StaffSidebar() {
       <div className="px-5 py-5 border-b border-white/15 dark:border-[#2a3245]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt={SCHOOL_CONFIG.name} className="w-full h-full object-cover" />
           </div>
           <div>
-            <div className="text-white font-semibold text-sm tracking-wide">Mando House</div>
+            <div className="text-white font-semibold text-sm tracking-wide">{SCHOOL_CONFIG.name}</div>
             <div className="text-white/60 text-[10px]">ระบบหลังบ้าน</div>
           </div>
         </div>
@@ -162,9 +163,9 @@ export default function StaffSidebar() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-brand-500 dark:bg-[#141b2d] flex items-center justify-between px-4 py-3 border-b border-white/15 dark:border-[#2a3245]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt={SCHOOL_CONFIG.name} className="w-full h-full object-cover" />
           </div>
-          <span className="text-white font-semibold text-sm">Mando House</span>
+          <span className="text-white font-semibold text-sm">{SCHOOL_CONFIG.name}</span>
         </div>
         <button
           onClick={() => setOpen(!open)}
