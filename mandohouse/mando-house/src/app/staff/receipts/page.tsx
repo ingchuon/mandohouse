@@ -120,54 +120,163 @@ export default function ReceiptsPage() {
   function printReceipt(r: any) {
     const win = window.open('', '_blank')
     if (!win) return
-    const courseName = r.enrollment?.course?.name ?? '—'
-    const lessons = r.enrollment?.lessons_total ?? 0
-    const items = (r.items && r.items.length > 0)
-      ? r.items
-      : courseName !== '—'
-        ? [{ description: courseName, quantity: lessons, total: r.amount }]
-        : []
 
-    const html = `<!DOCTYPE html><html><head>
-      <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number}</title>
+    // ----- เตรียมข้อมูลรายการ (รองรับทั้ง items แบบเก่า {amount,description} และใหม่ {quantity,total}) -----
+    const courseName = r.enrollment?.course?.name ?? '—'
+    const enrollmentLessons =
+      r.enrollment?.lessons_total ?? r.enrollment?.course?.total_lessons ?? null
+
+    const rawItems: any[] =
+      Array.isArray(r.items) && r.items.length > 0
+        ? r.items
+        : courseName !== '—'
+          ? [{ description: courseName, total: r.amount }]
+          : []
+
+    const rows = rawItems.map((it: any, idx: number) => {
+      const lineTotal = Number(it.total ?? it.amount ?? 0)
+      // จำนวน: ใช้ของ item ก่อน ถ้าไม่มีและเป็นใบเสร็จคอร์ส (มีจำนวนครั้ง) ให้ดึงจาก enrollment
+      const qty: number | null =
+        it.quantity != null
+          ? Number(it.quantity)
+          : (rawItems.length === 1 && enrollmentLessons != null ? Number(enrollmentLessons) : null)
+      const isLessons = enrollmentLessons != null && it.quantity == null && rawItems.length === 1
+      const qtyText = qty != null ? `${qty}${isLessons ? ' ครั้ง' : ''}` : '—'
+      const unitPrice = qty && qty > 0 ? lineTotal / qty : null
+      return {
+        no: idx + 1,
+        description: it.description ?? '—',
+        qtyText,
+        unitPriceText: unitPrice != null ? formatThaiMoney(unitPrice) : '—',
+        totalText: formatThaiMoney(lineTotal),
+      }
+    })
+
+    const rowsHtml = rows.length > 0
+      ? rows.map(row => `
+        <tr>
+          <td class="c-no">${row.no}</td>
+          <td class="c-desc">${row.description}</td>
+          <td class="c-qty">${row.qtyText}</td>
+          <td class="c-num">${row.unitPriceText}</td>
+          <td class="c-num">${row.totalText}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" class="empty">ไม่มีข้อมูลรายการ</td></tr>`
+
+    const payMethod =
+      ({ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' } as Record<string, string>)[r.payment_method]
+      || r.payment_method || '—'
+
+    const logoUrl =
+      'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png'
+
+    const html = `<!DOCTYPE html><html lang="th"><head>
+      <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number ?? ''}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
       <style>
-        body{font-family:'Noto Sans Thai',sans-serif;padding:40px;max-width:480px;margin:0 auto;color:#111}
-        .logo{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px}
-        .sub{color:#444;font-size:13px;text-align:center;line-height:1.8;margin-bottom:6px}
-        .receipt-label{color:#666;font-size:13px;text-align:center;margin-bottom:20px}
-        .divider{border:0;border-top:1px solid #eee;margin:16px 0}
-        .row{display:flex;justify-content:space-between;font-size:14px;padding:6px 0}
-        .total{font-size:16px;font-weight:700;border-top:2px solid #111;margin-top:8px;padding-top:12px}
-        .footer{text-align:center;font-size:13px;color:#666;margin-top:24px}
-        @media print{@page{margin:20mm}}
+        *{box-sizing:border-box}
+        body{font-family:'Sarabun','Noto Sans Thai',sans-serif;color:#1a1a1a;margin:0 auto;padding:32px;max-width:660px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .head{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:2px solid #0f766e}
+        .head img{height:60px;width:60px;object-fit:contain}
+        .brand{flex:1}
+        .brand h1{margin:0;font-size:20px;font-weight:700;color:#0f766e}
+        .brand p{margin:3px 0 0;font-size:12px;color:#555;line-height:1.6}
+        .doc-title{text-align:right}
+        .doc-title .th{font-size:18px;font-weight:700}
+        .doc-title .en{font-size:11px;color:#999;letter-spacing:2px}
+        .meta{display:flex;justify-content:space-between;gap:24px;margin:18px 0 4px;font-size:13px;line-height:1.9}
+        .meta .label{color:#999;margin-right:8px}
+        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+        thead th{background:#0f766e;color:#fff;font-weight:600;padding:9px 10px;text-align:left}
+        thead th.c-qty,thead th.c-num{text-align:right}
+        tbody td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top}
+        .c-no{width:6%;color:#aaa}
+        .c-desc{width:46%}
+        .c-qty{width:16%;text-align:right;white-space:nowrap}
+        .c-num{width:16%;text-align:right;white-space:nowrap}
+        .empty{text-align:center;color:#999;padding:18px}
+        .totals{margin-top:14px;display:flex;justify-content:flex-end}
+        .totals table{width:auto;min-width:250px;margin:0}
+        .totals td{padding:6px 10px;font-size:14px;border:none}
+        .totals .grand td{border-top:2px solid #0f766e;font-size:16px;font-weight:700;padding-top:10px}
+        .totals .num{text-align:right;white-space:nowrap}
+        .pay{margin-top:16px;font-size:13px;color:#444}
+        .pay .label{color:#999;margin-right:8px}
+        .notes{margin-top:6px;font-size:12px;color:#666}
+        .foot{margin-top:36px;display:flex;justify-content:space-between;align-items:flex-end}
+        .thanks{font-size:13px;color:#0f766e}
+        .sign{text-align:center;font-size:12px;color:#666}
+        .sign .line{width:170px;border-top:1px dotted #aaa;margin-bottom:4px}
+        @media print{@page{size:A4;margin:16mm}body{padding:0}}
       </style></head><body>
-      <div style="text-align:center;margin-bottom:10px"><img src="https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png" style="height:64px;object-fit:contain" alt="Mando House" /></div>
-      <div class="logo">Mando House</div>
-      <div class="sub">
-        สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br>
-        085-0930111 ， 097-1727677
-      </div>
-      <div class="receipt-label">ใบเสร็จรับเงิน · Receipt</div>
-      <hr class="divider">
-      <div class="row"><span>เลขที่</span><span>${r.receipt_number ?? '—'}</span></div>
-      <div class="row"><span>วันที่</span><span>${formatDate(r.issued_at)}</span></div>
-      <div class="row"><span>นักเรียน</span><span>${r.student?.nickname || r.student?.full_name || '—'}</span></div>
-      <hr class="divider">
-      ${items.length > 0 ? items.map((it: any) => `
-        <div class="row"><span>${it.description ?? '—'}</span><span></span></div>
-        <div class="row" style="color:#666;font-size:13px">
-          <span>จำนวน ${it.quantity ?? 0} ครั้ง</span>
-          <span>${formatThaiMoney(it.total ?? 0)}</span>
+
+      <div class="head">
+        <img src="${logoUrl}" alt="Mando House" />
+        <div class="brand">
+          <h1>Mando House</h1>
+          <p>สถาบันสอนพิเศษภาษาจีน · คณิตศาสตร์ · ภาษาอังกฤษ<br>โทร. 085-093-0111 , 097-172-7677</p>
         </div>
-      `).join('') : `<div class="row"><span style="color:#999">ไม่มีข้อมูลคอร์ส</span></div>`}
-      <div class="row total"><span>รวมทั้งสิ้น</span><span>${formatThaiMoney(r.amount)}</span></div>
-      <div class="row"><span>ชำระโดย</span><span>${{ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' }[r.payment_method as string] || r.payment_method}</span></div>
-      ${r.notes ? `<div class="row"><span>หมายเหตุ</span><span>${r.notes}</span></div>` : ''}
-      <div class="footer">ขอบคุณที่ไว้วางใจ Mando House 🙏</div>
+        <div class="doc-title">
+          <div class="th">ใบเสร็จรับเงิน</div>
+          <div class="en">RECEIPT</div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div>
+          <div><span class="label">เลขที่</span>${r.receipt_number ?? '—'}</div>
+          <div><span class="label">วันที่</span>${formatDate(r.issued_at)}</div>
+        </div>
+        <div style="text-align:right">
+          <div><span class="label">นักเรียน</span>${r.student?.nickname || r.student?.full_name || '—'}</div>
+          ${r.student?.parent_name ? `<div><span class="label">ผู้ปกครอง</span>${r.student.parent_name}</div>` : ''}
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="c-no">#</th>
+            <th class="c-desc">รายการ</th>
+            <th class="c-qty">จำนวน</th>
+            <th class="c-num">ราคา/หน่วย</th>
+            <th class="c-num">จำนวนเงิน</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+
+      <div class="totals">
+        <table>
+          <tr class="grand"><td>รวมทั้งสิ้น</td><td class="num">${formatThaiMoney(r.amount)}</td></tr>
+        </table>
+      </div>
+
+      <div class="pay"><span class="label">ชำระโดย</span>${payMethod}</div>
+      ${r.notes ? `<div class="notes">หมายเหตุ: ${r.notes}</div>` : ''}
+
+      <div class="foot">
+        <div class="thanks">ขอบคุณที่ไว้วางใจ Mando House 🙏</div>
+        <div class="sign"><div class="line"></div>ผู้รับเงิน</div>
+      </div>
+
+      <script>
+        (function(){
+          function go(){ try { window.focus(); window.print(); } catch (e) {} }
+          var img = document.querySelector('img');
+          if (img && !img.complete) {
+            img.addEventListener('load', go);
+            img.addEventListener('error', go);   // โลโก้โหลดไม่ได้ก็ยังพิมพ์ต่อ
+            setTimeout(go, 3000);                 // กันเหนียว ถ้าโหลดช้าเกินไป
+          } else {
+            setTimeout(go, 300);
+          }
+        })();
+      </script>
       </body></html>`
+
     win.document.write(html)
     win.document.close()
-    win.print()
   }
 
   return (
