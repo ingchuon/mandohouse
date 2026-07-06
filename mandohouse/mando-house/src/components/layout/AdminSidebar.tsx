@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SCHOOL_CONFIG } from '@/lib/config'
 
 const navItems = [
   { group: 'ภาพรวม', items: [
@@ -63,10 +64,10 @@ export default function AdminSidebar() {
       <div className="px-5 py-5 border-b border-white/15">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt={SCHOOL_CONFIG.name} className="w-full h-full object-cover" />
           </div>
           <div>
-            <div className="text-white font-medium text-sm">Mando House</div>
+            <div className="text-white font-medium text-sm">{SCHOOL_CONFIG.name}</div>
             <div className="text-white/60 text-xs">ระบบหลังบ้าน</div>
           </div>
         </div>
