@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_Thai } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { SCHOOL_CONFIG } from '@/lib/config'
 import './globals.css'
 
 const notoSansThai = Noto_Sans_Thai({
@@ -12,18 +13,18 @@ const notoSansThai = Noto_Sans_Thai({
 })
 
 export const metadata: Metadata = {
-  title: 'Mando House — ระบบหลังบ้าน',
-  description: 'ระบบบริหารจัดการสถาบันสอนภาษาจีน Mando House',
+  title: `${SCHOOL_CONFIG.name} — ระบบหลังบ้าน`,
+  description: SCHOOL_CONFIG.description,
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Mando House',
+    title: SCHOOL_CONFIG.name,
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0F6E56',
+  themeColor: SCHOOL_CONFIG.primaryColor,
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Mando House" />
+        <meta name="apple-mobile-web-app-title" content={SCHOOL_CONFIG.name} />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${notoSansThai.variable} font-sans bg-surface dark:bg-[#1a2030] text-gray-900 dark:text-gray-100 antialiased`}>
