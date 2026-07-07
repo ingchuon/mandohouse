@@ -6,6 +6,58 @@ import { formatDate, formatThaiMoney } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
+const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
+function thaiDateShort(iso: string | null | undefined, sep = ' '): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const day = d.getDate()
+  const mon = THAI_MONTHS_ABBR[d.getMonth()]
+  const be = String((d.getFullYear() + 543) % 100).padStart(2, '0')
+  return `${day}${sep}${mon}${sep}${be}`
+}
+
+// แปลงจำนวนเงินเป็นตัวอักษรภาษาไทย เช่น 4500 -> "สี่พันห้าร้อยบาทถ้วน"
+function bahtText(input: number): string {
+  const amount = Math.round((Number(input) + Number.EPSILON) * 100) / 100
+  const neg = amount < 0
+  const abs = Math.abs(amount)
+  const baht = Math.floor(abs)
+  const satang = Math.round((abs - baht) * 100)
+  const digit = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
+  const pos = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน']
+  const readGroup = (n: number): string => {
+    let s = ''
+    const str = String(n)
+    const L = str.length
+    for (let i = 0; i < L; i++) {
+      const d = +str[i]
+      const p = L - i - 1
+      if (d === 0) continue
+      if (p === 1) s += (d === 1 ? 'สิบ' : d === 2 ? 'ยี่สิบ' : digit[d] + 'สิบ')
+      else if (p === 0) s += (d === 1 && L > 1 ? 'เอ็ด' : digit[d])
+      else s += digit[d] + pos[p]
+    }
+    return s
+  }
+  const readNumber = (n: number): string => {
+    if (n === 0) return ''
+    let s = ''
+    const million = Math.floor(n / 1000000)
+    const rest = n % 1000000
+    if (million > 0) s += readNumber(million) + 'ล้าน'
+    if (rest > 0) s += readGroup(rest)
+    return s
+  }
+  let out = ''
+  if (baht > 0) out += readNumber(baht) + 'บาท'
+  if (satang > 0) out += readGroup(satang) + 'สตางค์'
+  else if (baht > 0) out += 'ถ้วน'
+  if (baht === 0 && satang === 0) out = 'ศูนย์บาทถ้วน'
+  return (neg ? 'ลบ' : '') + out
+}
+
 export default function ReceiptsPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -121,7 +173,17 @@ export default function ReceiptsPage() {
     const win = window.open('', '_blank')
     if (!win) return
 
-    // ----- เตรียมข้อมูลรายการ (รองรับทั้ง items แบบเก่า {amount,description} และใหม่ {quantity,total}) -----
+    // ----- ข้อมูลสถาบัน (แก้ได้ตรงนี้) -----
+    const BIZ = {
+      brand: 'Mando House',
+      subtitle: 'สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ',
+      address: 'ที่อยู่ : 178/25 ถ.พระยาสัจจา ต.เสม็ด อ.เมือง จ.ชลบุรี 20000',
+      tel: 'โทร : 085-0930111 , 097-1727677',
+      receiver: 'นลินรัตน์ คงเนาวรัตน์',
+      logo: 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png',
+    }
+
+    // ----- เตรียมรายการ (รองรับ items ทั้งแบบเก่า {amount,description} และใหม่ {quantity,total}) -----
     const courseName = r.enrollment?.course?.name ?? '—'
     const enrollmentLessons =
       r.enrollment?.lessons_total ?? r.enrollment?.course?.total_lessons ?? null
@@ -133,131 +195,145 @@ export default function ReceiptsPage() {
           ? [{ description: courseName, total: r.amount }]
           : []
 
-    const rows = rawItems.map((it: any, idx: number) => {
-      const lineTotal = Number(it.total ?? it.amount ?? 0)
-      // จำนวน: ใช้ของ item ก่อน ถ้าไม่มีและเป็นใบเสร็จคอร์ส (มีจำนวนครั้ง) ให้ดึงจาก enrollment
-      const qty: number | null =
-        it.quantity != null
+    const itemRows = rawItems.map((it: any, idx: number) => {
+      const amount = Number(it.total ?? it.amount ?? 0)
+      let desc = it.description ?? '—'
+      if (!/ครั้ง/.test(desc)) {
+        const sessions = it.quantity != null
           ? Number(it.quantity)
-          : (rawItems.length === 1 && enrollmentLessons != null ? Number(enrollmentLessons) : null)
-      const isLessons = enrollmentLessons != null && it.quantity == null && rawItems.length === 1
-      const qtyText = qty != null ? `${qty}${isLessons ? ' ครั้ง' : ''}` : '—'
-      const unitPrice = qty && qty > 0 ? lineTotal / qty : null
-      return {
-        no: idx + 1,
-        description: it.description ?? '—',
-        qtyText,
-        unitPriceText: unitPrice != null ? formatThaiMoney(unitPrice) : '—',
-        totalText: formatThaiMoney(lineTotal),
+          : (rawItems.length === 1 ? enrollmentLessons : null)
+        if (sessions != null) desc = `${desc} ( ${sessions} ครั้ง )`
       }
+      return { no: idx + 1, desc, courses: 1, amount, amountText: formatThaiMoney(amount) }
     })
 
-    const rowsHtml = rows.length > 0
-      ? rows.map(row => `
-        <tr>
+    const total = Number(r.amount || 0)
+
+    // เติมแถวว่างให้ตารางสูงพอสวย (อย่างน้อย 6 แถว)
+    const MIN_ROWS = 6
+    const emptyCount = Math.max(0, MIN_ROWS - itemRows.length)
+
+    const bodyRows = itemRows.map(row => `
+        <tr class="itemrow">
           <td class="c-no">${row.no}</td>
-          <td class="c-desc">${row.description}</td>
-          <td class="c-qty">${row.qtyText}</td>
-          <td class="c-num">${row.unitPriceText}</td>
-          <td class="c-num">${row.totalText}</td>
+          <td class="c-desc">${row.desc}</td>
+          <td class="c-qty">${row.courses}</td>
+          <td class="c-amt">${row.amountText}</td>
         </tr>`).join('')
-      : `<tr><td colspan="5" class="empty">ไม่มีข้อมูลรายการ</td></tr>`
+      + Array.from({ length: emptyCount }).map(() => `
+        <tr class="itemrow"><td class="c-no">&nbsp;</td><td></td><td></td><td></td></tr>`).join('')
 
-    const payMethod =
-      ({ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' } as Record<string, string>)[r.payment_method]
-      || r.payment_method || '—'
+    const pm = r.payment_method
+    const chk = (on: boolean) => `<span class="box">${on ? '✓' : ''}</span>`
 
-    const logoUrl =
-      'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png'
+    const customer = `${r.student?.full_name ?? ''}${r.student?.nickname ? ` (${r.student.nickname})` : ''}`.trim() || '—'
 
     const html = `<!DOCTYPE html><html lang="th"><head>
       <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number ?? ''}</title>
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
       <style>
         *{box-sizing:border-box}
-        body{font-family:'Sarabun','Noto Sans Thai',sans-serif;color:#1a1a1a;margin:0 auto;padding:32px;max-width:660px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        .head{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:2px solid #0f766e}
-        .head img{height:60px;width:60px;object-fit:contain}
-        .brand{flex:1}
-        .brand h1{margin:0;font-size:20px;font-weight:700;color:#0f766e}
-        .brand p{margin:3px 0 0;font-size:12px;color:#555;line-height:1.6}
-        .doc-title{text-align:right}
-        .doc-title .th{font-size:18px;font-weight:700}
-        .doc-title .en{font-size:11px;color:#999;letter-spacing:2px}
-        .meta{display:flex;justify-content:space-between;gap:24px;margin:18px 0 4px;font-size:13px;line-height:1.9}
-        .meta .label{color:#999;margin-right:8px}
-        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-        thead th{background:#0f766e;color:#fff;font-weight:600;padding:9px 10px;text-align:left}
-        thead th.c-qty,thead th.c-num{text-align:right}
-        tbody td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top}
-        .c-no{width:6%;color:#aaa}
-        .c-desc{width:46%}
-        .c-qty{width:16%;text-align:right;white-space:nowrap}
-        .c-num{width:16%;text-align:right;white-space:nowrap}
-        .empty{text-align:center;color:#999;padding:18px}
-        .totals{margin-top:14px;display:flex;justify-content:flex-end}
-        .totals table{width:auto;min-width:250px;margin:0}
-        .totals td{padding:6px 10px;font-size:14px;border:none}
-        .totals .grand td{border-top:2px solid #0f766e;font-size:16px;font-weight:700;padding-top:10px}
-        .totals .num{text-align:right;white-space:nowrap}
-        .pay{margin-top:16px;font-size:13px;color:#444}
-        .pay .label{color:#999;margin-right:8px}
-        .notes{margin-top:6px;font-size:12px;color:#666}
-        .foot{margin-top:36px;display:flex;justify-content:space-between;align-items:flex-end}
-        .thanks{font-size:13px;color:#0f766e}
-        .sign{text-align:center;font-size:12px;color:#666}
-        .sign .line{width:170px;border-top:1px dotted #aaa;margin-bottom:4px}
-        @media print{@page{size:A4;margin:16mm}body{padding:0}}
+        body{font-family:'Sarabun','Noto Sans Thai',sans-serif;color:#000;margin:0 auto;padding:28px 32px;max-width:720px;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .title-row{text-align:center;margin-bottom:12px}
+        .title-row .title{font-size:17px;font-weight:700}
+        .biz{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:10px}
+        .biz .name{color:#1d4ed8;font-size:18px;font-weight:700;margin-bottom:2px}
+        .biz .subtitle{font-weight:600;margin-bottom:3px}
+        .biz .info{line-height:1.75}
+        .biz .logo{width:112px;height:96px;object-fit:contain;flex:none}
+        .cust{border-top:1px solid #000;padding-top:8px;display:flex;justify-content:space-between;gap:24px;line-height:2.1}
+        .label{color:#000}
+        .blue{color:#1d4ed8;font-weight:600}
+        .uline{display:inline-block;min-width:150px;border-bottom:1px dotted #666;padding:0 6px}
+        .uline.sm{min-width:90px}
+        table.items{width:100%;border-collapse:collapse;margin-top:14px}
+        table.items th,table.items td{border:1px solid #000;padding:6px 8px}
+        table.items thead th{text-align:center;font-weight:700;line-height:1.25}
+        table.items thead .en{font-weight:400;font-size:11px;color:#333}
+        .c-no{width:9%;text-align:center}
+        .c-desc{width:55%}
+        .c-qty{width:17%;text-align:center}
+        .c-amt{width:19%;text-align:right}
+        .itemrow td{height:26px}
+        table.totals{width:100%;border-collapse:collapse;border:1px solid #000;border-top:none}
+        table.totals td{border:1px solid #000;padding:8px;vertical-align:middle}
+        table.totals td:first-child{border-left:none}
+        table.totals tr:last-child td{border-bottom:none}
+        .t-left{width:60%}
+        .t-lbl{width:23%;line-height:1.2}
+        .t-lbl .en{font-size:10px;color:#333}
+        .t-num{width:17%;text-align:right;white-space:nowrap}
+        .words{font-weight:500}
+        .chk{display:inline-flex;align-items:center;gap:6px;margin-right:18px}
+        .box{width:15px;height:15px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#1d4ed8}
+        .sign{display:flex;justify-content:space-around;margin-top:44px;text-align:center}
+        .sign .signname{min-height:18px;margin-bottom:4px}
+        .sign .line{width:190px;border-bottom:1px dotted #666;height:1px;margin-bottom:6px}
+        @media print{@page{size:A4;margin:14mm}body{padding:0}}
       </style></head><body>
 
-      <div class="head">
-        <img src="${logoUrl}" alt="Mando House" />
-        <div class="brand">
-          <h1>Mando House</h1>
-          <p>สถาบันสอนพิเศษภาษาจีน · คณิตศาสตร์ · ภาษาอังกฤษ<br>โทร. 085-093-0111 , 097-172-7677</p>
-        </div>
-        <div class="doc-title">
-          <div class="th">ใบเสร็จรับเงิน</div>
-          <div class="en">RECEIPT</div>
-        </div>
+      <div class="title-row">
+        <span class="title">ใบเสร็จรับเงิน (Receipt)</span>
       </div>
 
-      <div class="meta">
+      <div class="biz">
         <div>
-          <div><span class="label">เลขที่</span>${r.receipt_number ?? '—'}</div>
-          <div><span class="label">วันที่</span>${formatDate(r.issued_at)}</div>
+          <div class="name">${BIZ.brand}</div>
+          <div class="subtitle">${BIZ.subtitle}</div>
+          <div class="info">
+            ${BIZ.address}<br>
+            ${BIZ.tel}
+          </div>
         </div>
-        <div style="text-align:right">
-          <div><span class="label">นักเรียน</span>${r.student?.nickname || r.student?.full_name || '—'}</div>
-          ${r.student?.parent_name ? `<div><span class="label">ผู้ปกครอง</span>${r.student.parent_name}</div>` : ''}
+        <img class="logo" src="${BIZ.logo}" alt="Mando House" />
+      </div>
+
+      <div class="cust">
+        <div style="flex:1">
+          <div><span class="label">ชื่อผู้รับบริการ/Customer :</span> <span class="blue">${customer}</span></div>
+          <div><span class="label">ที่อยู่/Address :</span> <span class="uline"></span></div>
+          <div><span class="label">เลขประจำตัวผู้เสียภาษี/Tax ID :</span> <span class="uline"></span></div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          <div><span class="label">วันที่/Date :</span> <span class="blue">${thaiDateShort(r.issued_at)}</span></div>
+          <div><span class="label">เลขที่/No. :</span> <span class="blue">${r.receipt_number ?? '—'}</span></div>
         </div>
       </div>
 
-      <table>
+      <table class="items">
         <thead>
           <tr>
-            <th class="c-no">#</th>
-            <th class="c-desc">รายการ</th>
-            <th class="c-qty">จำนวน</th>
-            <th class="c-num">ราคา/หน่วย</th>
-            <th class="c-num">จำนวนเงิน</th>
+            <th class="c-no">ลำดับที่<br><span class="en">Items</span></th>
+            <th class="c-desc">รายละเอียดคอร์ส<br><span class="en">Description</span></th>
+            <th class="c-qty">จำนวนคอร์ส<br><span class="en">No.of Course</span></th>
+            <th class="c-amt">จำนวนเงิน<br><span class="en">Amount</span></th>
           </tr>
         </thead>
-        <tbody>${rowsHtml}</tbody>
+        <tbody>${bodyRows}</tbody>
       </table>
 
-      <div class="totals">
-        <table>
-          <tr class="grand"><td>รวมทั้งสิ้น</td><td class="num">${formatThaiMoney(r.amount)}</td></tr>
-        </table>
-      </div>
+      <table class="totals">
+        <tr>
+          <td class="t-left words">ตัวอักษร . ${bahtText(total)}</td>
+          <td class="t-lbl">จำนวนเงินรวม<br><span class="en">Total Amount</span></td>
+          <td class="t-num">${formatThaiMoney(total)}</td>
+        </tr>
+        <tr>
+          <td class="t-left">
+            <span class="chk">${chk(pm === 'cash')} เงินสด</span>
+            <span class="chk">${chk(pm === 'transfer')} เงินโอน</span>
+            <span class="chk">${chk(pm === 'promptpay')} พร้อมเพย์</span>
+            ธนาคาร <span class="uline sm"></span>
+            ${r.notes ? `<div style="font-size:11px;color:#666;margin-top:4px">หมายเหตุ: ${r.notes}</div>` : ''}
+          </td>
+          <td class="t-lbl">จำนวนเงินสุทธิ<br><span class="en">Total net</span></td>
+          <td class="t-num" style="font-weight:700">${formatThaiMoney(total)}</td>
+        </tr>
+      </table>
 
-      <div class="pay"><span class="label">ชำระโดย</span>${payMethod}</div>
-      ${r.notes ? `<div class="notes">หมายเหตุ: ${r.notes}</div>` : ''}
-
-      <div class="foot">
-        <div class="thanks">ขอบคุณที่ไว้วางใจ Mando House 🙏</div>
-        <div class="sign"><div class="line"></div>ผู้รับเงิน</div>
+      <div class="sign">
+        <div><div class="signname">${BIZ.receiver}</div><div class="line"></div>ผู้รับเงิน</div>
+        <div><div class="signname">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่</div>
       </div>
 
       <script>
@@ -266,8 +342,8 @@ export default function ReceiptsPage() {
           var img = document.querySelector('img');
           if (img && !img.complete) {
             img.addEventListener('load', go);
-            img.addEventListener('error', go);   // โลโก้โหลดไม่ได้ก็ยังพิมพ์ต่อ
-            setTimeout(go, 3000);                 // กันเหนียว ถ้าโหลดช้าเกินไป
+            img.addEventListener('error', go);
+            setTimeout(go, 3000);
           } else {
             setTimeout(go, 300);
           }
