@@ -96,12 +96,28 @@ export default async function DashboardPage() {
   })
   const pieData = Object.entries(subjectRevenue).filter(([, v]) => v > 0).map(([k, v]) => ({ key: k, label: subjectLabels[k], value: v, color: subjectPalette[k] }))
   const pieTotal = pieData.reduce((s, d) => s + d.value, 0)
-  const RR = 44; const CIRC = 2 * Math.PI * RR
-  let acc = 0
-  const pieSegments = pieData.map(d => {
-    const len = pieTotal > 0 ? (d.value / pieTotal) * CIRC : 0
-    const seg = { color: d.color, dasharray: `${len} ${CIRC - len}`, dashoffset: -acc }
-    acc += len; return seg
+
+  // วาด donut ด้วย path arc (เต็มวง ไม่มีรอยโหว่)
+  const CX = 50, CY = 50, R_OUT = 42, R_IN = 26
+  function polar(r: number, deg: number): [number, number] {
+    const a = (deg - 90) * Math.PI / 180
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)]
+  }
+  let angleAcc = 0
+  const piePaths = pieData.map(d => {
+    const start = angleAcc
+    const sweep = pieTotal > 0 ? (d.value / pieTotal) * 360 : 0
+    let end = start + sweep
+    angleAcc = end
+    // กันกรณี segment เดียว 360° (path arc วาดไม่ได้) ให้หดนิดนึง
+    if (sweep >= 359.999) end = start + 359.999
+    const large = sweep > 180 ? 1 : 0
+    const [x1, y1] = polar(R_OUT, start)
+    const [x2, y2] = polar(R_OUT, end)
+    const [x3, y3] = polar(R_IN, end)
+    const [x4, y4] = polar(R_IN, start)
+    const path = `M ${x1.toFixed(3)} ${y1.toFixed(3)} A ${R_OUT} ${R_OUT} 0 ${large} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} L ${x3.toFixed(3)} ${y3.toFixed(3)} A ${R_IN} ${R_IN} 0 ${large} 0 ${x4.toFixed(3)} ${y4.toFixed(3)} Z`
+    return { path, color: d.color }
   })
 
   const urgentExpiring = (allActiveEnrollments ?? [])
@@ -110,7 +126,7 @@ export default async function DashboardPage() {
     .slice(0, 6)
 
   return (
-    <div className="p-3 md:p-5 flex flex-col gap-3">
+    <div className="p-3 md:p-5 flex flex-col gap-3 min-h-full">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -123,10 +139,10 @@ export default async function DashboardPage() {
         <DashboardExport />
       </div>
 
-      {/* ── แถว 1: การ์ด 6 ใบ ── */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+      {/* ── แถว 1: การ์ดการเงิน 4 ใบ ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: '💙 รายรับ',  value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, bg: 'linear-gradient(135deg,#0284c7,#38bdf8)', href: '/staff/receipts' },
+          { label: '💙 รายรับ',  value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}% จากเดือนก่อน`, bg: 'linear-gradient(135deg,#0284c7,#38bdf8)', href: '/staff/receipts' },
           { label: '💛 รายจ่าย', value: formatThaiMoney(expensesTotal),    sub: currentMonth,   bg: 'linear-gradient(135deg,#d97706,#fbbf24)', href: '/staff/expenses' },
           { label: profitThisMonth >= 0 ? '📈 กำไร' : '📉 ขาดทุน',
             value: `${profitThisMonth >= 0 ? '+' : ''}${formatThaiMoney(profitThisMonth)}`,
@@ -134,20 +150,18 @@ export default async function DashboardPage() {
             bg: profitThisMonth >= 0 ? 'linear-gradient(135deg,#059669,#34d399)' : 'linear-gradient(135deg,#dc2626,#f87171)',
             href: '/staff/settings' },
           { label: '💰 คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, bg: 'linear-gradient(135deg,#4f46e5,#818cf8)', href: '/staff/settings' },
-          { label: '👥 นักเรียน', value: `${totalStudents ?? 0}`, sub: 'คน Active', bg: 'linear-gradient(135deg,#0891b2,#22d3ee)', href: '/staff/students' },
-          { label: '📚 คอร์ส',   value: `${activeEnrollments ?? 0}`, sub: 'กำลังเรียน', bg: 'linear-gradient(135deg,#7c3aed,#c084fc)', href: '/staff/students' },
         ].map((c, i) => (
           <Link key={i} href={c.href}
-            className="col-span-1 rounded-2xl p-3 md:p-4 text-white shadow-sm hover:-translate-y-0.5 transition-all"
+            className="rounded-2xl p-4 md:p-5 text-white shadow-sm hover:-translate-y-0.5 transition-all"
             style={{ background: c.bg }}>
-            <div className="text-[10px] font-medium opacity-80 mb-1.5 leading-tight">{c.label}</div>
-            <div className="text-sm md:text-xl font-bold truncate leading-tight">{c.value}</div>
-            <div className="text-[9px] opacity-70 mt-1">{c.sub}</div>
+            <div className="text-xs font-medium opacity-80 mb-2">{c.label}</div>
+            <div className="text-xl md:text-2xl font-bold truncate leading-tight">{c.value}</div>
+            <div className="text-[10px] opacity-70 mt-1.5">{c.sub}</div>
           </Link>
         ))}
       </div>
 
-      {/* ── แถว 2: กราฟแท่ง 6 เดือน (เต็มความกว้าง) ── */}
+      {/* ── แถว 2: กราฟแท่ง 6 เดือน ── */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">📊 รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
@@ -156,17 +170,17 @@ export default async function DashboardPage() {
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#fbbf24' }}></span>รายจ่าย</span>
           </div>
         </div>
-        <div className="flex items-end gap-2 md:gap-4 h-28">
+        <div className="flex items-end gap-2 md:gap-4 h-32">
           {chartData.map((m, i) => {
             const revH = chartMax > 0 ? Math.round((m.rev / chartMax) * 100) : 0
             const expH = chartMax > 0 ? Math.round((m.exp / chartMax) * 100) : 0
             return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end gap-0.5 h-20">
-                  <div className="flex-1 rounded-t-md transition-all"
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                <div className="w-full flex items-end justify-center gap-1 flex-1">
+                  <div className="w-1/2 max-w-[28px] rounded-t-md"
                     style={{ height: `${revH}%`, background: '#38bdf8', minHeight: m.rev > 0 ? '4px' : '0' }}
                     title={`รายรับ: ${formatThaiMoney(m.rev)}`} />
-                  <div className="flex-1 rounded-t-md transition-all"
+                  <div className="w-1/2 max-w-[28px] rounded-t-md"
                     style={{ height: `${expH}%`, background: '#fbbf24', minHeight: m.exp > 0 ? '4px' : '0' }}
                     title={`รายจ่าย: ${formatThaiMoney(m.exp)}`} />
                 </div>
@@ -177,33 +191,28 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── แถว 3: กราฟวงกลม + เช็กอิน + ใกล้หมดคอร์ส ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* ── แถว 3: กราฟวงกลม + เช็กอิน + ใกล้หมดคอร์ส (ยืดเต็มความสูงที่เหลือ) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 min-h-0">
 
         {/* กราฟวงกลม */}
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col">
           <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">🎯 รายได้ตามวิชาเดือนนี้</div>
           {pieTotal === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6">
+            <div className="flex flex-col items-center justify-center flex-1">
               <div className="text-2xl mb-1">📭</div>
               <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <svg viewBox="0 0 100 100" width="90" height="90" className="flex-shrink-0">
-                <g transform="rotate(-90 50 50)">
-                  {pieSegments.map((seg, i) => (
-                    <circle key={i} cx="50" cy="50" r={RR} fill="none"
-                      stroke={seg.color} strokeWidth="18"
-                      strokeDasharray={seg.dasharray} strokeDashoffset={seg.dashoffset} />
-                  ))}
-                </g>
-                <text x="50" y="47" textAnchor="middle" style={{ fontSize: '7px', fill: '#9ca3af' }}>รวม</text>
-                <text x="50" y="57" textAnchor="middle" style={{ fontSize: '10px', fontWeight: 700, fill: '#1f2937' }}>
+            <div className="flex items-center gap-4 flex-1">
+              <svg viewBox="0 0 100 100" width="110" height="110" className="flex-shrink-0">
+                {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
+                <circle cx={CX} cy={CY} r={R_IN - 0.5} className="fill-white dark:fill-[#242d3f]" />
+                <text x={CX} y={CY - 2} textAnchor="middle" style={{ fontSize: '6px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
+                <text x={CX} y={CY + 7} textAnchor="middle" style={{ fontSize: '9px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">
                   {formatThaiMoney(pieTotal)}
                 </text>
               </svg>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-2.5">
                 {pieData.map(d => (
                   <div key={d.key} className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
@@ -217,18 +226,18 @@ export default async function DashboardPage() {
         </div>
 
         {/* เช็กอินวันนี้ */}
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">🕐 เช็กอินวันนี้</div>
             <Link href="/staff/checkin" className="text-[10px] text-brand-600 hover:underline">จัดการ →</Link>
           </div>
           {!(recentCheckins ?? []).length ? (
-            <div className="flex flex-col items-center justify-center py-6">
+            <div className="flex flex-col items-center justify-center flex-1">
               <div className="text-2xl mb-1">😴</div>
               <p className="text-xs text-gray-400">ยังไม่มีการเช็กอิน</p>
             </div>
           ) : (
-            <div className="space-y-1.5 overflow-y-auto max-h-36">
+            <div className="space-y-1.5 overflow-y-auto flex-1">
               {(recentCheckins ?? []).map((c: any) => (
                 <Link href="/staff/checkin" key={c.id}
                   className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-[#2a3245] transition">
@@ -249,18 +258,18 @@ export default async function DashboardPage() {
         </div>
 
         {/* ใกล้หมดคอร์ส */}
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">⚠️ ใกล้หมดคอร์ส</div>
             <Link href="/staff/alerts" className="text-[10px] text-brand-600 hover:underline">ดูทั้งหมด →</Link>
           </div>
           {urgentExpiring.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6">
+            <div className="flex flex-col items-center justify-center flex-1">
               <div className="text-2xl mb-1">🎉</div>
               <p className="text-xs text-gray-400">ไม่มีคอร์สที่ใกล้หมด</p>
             </div>
           ) : (
-            <div className="space-y-1.5 overflow-y-auto max-h-36">
+            <div className="space-y-1.5 overflow-y-auto flex-1">
               {urgentExpiring.map((e: any) => {
                 const remaining = e.lessons_total - e.lessons_used
                 const name = e.student?.nickname || e.student?.full_name || '?'
