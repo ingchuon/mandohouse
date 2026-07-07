@@ -33,6 +33,14 @@ export default function CheckinPage() {
     lessonHistory: { lesson_number: number; lesson_date: string; topic?: string }[]
   } | null>(null)
   const [listStudentFilter, setListStudentFilter] = useState('')
+  const [studentSummary, setStudentSummary] = useState<{
+    name: string
+    courseName: string
+    lessonsUsed: number
+    lessonsTotal: number
+    history: { lesson_number: number; lesson_date: string; topic?: string }[]
+  } | null>(null)
+  const [loadingSummary, setLoadingSummary] = useState(false)
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
   const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '', lesson_note: '' })
@@ -419,6 +427,28 @@ export default function CheckinPage() {
     return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
+  async function loadStudentSummary(c: any) {
+    setLoadingSummary(true)
+    setStudentSummary(null)
+    const enrollmentId = c.enrollment_id
+    const name = c.student?.nickname || c.student?.full_name || '?'
+    const courseName = c.enrollment?.course?.name || '—'
+
+    const [{ data: freshEnroll }, { data: historyData }] = await Promise.all([
+      supabase.from('enrollments').select('lessons_used, lessons_total').eq('id', enrollmentId ?? '').single(),
+      supabase.from('lesson_logs').select('lesson_number, lesson_date, topic').eq('enrollment_id', enrollmentId ?? '').order('lesson_number', { ascending: true }),
+    ])
+
+    setStudentSummary({
+      name,
+      courseName,
+      lessonsUsed: freshEnroll?.lessons_used ?? 0,
+      lessonsTotal: freshEnroll?.lessons_total ?? 0,
+      history: historyData ?? [],
+    })
+    setLoadingSummary(false)
+  }
+
   const presentCount = checkins.length
   const checkedOutCount = checkins.filter(c => c.check_out_at).length
   const stillInCount = checkins.filter(c => !c.check_out_at).length
@@ -589,7 +619,107 @@ export default function CheckinPage() {
         </div>
       )}
 
-      <h1 className="text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
+      {/* ── Modal สรุปรายคน (กดจากรายการเช็กอิน) ── */}
+      {(loadingSummary || studentSummary) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            {loadingSummary ? (
+              <p className="text-center text-gray-400 py-8">กำลังโหลด...</p>
+            ) : studentSummary && (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-3xl mb-2">📋</div>
+                  <h3 className="font-semibold text-lg">{studentSummary.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{studentSummary.courseName}</p>
+                </div>
+
+                {/* progress */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-3">
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="text-gray-500">เรียนไปแล้ว</span>
+                    <span className="font-semibold">{studentSummary.lessonsUsed} / {studentSummary.lessonsTotal} ครั้ง</span>
+                  </div>
+                  {studentSummary.lessonsTotal > 0 && (
+                    <>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1">
+                        <div
+                          className={`h-2 rounded-full ${studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 ? 'bg-red-500' : studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 4 ? 'bg-amber-400' : 'bg-brand-500'}`}
+                          style={{ width: `${Math.min(100, Math.round((studentSummary.lessonsUsed / studentSummary.lessonsTotal) * 100))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>{Math.round((studentSummary.lessonsUsed / studentSummary.lessonsTotal) * 100)}%</span>
+                        <span className={studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 ? 'text-red-500 font-medium' : ''}>
+                          เหลือ {studentSummary.lessonsTotal - studentSummary.lessonsUsed} ครั้ง
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* history */}
+                {studentSummary.history.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 max-h-44 overflow-y-auto">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">ประวัติการเรียน</div>
+                    <div className="space-y-1.5">
+                      {studentSummary.history.map(h => {
+                        const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                        return (
+                          <div key={h.lesson_number} className="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-300">
+                            <span className="w-16 shrink-0 font-medium">ครั้งที่ {h.lesson_number}</span>
+                            <span className="text-gray-400">—</span>
+                            <span>{d}</span>
+                            {h.topic && <span className="text-gray-400 truncate">({h.topic})</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 && studentSummary.lessonsTotal > 0 && (
+                  <div className={`text-sm rounded-xl px-4 py-2.5 mb-4 ${studentSummary.lessonsUsed >= studentSummary.lessonsTotal ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'}`}>
+                    {studentSummary.lessonsUsed >= studentSummary.lessonsTotal
+                      ? '🎓 หมดคอร์สแล้ว! อย่าลืมแจ้งผู้ปกครองต่อคอร์ส'
+                      : '⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์ส'}
+                  </div>
+                )}
+
+                <button
+                  className="btn-outline w-full mb-2"
+                  onClick={async () => {
+                    const remaining = studentSummary.lessonsTotal - studentSummary.lessonsUsed
+                    const historyLines = studentSummary.history.map(h => {
+                      const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                      return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
+                    }).join('\n')
+                    const msg = [
+                      `📚 สรุปการเรียน Mando House`,
+                      `👤 น้อง${studentSummary.name}`,
+                      `📖 ${studentSummary.courseName}`,
+                      ``,
+                      `📋 ประวัติการเรียน`,
+                      historyLines || '  (ยังไม่มีประวัติ)',
+                      ``,
+                      `📊 เรียนไปแล้ว ${studentSummary.lessonsUsed}/${studentSummary.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
+                      studentSummary.lessonsUsed >= studentSummary.lessonsTotal
+                        ? `⚠️ หมดคอร์สแล้ว กรุณาติดต่อต่อคอร์สได้เลยนะคะ 🙏`
+                        : remaining <= 2
+                        ? `⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ 🙏`
+                        : `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
+                    ].join('\n')
+                    await navigator.clipboard.writeText(msg)
+                    alert('คัดลอกข้อความแล้ว ✅ นำไปวางใน LINE ผู้ปกครองได้เลย')
+                  }}
+                >
+                  📋 คัดลอกส่งผู้ปกครอง
+                </button>
+                <button className="btn-brand w-full" onClick={() => setStudentSummary(null)}>ปิด</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -949,6 +1079,11 @@ export default function CheckinPage() {
                       >📝</button>
                       <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
                       <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
+                      <button
+                        onClick={() => loadStudentSummary(c)}
+                        className="btn-outline btn-sm px-2 text-brand-500"
+                        title="สรุปส่งผู้ปกครอง"
+                      >📋</button>
                     </div>
                   </div>
                   {c.lesson_note && (
