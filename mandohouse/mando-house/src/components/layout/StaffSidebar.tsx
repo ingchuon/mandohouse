@@ -19,34 +19,33 @@ const navItems = [
   {
     group: 'นักเรียน',
     items: [
-      { href: '/staff/students',     label: 'ข้อมูลนักเรียน',      icon: '👥' },
-      { href: '/staff/checkin',      label: 'เช็กอิน / เช็กเอาท์', icon: '🕐' },
+      { href: '/staff/students', label: 'ข้อมูลนักเรียน',      icon: '👥' },
+      { href: '/staff/checkin',  label: 'เช็กอิน / เช็กเอาท์', icon: '🕐' },
     ],
   },
   {
     group: 'การสอน',
     items: [
-      { href: '/staff/teaching-report', label: 'รายงานชั่วโมงสอน', icon: '⏱' },
-      { href: '/staff/teachers', label: 'จัดการครู',     icon: '🧑‍🏫' },
-      { href: '/staff/schedule', label: 'ตารางสอน',        icon: '🗓' },
-      { href: '/staff/courses',  label: 'คอร์สและราคา',   icon: '📚' },
+      { href: '/staff/teaching-report', label: 'ชั่วโมงสอน',    icon: '⏱' },
+      { href: '/staff/teachers',        label: 'ครูผู้สอน',     icon: '🧑‍🏫' },
+      { href: '/staff/schedule',        label: 'ตารางสอน',       icon: '🗓' },
+      { href: '/staff/courses',         label: 'คอร์สและราคา',  icon: '📚' },
     ],
   },
   {
     group: 'การเงิน',
     items: [
       { href: '/staff/receipts', label: 'รายรับ',        icon: '🧾' },
-      { href: '/staff/books',    label: 'จัดการหนังสือ', icon: '📖' },
       { href: '/staff/expenses', label: 'รายจ่าย',       icon: '📤' },
-      { href: '/staff/import',   label: 'Import ข้อมูล', icon: '📥' },
+      { href: '/staff/settings', label: 'Finance',       icon: '💰' },
+      { href: '/staff/import',   label: 'Download file', icon: '📥' },
     ],
   },
   {
     group: 'ทีมงาน',
     items: [
-      { href: '/staff/team',     label: 'จัดการทีม',      icon: '🎓' },
-      { href: '/staff/settings', label: 'ตั้งค่ายอดเงิน', icon: '⚙️' },
-      { href: '/staff/help',     label: 'คู่มือการใช้งาน', icon: '📖' },
+      { href: '/staff/team', label: 'จัดการทีม',      icon: '🎓' },
+      { href: '/staff/help', label: 'คู่มือการใช้งาน', icon: '📖' },
     ],
   },
 ]
