@@ -8,8 +8,32 @@ import toast from 'react-hot-toast'
 export default function DashboardExport() {
   const supabase = createClient()
   const [loading, setLoading] = useState<string | null>(null)
-
   const [showMenu, setShowMenu] = useState(false)
+
+  // ตัวกรองเดือน — default = เดือนปัจจุบัน, '' = ทั้งหมด
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+
+  // สร้างรายการเดือนย้อนหลัง 24 เดือน + ตัวเลือก "ทั้งหมด"
+  const monthOptions = [
+    { value: '', label: 'ทั้งหมด (ไม่กรองเดือน)' },
+    ...Array.from({ length: 24 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+      return { value: val, label }
+    }),
+  ]
+
+  // helper กรอง array ตามเดือน
+  function filterByMonth<T extends Record<string, any>>(arr: T[], dateField: string): T[] {
+    if (!selectedMonth) return arr
+    return arr.filter(r => {
+      const v = r[dateField]
+      return typeof v === 'string' && v.slice(0, 7) === selectedMonth
+    })
+  }
 
   // ── 1. Export รายรับ-รายจ่าย ─────────────────────────────
   async function exportFinance() {
@@ -29,9 +53,11 @@ export default function DashboardExport() {
 
     toast.dismiss()
     const wb = XLSX.utils.book_new()
+    const filteredReceipts = filterByMonth(receipts ?? [], 'issued_at')
+    const filteredExpenses = filterByMonth(expenses ?? [], 'expense_date')
 
     // Sheet 1: รายรับ
-    const receiptRows = (receipts ?? []).map((r: any) => ({
+    const receiptRows = filteredReceipts.map((r: any) => ({
       'เลขที่ใบเสร็จ': r.receipt_number ?? '',
       'วันที่':        r.issued_at?.split('T')[0] ?? '',
       'ชื่อนักเรียน':  r.student?.nickname || r.student?.full_name || '',
@@ -45,7 +71,7 @@ export default function DashboardExport() {
     XLSX.utils.book_append_sheet(wb, ws1, 'รายรับ')
 
     // Sheet 2: รายจ่าย
-    const expenseRows = (expenses ?? []).map((e: any) => ({
+    const expenseRows = filteredExpenses.map((e: any) => ({
       'วันที่':       e.expense_date ?? '',
       'รายการ':       e.title ?? '',
       'หมวดหมู่':    (e.category as any)?.name ?? '',
@@ -57,8 +83,9 @@ export default function DashboardExport() {
     ws2['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 20 }]
     XLSX.utils.book_append_sheet(wb, ws2, 'รายจ่าย')
 
-    XLSX.writeFile(wb, `mando_finance_${new Date().toISOString().split('T')[0]}.xlsx`)
-    toast.success('Export รายรับ-รายจ่าย สำเร็จ')
+    const monthTag = selectedMonth || 'ทั้งหมด'
+    XLSX.writeFile(wb, `mando_finance_${monthTag}.xlsx`)
+    toast.success(`Export รายรับ-รายจ่าย ${selectedMonth ? monthOptions.find(m => m.value === selectedMonth)?.label : 'ทั้งหมด'} สำเร็จ`)
     setLoading(null)
     setShowMenu(false)
   }
@@ -79,17 +106,18 @@ export default function DashboardExport() {
 
     toast.dismiss()
     const wb = XLSX.utils.book_new()
+    const filteredCheckins = filterByMonth(checkins ?? [], 'check_in_at')
 
     // จัดกลุ่มตามนักเรียน
     const byStudent: Record<string, any[]> = {}
-    ;(checkins ?? []).forEach((c: any) => {
+    filteredCheckins.forEach((c: any) => {
       const name = c.student?.nickname || c.student?.full_name || 'ไม่ระบุ'
       if (!byStudent[name]) byStudent[name] = []
       byStudent[name].push(c)
     })
 
     // Sheet รวม
-    const allRows = (checkins ?? []).map((c: any, i: number) => {
+    const allRows = filteredCheckins.map((c: any, i: number) => {
       const inTime  = new Date(c.check_in_at)
       const outTime = c.check_out_at ? new Date(c.check_out_at) : null
       const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
@@ -130,8 +158,9 @@ export default function DashboardExport() {
       XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31))
     })
 
-    XLSX.writeFile(wb, `mando_checkins_${new Date().toISOString().split('T')[0]}.xlsx`)
-    toast.success(`Export การเข้าเรียน สำเร็จ ${Object.keys(byStudent).length} คน`)
+    const monthTag2 = selectedMonth || 'ทั้งหมด'
+    XLSX.writeFile(wb, `mando_checkins_${monthTag2}.xlsx`)
+    toast.success(`Export การเข้าเรียน ${selectedMonth ? monthOptions.find(m => m.value === selectedMonth)?.label : 'ทั้งหมด'} สำเร็จ ${Object.keys(byStudent).length} คน`)
     setLoading(null)
     setShowMenu(false)
   }
@@ -235,7 +264,21 @@ export default function DashboardExport() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Export ข้อมูล</p>
             </div>
 
-            <div className="p-2">
+            {/* ตัวเลือกเดือน */}
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs text-gray-500 mb-1.5">กรองตามเดือน</p>
+            <select
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-400"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+            >
+              {monthOptions.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="p-2">
               <button
                 onClick={exportFinance}
                 disabled={loading === 'finance'}
