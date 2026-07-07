@@ -80,6 +80,7 @@ export default function CheckinPage() {
     lessonHistory: { lesson_number: number; lesson_date: string; topic?: string }[]
   } | null>(null)
   const [listStudentFilter, setListStudentFilter] = useState('')
+  const [checkinPanelTab, setCheckinPanelTab] = useState<'list' | 'lookup'>('list')
   const [studentSummary, setStudentSummary] = useState<{
     name: string
     courseName: string
@@ -996,49 +997,6 @@ export default function CheckinPage() {
           </div>
         </div>
 
-        {/* Student lookup panel */}
-        <div className="md:col-span-2 card mb-0">
-          <div className="card-header">
-            <h3 className="font-medium text-gray-800 dark:text-gray-100">🔍 ดูสรุปรายคน</h3>
-          </div>
-          <div className="p-4">
-            <StudentLookup
-              students={students}
-              onSelect={async (student) => {
-                // หา enrollment active ล่าสุดของนักเรียนคนนี้
-                setLoadingSummary(true)
-                setStudentSummary(null)
-                const { data: enrollments } = await supabase
-                  .from('enrollments')
-                  .select('id, lessons_used, lessons_total, course:courses(name)')
-                  .eq('student_id', student.id)
-                  .eq('status', 'active')
-                  .order('created_at', { ascending: false })
-                  .limit(1)
-                const enroll = enrollments?.[0]
-                if (!enroll) {
-                  toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
-                  setLoadingSummary(false)
-                  return
-                }
-                const { data: historyData } = await supabase
-                  .from('lesson_logs')
-                  .select('lesson_number, lesson_date, topic')
-                  .eq('enrollment_id', enroll.id)
-                  .order('lesson_number', { ascending: true })
-                setStudentSummary({
-                  name: student.nickname || student.full_name || '?',
-                  courseName: (enroll.course as any)?.name || '—',
-                  lessonsUsed: enroll.lessons_used ?? 0,
-                  lessonsTotal: enroll.lessons_total ?? 0,
-                  history: historyData ?? [],
-                })
-                setLoadingSummary(false)
-              }}
-            />
-          </div>
-        </div>
-
         {/* Attendance panel */}
         <div className="md:col-span-2 card">
           <div className="card-header gap-2 flex-wrap">
@@ -1071,6 +1029,20 @@ export default function CheckinPage() {
             <span className="badge badge-green">{presentCount} คน</span>
           </div>
 
+          {/* Tab bar */}
+          <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-gray-100 dark:border-[#2a3245]">
+            <button
+              onClick={() => setCheckinPanelTab('list')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-all -mb-px border-b-2 ${checkinPanelTab === 'list' ? 'border-brand-600 text-brand-600 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >🗒 รายชื่อวันนี้</button>
+            <button
+              onClick={() => setCheckinPanelTab('lookup')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-all -mb-px border-b-2 ${checkinPanelTab === 'lookup' ? 'border-brand-600 text-brand-600 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >🔍 สรุปรายคน</button>
+          </div>
+
+          {/* ── TAB: รายชื่อวันนี้ ── */}
+          {checkinPanelTab === 'list' && <>
           {/* ช่องค้นหานักเรียนในรายการ */}
           {presentCount > 1 && (
             <div className="px-4 pt-3 pb-1">
@@ -1185,6 +1157,47 @@ export default function CheckinPage() {
               )
             })}
           </div>
+          </> /* end tab: รายชื่อวันนี้ */}
+
+          {/* ── TAB: สรุปรายคน ── */}
+          {checkinPanelTab === 'lookup' && (
+            <div className="p-4">
+              <StudentLookup
+                students={students}
+                onSelect={async (student) => {
+                  setLoadingSummary(true)
+                  setStudentSummary(null)
+                  const { data: enrollments } = await supabase
+                    .from('enrollments')
+                    .select('id, lessons_used, lessons_total, course:courses(name)')
+                    .eq('student_id', student.id)
+                    .eq('status', 'active')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                  const enroll = enrollments?.[0]
+                  if (!enroll) {
+                    toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
+                    setLoadingSummary(false)
+                    return
+                  }
+                  const { data: historyData } = await supabase
+                    .from('lesson_logs')
+                    .select('lesson_number, lesson_date, topic')
+                    .eq('enrollment_id', enroll.id)
+                    .order('lesson_number', { ascending: true })
+                  setStudentSummary({
+                    name: student.nickname || student.full_name || '?',
+                    courseName: (enroll.course as any)?.name || '—',
+                    lessonsUsed: enroll.lessons_used ?? 0,
+                    lessonsTotal: enroll.lessons_total ?? 0,
+                    history: historyData ?? [],
+                  })
+                  setLoadingSummary(false)
+                }}
+              />
+            </div>
+          )}
+
         </div>
       </div>
 
