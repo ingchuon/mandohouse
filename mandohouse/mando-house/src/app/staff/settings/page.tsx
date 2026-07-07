@@ -32,7 +32,6 @@ export default function FinancePage() {
   // ข้อมูลการเงิน
   const [receipts, setReceipts] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
-  const [allReceipts, setAllReceipts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // settings
@@ -44,7 +43,6 @@ export default function FinancePage() {
     const [
       { data: rec },
       { data: exp },
-      { data: allRec },
       { data: bal },
     ] = await Promise.all([
       supabase.from('receipts')
@@ -53,12 +51,10 @@ export default function FinancePage() {
       supabase.from('expenses')
         .select('id, title, amount, expense_date, payment_method, category:expense_categories(name, icon, color)')
         .order('expense_date', { ascending: false }),
-      supabase.from('receipts').select('amount'),
       supabase.from('monthly_balance').select('carry_over, total_carry_over').eq('month', currentMonth).single(),
     ])
     setReceipts(rec ?? [])
     setExpenses(exp ?? [])
-    setAllReceipts(allRec ?? [])
     if (bal) setSettingsForm({ carry_over: bal.carry_over ?? 0, total_carry_over: bal.total_carry_over ?? 0 })
     setLoading(false)
   }, [currentMonth])
@@ -77,7 +73,7 @@ export default function FinancePage() {
   const totalRevenue      = filteredReceipts.reduce((s, r) => s + Number(r.amount), 0)
   const totalExpenses     = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0)
   const profit            = totalRevenue - totalExpenses
-  const totalAllRevenue = settingsForm.total_carry_over + allReceipts.reduce((s, r) => s + Number(r.amount), 0)
+  const totalAllRevenue = settingsForm.total_carry_over + totalRevenue
   const bookRevenue       = filteredReceipts.reduce((s, r) => s + Number(r.book_fee ?? 0), 0)
   const courseRevenue     = totalRevenue - bookRevenue
 
