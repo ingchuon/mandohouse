@@ -228,7 +228,13 @@ export default function CheckinPage() {
     }
 
     const courseName = enroll?.course?.name ?? ''
-    const newLessonsUsed = (enroll?.lessons_used ?? 0) + (skipLessonCount ? 0 : 1)
+    // lessons_used ที่อัปเดตแล้ว — ดึงค่าใหม่จาก DB เพื่อความแม่นยำ
+    const { data: freshEnroll } = await supabase
+      .from('enrollments')
+      .select('lessons_used, lessons_total')
+      .eq('id', enrollmentId ?? '')
+      .single()
+    const newLessonsUsed = freshEnroll?.lessons_used ?? (enroll?.lessons_used ?? 0)
     const lessonNum = newLessonsUsed
 
     // ดึง lesson_number จริงจาก lesson_log ที่เพิ่งบันทึก
@@ -253,7 +259,7 @@ export default function CheckinPage() {
         lessonDate: checkinDateStr,
         lessonNumber: lastLog?.lesson_number ?? lessonNum,
         lessonsUsed: newLessonsUsed,
-        lessonsTotal: enroll?.lessons_total ?? 0,
+        lessonsTotal: freshEnroll?.lessons_total ?? enroll?.lessons_total ?? 0,
       })
     }
 
