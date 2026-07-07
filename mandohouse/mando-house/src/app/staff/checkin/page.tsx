@@ -10,6 +10,53 @@ interface Teacher {
   subject: string | null
 }
 
+type StudentOption = { id: string; full_name: string; nickname?: string | null }
+
+function StudentLookup({ students, onSelect }: {
+  students: StudentOption[]
+  onSelect: (s: StudentOption) => void
+}) {
+  const [search, setSearch] = useState('')
+  const filtered = search.trim().length > 0
+    ? students.filter(s => {
+        const q = search.toLowerCase()
+        return (s.nickname || '').toLowerCase().includes(q) || s.full_name.toLowerCase().includes(q)
+      })
+    : []
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        className="input text-sm"
+        placeholder="พิมพ์ชื่อหรือชื่อเล่นนักเรียน..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+      {filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-[#2a3245] rounded-xl shadow-lg z-30 max-h-52 overflow-y-auto">
+          {filtered.map(s => (
+            <button
+              key={s.id}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-[#2a3245] transition flex items-center gap-2"
+              onClick={() => { onSelect(s); setSearch('') }}
+            >
+              <span className="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-800 flex items-center justify-center text-brand-700 dark:text-brand-200 text-xs font-bold flex-shrink-0">
+                {(s.nickname || s.full_name).slice(0, 2)}
+              </span>
+              <span className="font-medium">{s.nickname || s.full_name}</span>
+              {s.nickname && <span className="text-gray-400 text-xs">{s.full_name}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {search.trim().length > 0 && filtered.length === 0 && (
+        <p className="mt-2 text-sm text-gray-400">ไม่พบนักเรียน "{search}"</p>
+      )}
+    </div>
+  )
+}
+
 export default function CheckinPage() {
   const supabase = createClient()
   const [students, setStudents] = useState<Student[]>([])
@@ -946,6 +993,49 @@ export default function CheckinPage() {
             >
               {loading ? 'กำลังบันทึก...' : isBackdate ? '📅 บันทึกย้อนหลัง' : '✓ เช็กอิน'}
             </button>
+          </div>
+        </div>
+
+        {/* Student lookup panel */}
+        <div className="md:col-span-2 card mb-0">
+          <div className="card-header">
+            <h3 className="font-medium text-gray-800 dark:text-gray-100">🔍 ดูสรุปรายคน</h3>
+          </div>
+          <div className="p-4">
+            <StudentLookup
+              students={students}
+              onSelect={async (student) => {
+                // หา enrollment active ล่าสุดของนักเรียนคนนี้
+                setLoadingSummary(true)
+                setStudentSummary(null)
+                const { data: enrollments } = await supabase
+                  .from('enrollments')
+                  .select('id, lessons_used, lessons_total, course:courses(name)')
+                  .eq('student_id', student.id)
+                  .eq('status', 'active')
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                const enroll = enrollments?.[0]
+                if (!enroll) {
+                  toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
+                  setLoadingSummary(false)
+                  return
+                }
+                const { data: historyData } = await supabase
+                  .from('lesson_logs')
+                  .select('lesson_number, lesson_date, topic')
+                  .eq('enrollment_id', enroll.id)
+                  .order('lesson_number', { ascending: true })
+                setStudentSummary({
+                  name: student.nickname || student.full_name || '?',
+                  courseName: (enroll.course as any)?.name || '—',
+                  lessonsUsed: enroll.lessons_used ?? 0,
+                  lessonsTotal: enroll.lessons_total ?? 0,
+                  history: historyData ?? [],
+                })
+                setLoadingSummary(false)
+              }}
+            />
           </div>
         </div>
 
