@@ -30,6 +30,7 @@ export default function CheckinPage() {
     lessonNumber: number
     lessonsUsed: number
     lessonsTotal: number
+    lessonHistory: { lesson_number: number; lesson_date: string; topic?: string }[]
   } | null>(null)
   const [listStudentFilter, setListStudentFilter] = useState('')
   const [now, setNow] = useState(new Date())
@@ -250,6 +251,13 @@ export default function CheckinPage() {
     const studentName = st?.nickname || st?.full_name || ''
     const checkinDateStr = isBackdate && customDate ? customDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
 
+    // ดึงประวัติการเรียนทั้งหมดของ enrollment นี้
+    const { data: historyData } = await supabase
+      .from('lesson_logs')
+      .select('lesson_number, lesson_date, topic')
+      .eq('enrollment_id', enrollmentId ?? '')
+      .order('lesson_number', { ascending: true })
+
     if (isBackdate) {
       toast.success('บันทึกย้อนหลังสำเร็จ!')
     } else {
@@ -260,6 +268,7 @@ export default function CheckinPage() {
         lessonNumber: lastLog?.lesson_number ?? lessonNum,
         lessonsUsed: newLessonsUsed,
         lessonsTotal: freshEnroll?.lessons_total ?? enroll?.lessons_total ?? 0,
+        lessonHistory: historyData ?? [],
       })
     }
 
@@ -518,6 +527,58 @@ export default function CheckinPage() {
               </div>
             )}
 
+            {checkinSummary.lessonHistory.length > 0 && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 max-h-40 overflow-y-auto">
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">📋 ประวัติการเรียน</div>
+                <div className="space-y-1.5">
+                  {checkinSummary.lessonHistory.map(h => {
+                    const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                    const isToday = h.lesson_number === checkinSummary.lessonNumber
+                    return (
+                      <div key={h.lesson_number} className={`flex items-baseline gap-2 text-xs ${isToday ? 'text-brand-600 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
+                        <span className="w-16 shrink-0">ครั้งที่ {h.lesson_number}</span>
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                        <span>{d}</span>
+                        {h.topic && <span className="text-gray-400 dark:text-gray-500 truncate">({h.topic})</span>}
+                        {isToday && <span className="ml-auto shrink-0">← วันนี้</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button
+              className="btn-outline w-full mb-2"
+              onClick={async () => {
+                const dateStr = new Date(checkinSummary.lessonDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+                const remaining = checkinSummary.lessonsTotal - checkinSummary.lessonsUsed
+                const historyLines = checkinSummary.lessonHistory.map(h => {
+                  const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                  return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
+                }).join('\n')
+                const msg = [
+                  `📚 สรุปการเรียน Mando House`,
+                  `👤 น้อง${checkinSummary.studentName}`,
+                  `📖 ${checkinSummary.courseName}`,
+                  ``,
+                  `📋 ประวัติการเรียน`,
+                  historyLines,
+                  ``,
+                  `📅 วันนี้: ครั้งที่ ${checkinSummary.lessonNumber} (${dateStr})`,
+                  `📊 เรียนไปแล้ว ${checkinSummary.lessonsUsed}/${checkinSummary.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
+                  checkinSummary.lessonsUsed >= checkinSummary.lessonsTotal
+                    ? `⚠️ ครั้งนี้เป็นครั้งสุดท้ายของคอร์สแล้ว กรุณาติดต่อต่อคอร์สได้เลยนะคะ 🙏`
+                    : remaining <= 2
+                    ? `⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ 🙏`
+                    : `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
+                ].join('\n')
+                await navigator.clipboard.writeText(msg)
+                alert('คัดลอกข้อความแล้ว ✅ นำไปวางใน LINE ผู้ปกครองได้เลย')
+              }}
+            >
+              📋 คัดลอกส่งผู้ปกครอง
+            </button>
             <button
               className="btn-brand w-full"
               onClick={() => setCheckinSummary(null)}
