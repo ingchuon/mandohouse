@@ -77,7 +77,7 @@ export default function FinancePage() {
   const totalRevenue      = filteredReceipts.reduce((s, r) => s + Number(r.amount), 0)
   const totalExpenses     = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0)
   const profit            = totalRevenue - totalExpenses
-  const totalAllRevenue   = allReceipts.reduce((s, r) => s + Number(r.amount), 0)
+  const totalAllRevenue = settingsForm.total_carry_over + allReceipts.reduce((s, r) => s + Number(r.amount), 0)
   const bookRevenue       = filteredReceipts.reduce((s, r) => s + Number(r.book_fee ?? 0), 0)
   const courseRevenue     = totalRevenue - bookRevenue
 
