@@ -23,6 +23,15 @@ export default function CheckinPage() {
   const [loading, setLoading] = useState(false)
   const [customDate, setCustomDate] = useState('')
   const [isBackdate, setIsBackdate] = useState(false)
+  const [checkinSummary, setCheckinSummary] = useState<{
+    studentName: string
+    courseName: string
+    lessonDate: string
+    lessonNumber: number
+    lessonsUsed: number
+    lessonsTotal: number
+  } | null>(null)
+  const [listStudentFilter, setListStudentFilter] = useState('')
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
   const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '', lesson_note: '' })
@@ -219,7 +228,34 @@ export default function CheckinPage() {
     }
 
     const courseName = enroll?.course?.name ?? ''
-    toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ!' : `เช็กอินสำเร็จ! ${courseName}`)
+    const newLessonsUsed = (enroll?.lessons_used ?? 0) + (skipLessonCount ? 0 : 1)
+    const lessonNum = newLessonsUsed
+
+    // ดึง lesson_number จริงจาก lesson_log ที่เพิ่งบันทึก
+    const { data: lastLog } = await supabase
+      .from('lesson_logs')
+      .select('lesson_number')
+      .eq('enrollment_id', enrollmentId ?? '')
+      .order('lesson_number', { ascending: false })
+      .limit(1)
+      .single()
+
+    const st = students.find(s => s.id === selectedStudent)
+    const studentName = st?.nickname || st?.full_name || ''
+    const checkinDateStr = isBackdate && customDate ? customDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+
+    if (isBackdate) {
+      toast.success('บันทึกย้อนหลังสำเร็จ!')
+    } else {
+      setCheckinSummary({
+        studentName,
+        courseName,
+        lessonDate: checkinDateStr,
+        lessonNumber: lastLog?.lesson_number ?? lessonNum,
+        lessonsUsed: newLessonsUsed,
+        lessonsTotal: enroll?.lessons_total ?? 0,
+      })
+    }
 
     setSelectedStudent('')
     setSelectedEnrollmentId('')
@@ -372,6 +408,13 @@ export default function CheckinPage() {
   const checkedOutCount = checkins.filter(c => c.check_out_at).length
   const stillInCount = checkins.filter(c => !c.check_out_at).length
 
+  const filteredCheckins = listStudentFilter
+    ? checkins.filter(c => {
+        const name = (c.student?.nickname || c.student?.full_name || '').toLowerCase()
+        return name.includes(listStudentFilter.toLowerCase())
+      })
+    : checkins
+
   const filteredStudents = students.filter(s =>
     !studentSearch ||
     (s.nickname ?? '').toLowerCase().includes(studentSearch.toLowerCase()) ||
@@ -402,6 +445,83 @@ export default function CheckinPage() {
 
   return (
     <div className="p-4 md:p-6">
+
+      {/* ── Popup สรุปหลังเช็กอิน ── */}
+      {checkinSummary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
+            <div className="text-4xl mb-3">✅</div>
+            <h3 className="font-semibold text-lg mb-1">เช็กอินสำเร็จ!</h3>
+            <p className="text-brand-600 font-semibold text-base mb-4">{checkinSummary.studentName}</p>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-5 text-left space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">คอร์ส</span>
+                <span className="font-medium text-right max-w-[60%]">{checkinSummary.courseName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">วันที่</span>
+                <span className="font-medium">{new Date(checkinSummary.lessonDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">ครั้งที่</span>
+                <span className="font-semibold text-brand-600 text-base">{checkinSummary.lessonNumber}</span>
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2.5">
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-gray-500">เรียนไปแล้ว</span>
+                  <span className="font-semibold">
+                    {checkinSummary.lessonsUsed} / {checkinSummary.lessonsTotal} ครั้ง
+                  </span>
+                </div>
+                {checkinSummary.lessonsTotal > 0 && (
+                  <>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1">
+                      <div
+                        className={`h-2 rounded-full transition-all ${
+                          checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 2
+                            ? 'bg-red-500'
+                            : checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 4
+                            ? 'bg-amber-400'
+                            : 'bg-brand-500'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.round((checkinSummary.lessonsUsed / checkinSummary.lessonsTotal) * 100))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>{Math.round((checkinSummary.lessonsUsed / checkinSummary.lessonsTotal) * 100)}%</span>
+                      <span className={checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 2 ? 'text-red-500 font-medium' : ''}>
+                        เหลือ {checkinSummary.lessonsTotal - checkinSummary.lessonsUsed} ครั้ง
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 2 && checkinSummary.lessonsTotal > 0 && (
+              <div className={`text-sm rounded-xl px-4 py-2.5 mb-4 ${
+                checkinSummary.lessonsUsed >= checkinSummary.lessonsTotal
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                  : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+              }`}>
+                {checkinSummary.lessonsUsed >= checkinSummary.lessonsTotal
+                  ? '🎓 นี่คือครั้งสุดท้ายของคอร์สนี้แล้ว! อย่าลืมแจ้งผู้ปกครองต่อคอร์สด้วยนะคะ'
+                  : `⚠️ เหลือครั้งเรียนน้อยมาก — แนะนำต่อคอร์สเพิ่ม`
+                }
+              </div>
+            )}
+
+            <button
+              className="btn-brand w-full"
+              onClick={() => setCheckinSummary(null)}
+            >
+              รับทราบ
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-lg md:text-xl font-semibold mb-1">เช็กอิน / เช็กเอาท์</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
 
@@ -664,6 +784,33 @@ export default function CheckinPage() {
             <span className="badge badge-green">{presentCount} คน</span>
           </div>
 
+          {/* ช่องค้นหานักเรียนในรายการ */}
+          {presentCount > 1 && (
+            <div className="px-4 pt-3 pb-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <input
+                  type="text"
+                  className="input text-sm pl-8 py-1.5"
+                  placeholder="ค้นหาชื่อนักเรียน..."
+                  value={listStudentFilter}
+                  onChange={e => setListStudentFilter(e.target.value)}
+                />
+                {listStudentFilter && (
+                  <button
+                    onClick={() => setListStudentFilter('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                  >✕</button>
+                )}
+              </div>
+              {listStudentFilter && (
+                <p className="text-xs text-gray-400 mt-1.5 px-1">
+                  แสดง {filteredCheckins.length} จาก {presentCount} คน
+                </p>
+              )}
+            </div>
+          )}
+
           {presentCount > 0 && (
             <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-1.5">
@@ -694,7 +841,12 @@ export default function CheckinPage() {
                 {isToday ? 'ยังไม่มีการเช็กอินวันนี้' : `ไม่มีข้อมูลวันที่ ${formatDateTH(selectedDate)}`}
               </p>
             )}
-            {checkins.map(c => {
+            {checkins.length > 0 && filteredCheckins.length === 0 && (
+              <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
+                ไม่พบ "{listStudentFilter}"
+              </p>
+            )}
+            {filteredCheckins.map(c => {
               const name = c.student?.nickname || c.student?.full_name || '?'
               const inTime = new Date(c.check_in_at)
               const outTime = c.check_out_at ? new Date(c.check_out_at) : null
