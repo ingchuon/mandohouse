@@ -19,9 +19,8 @@ const navItems = [
   {
     group: 'นักเรียน',
     items: [
-      { href: '/staff/students',     label: 'ข้อมูลนักเรียน',   icon: '👥' },
+      { href: '/staff/students',     label: 'ข้อมูลนักเรียน',      icon: '👥' },
       { href: '/staff/checkin',      label: 'เช็กอิน / เช็กเอาท์', icon: '🕐' },
-      { href: '/staff/lessons',      label: 'นับครั้งการเรียน', icon: '📅' },
     ],
   },
   {
@@ -36,7 +35,7 @@ const navItems = [
   {
     group: 'การเงิน',
     items: [
-      { href: '/staff/receipts', label: 'ออกใบเสร็จ',   icon: '🧾' },
+      { href: '/staff/receipts', label: 'รายรับ',        icon: '🧾' },
       { href: '/staff/books',    label: 'จัดการหนังสือ', icon: '📖' },
       { href: '/staff/expenses', label: 'รายจ่าย',       icon: '📤' },
       { href: '/staff/import',   label: 'Import ข้อมูล', icon: '📥' },
