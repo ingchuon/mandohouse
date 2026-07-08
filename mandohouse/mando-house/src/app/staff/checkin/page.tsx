@@ -256,13 +256,15 @@ export default function CheckinPage() {
         }
       }
 
-      // นับจำนวน lesson_logs จริงๆ ใน enrollment นี้ แล้ว +1 (กันซ้ำจาก race condition)
-      const { count: logCount } = await supabase
-        .from('lesson_logs')
+      // คำนวณ lesson_number จากจำนวน checkins ที่เกิดขึ้นก่อนหรือในวันนี้
+      // วิธีนี้ทำให้เช็กอินย้อนหลังได้ lesson_number ที่ถูกต้องเสมอ
+      const { count: checkinsBefore } = await supabase
+        .from('checkins')
         .select('*', { count: 'exact', head: true })
         .eq('enrollment_id', enrollmentId)
+        .lte('check_in_at', checkinTime)
 
-      const nextLesson = (logCount ?? 0) + 1
+      const nextLesson = checkinsBefore ?? 1
 
       const { error: logError } = await supabase.from('lesson_logs').insert({
         enrollment_id: enrollmentId,
@@ -276,10 +278,42 @@ export default function CheckinPage() {
         homework: homework || null,
       })
 
+      // ถ้าเป็นการย้อนหลัง ต้อง renumber lesson_logs ทั้งหมดของ enrollment นี้
+      // เพื่อให้ครั้งที่แทรกกลางไม่ทำให้เลขซ้ำ
+      if (isBackdate && !logError) {
+        const { data: allCheckins } = await supabase
+          .from('checkins')
+          .select('id, check_in_at, check_in_at')
+          .eq('enrollment_id', enrollmentId)
+          .order('check_in_at', { ascending: true })
+
+        if (allCheckins) {
+          const { data: allLogs } = await supabase
+            .from('lesson_logs')
+            .select('id, lesson_date')
+            .eq('enrollment_id', enrollmentId)
+            .order('lesson_date', { ascending: true })
+
+          if (allLogs) {
+            for (let i = 0; i < allLogs.length; i++) {
+              await supabase
+                .from('lesson_logs')
+                .update({ lesson_number: i + 1 })
+                .eq('id', allLogs[i].id)
+            }
+          }
+        }
+      }
+
       if (!logError && enroll && !skipLessonCount) {
+        // อัปเดต lessons_used จาก count จริงของ checkins
+        const { count: totalCheckins } = await supabase
+          .from('checkins')
+          .select('*', { count: 'exact', head: true })
+          .eq('enrollment_id', enrollmentId)
         await supabase
           .from('enrollments')
-          .update({ lessons_used: enroll.lessons_used + 1 })
+          .update({ lessons_used: totalCheckins ?? enroll.lessons_used + 1 })
           .eq('id', enrollmentId)
       }
     }
