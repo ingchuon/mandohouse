@@ -113,8 +113,14 @@ export default function TeachersPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-lg md:text-xl font-semibold">จัดการครู</h1>
-        <button onClick={openAdd} className="btn-brand">+ เพิ่มครู</button>
+        <h1 className="text-lg md:text-xl font-semibold">ครูผู้สอน</h1>
+        <div className="flex gap-2">
+          <a href="/teach" target="_blank" rel="noopener noreferrer"
+            className="btn-outline text-sm flex items-center gap-1.5">
+            🧑‍🏫 หน้าครูกรอกข้อมูล
+          </a>
+          <button onClick={openAdd} className="btn-brand">+ เพิ่มครู</button>
+        </div>
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">
         เพิ่ม/แก้ไขข้อมูลครู ตั้งวิชาที่สอน และดู/รีเซ็ต PIN สำหรับเข้าหน้า{' '}
