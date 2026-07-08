@@ -113,14 +113,14 @@ export default async function DashboardPage() {
 
   // สีธีม — ฟ้า เหลือง สลับกัน
   const financeCards = [
-    { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, bg: '#3B9EE0', href: '/staff/receipts' },
-    { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              bg: '#F5A623', href: '/staff/expenses' },
+    { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, color: '#3B9EE0', href: '/staff/receipts' },
+    { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              color: '#F5A623', href: '/staff/expenses' },
     { label: profitThisMonth >= 0 ? 'กำไร' : 'ขาดทุน',
       value: `${profitThisMonth >= 0 ? '+' : ''}${formatThaiMoney(profitThisMonth)}`,
       sub: 'รายรับ − รายจ่าย',
-      bg: profitThisMonth >= 0 ? '#3BBFAD' : '#E05A5A',
+      color: profitThisMonth >= 0 ? '#3BBFAD' : '#E05A5A',
       href: '/staff/settings' },
-    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, bg: '#7C6FF7', href: '/staff/settings' },
+    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, color: '#7C6FF7', href: '/staff/settings' },
   ]
 
   return (
@@ -139,11 +139,12 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {financeCards.map((c, i) => (
           <Link key={i} href={c.href}
-            className="rounded-2xl p-4 text-white shadow-sm hover:-translate-y-0.5 transition-all"
-            style={{ background: c.bg }}>
-            <div className="text-xs font-medium opacity-80 mb-1">{c.label}</div>
-            <div className="text-xl md:text-2xl font-bold truncate leading-tight">{c.value}</div>
-            <div className="text-[10px] opacity-70 mt-1">{c.sub}</div>
+            style={{ background: c.color, borderRadius: '1rem', padding: '1rem', color: 'white', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,.1)', transition: 'transform .15s', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={e => (e.currentTarget.style.transform = '')}>
+            <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '4px' }}>{c.label}</div>
+            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.value}</div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '4px' }}>{c.sub}</div>
           </Link>
         ))}
       </div>
@@ -188,8 +189,8 @@ export default async function DashboardPage() {
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
               {/* กราฟเต็มพื้นที่ */}
-              <div className="flex-1 min-h-0 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+              <div className="flex-1 min-h-0 flex items-center justify-center py-2">
+                <svg viewBox="0 0 100 100" style={{ width: '75%', maxWidth: '200px', height: 'auto' }}>
                   {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
                   <circle cx={CX} cy={CY} r={R_IN - 1} fill="white" className="dark:fill-[#242d3f]" />
                   <text x={CX} y={CY - 3} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
