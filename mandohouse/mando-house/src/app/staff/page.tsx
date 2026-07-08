@@ -36,22 +36,18 @@ export default async function DashboardPage() {
     { data: allActiveEnrollments },
     { data: recentCheckins },
     { data: expensesThisMonth },
-    { data: cashBalanceSettings },
-    { data: receiptsAfterAnchor },
-    { data: expensesAfterAnchor },
     { data: allReceipts6m },
     { data: allExpenses6m },
+    { data: monthlyBalance },
   ] = await Promise.all([
     supabase.from('receipts').select('amount, subject, book_fee, enrollment:enrollments(course:courses(name))').gte('issued_at', firstOfMonth),
     supabase.from('receipts').select('amount').gte('issued_at', firstOfLastMonth).lte('issued_at', lastOfLastMonth),
     supabase.from('enrollments').select('*, student:students(nickname,full_name), course:courses(name)').eq('status', 'active'),
     supabase.from('checkins').select('*, student:students(nickname,full_name)').gte('check_in_at', todayStart).lte('check_in_at', todayEnd).order('check_in_at', { ascending: false }).limit(10),
     supabase.from('expenses').select('amount').gte('expense_date', firstOfMonth),
-    supabase.from('cash_balance_settings').select('anchor_date, anchor_amount').eq('id', 1).single(),
-    supabase.from('receipts').select('amount, issued_at'),
-    supabase.from('expenses').select('amount, expense_date'),
     supabase.from('receipts').select('amount, issued_at').gte('issued_at', last6Months[0].key + '-01'),
     supabase.from('expenses').select('amount, expense_date').gte('expense_date', last6Months[0].key + '-01'),
+    supabase.from('monthly_balance').select('carry_over').eq('month', currentMonth).single(),
   ])
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
@@ -60,11 +56,8 @@ export default async function DashboardPage() {
   const expensesTotal   = expensesThisMonth?.reduce((s: number, e: any) => s + Number(e.amount), 0) ?? 0
   const profitThisMonth = revenueThisMonth - expensesTotal
 
-  const anchorDate   = (cashBalanceSettings as any)?.anchor_date ?? today
-  const anchorAmount = Number((cashBalanceSettings as any)?.anchor_amount ?? 0)
-  const receiptsSinceAnchor = (receiptsAfterAnchor ?? []).filter((r: any) => r.issued_at > anchorDate).reduce((s: number, r: any) => s + Number(r.amount), 0)
-  const expensesSinceAnchor = (expensesAfterAnchor ?? []).filter((e: any) => e.expense_date > anchorDate).reduce((s: number, e: any) => s + Number(e.amount), 0)
-  const cashBalance = anchorAmount + receiptsSinceAnchor - expensesSinceAnchor
+  const carryOver = Number((monthlyBalance as any)?.carry_over ?? 0)
+  const cashBalance = carryOver + revenueThisMonth - expensesTotal
 
   // กราฟ 6 เดือน
   const chartData = last6Months.map(m => ({
@@ -120,7 +113,7 @@ export default async function DashboardPage() {
       sub: 'รายรับ − รายจ่าย',
       color: profitThisMonth >= 0 ? '#3BBFAD' : '#E05A5A',
       href: '/staff/settings' },
-    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, color: '#7C6FF7', href: '/staff/settings' },
+    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `ยกมา ${formatThaiMoney(carryOver)}`, color: '#7C6FF7', href: '/staff/settings' },
   ]
 
   return (
