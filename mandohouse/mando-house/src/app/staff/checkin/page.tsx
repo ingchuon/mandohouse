@@ -256,15 +256,13 @@ export default function CheckinPage() {
         }
       }
 
-      const { data: last } = await supabase
+      // นับจำนวน lesson_logs จริงๆ ใน enrollment นี้ แล้ว +1 (กันซ้ำจาก race condition)
+      const { count: logCount } = await supabase
         .from('lesson_logs')
-        .select('lesson_number')
+        .select('*', { count: 'exact', head: true })
         .eq('enrollment_id', enrollmentId)
-        .order('lesson_number', { ascending: false })
-        .limit(1)
-        .single()
 
-      const nextLesson = (last?.lesson_number ?? 0) + 1
+      const nextLesson = (logCount ?? 0) + 1
 
       const { error: logError } = await supabase.from('lesson_logs').insert({
         enrollment_id: enrollmentId,
