@@ -83,10 +83,12 @@ export default function CheckinPage() {
   const [checkinPanelTab, setCheckinPanelTab] = useState<'list' | 'lookup'>('list')
   const [studentSummary, setStudentSummary] = useState<{
     name: string
-    courseName: string
-    lessonsUsed: number
-    lessonsTotal: number
-    history: { lesson_number: number; lesson_date: string; topic?: string }[]
+    courses: {
+      courseName: string
+      lessonsUsed: number
+      lessonsTotal: number
+      history: { lesson_number: number; lesson_date: string; topic?: string }[]
+    }[]
   } | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [now, setNow] = useState(new Date())
@@ -475,26 +477,45 @@ export default function CheckinPage() {
     return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
-  async function loadStudentSummary(c: any) {
+  async function loadStudentSummaryById(studentId: string, name: string) {
     setLoadingSummary(true)
     setStudentSummary(null)
-    const enrollmentId = c.enrollment_id
-    const name = c.student?.nickname || c.student?.full_name || '?'
-    const courseName = c.enrollment?.course?.name || '—'
+    // ดึงทุกคอร์สที่ยัง active ของนักเรียนคนนี้
+    const { data: enrollments } = await supabase
+      .from('enrollments')
+      .select('id, lessons_used, lessons_total, course:courses(name)')
+      .eq('student_id', studentId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: true })
 
-    const [{ data: freshEnroll }, { data: historyData }] = await Promise.all([
-      supabase.from('enrollments').select('lessons_used, lessons_total').eq('id', enrollmentId ?? '').single(),
-      supabase.from('lesson_logs').select('lesson_number, lesson_date, topic').eq('enrollment_id', enrollmentId ?? '').order('lesson_number', { ascending: true }),
-    ])
+    if (!enrollments || enrollments.length === 0) {
+      toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
+      setLoadingSummary(false)
+      return
+    }
 
-    setStudentSummary({
-      name,
-      courseName,
-      lessonsUsed: freshEnroll?.lessons_used ?? 0,
-      lessonsTotal: freshEnroll?.lessons_total ?? 0,
-      history: historyData ?? [],
-    })
+    // ดึงประวัติของแต่ละคอร์สแยกกัน
+    const courses = await Promise.all(enrollments.map(async (en: any) => {
+      const { data: hist } = await supabase
+        .from('lesson_logs')
+        .select('lesson_number, lesson_date, topic')
+        .eq('enrollment_id', en.id)
+        .order('lesson_number', { ascending: true })
+      return {
+        courseName: (en.course as any)?.name || '—',
+        lessonsUsed: en.lessons_used ?? 0,
+        lessonsTotal: en.lessons_total ?? 0,
+        history: hist ?? [],
+      }
+    }))
+
+    setStudentSummary({ name, courses })
     setLoadingSummary(false)
+  }
+
+  async function loadStudentSummary(c: any) {
+    const name = c.student?.nickname || c.student?.full_name || '?'
+    if (c.student_id) await loadStudentSummaryById(c.student_id, name)
   }
 
   const presentCount = checkins.length
@@ -670,7 +691,7 @@ export default function CheckinPage() {
       {/* ── Modal สรุปรายคน (กดจากรายการเช็กอิน) ── */}
       {(loadingSummary || studentSummary) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl max-h-[90vh] overflow-y-auto">
             {loadingSummary ? (
               <p className="text-center text-gray-400 py-8">กำลังโหลด...</p>
             ) : studentSummary && (
@@ -678,83 +699,90 @@ export default function CheckinPage() {
                 <div className="text-center mb-4">
                   <div className="text-3xl mb-2">📋</div>
                   <h3 className="font-semibold text-lg">{studentSummary.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{studentSummary.courseName}</p>
+                  <p className="text-xs text-gray-400">{studentSummary.courses.length} คอร์สที่กำลังเรียน</p>
                 </div>
 
-                {/* progress */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-3">
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className="text-gray-500">เรียนไปแล้ว</span>
-                    <span className="font-semibold">{studentSummary.lessonsUsed} / {studentSummary.lessonsTotal} ครั้ง</span>
-                  </div>
-                  {studentSummary.lessonsTotal > 0 && (
-                    <>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1">
-                        <div
-                          className={`h-2 rounded-full ${studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 ? 'bg-red-500' : studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 4 ? 'bg-amber-400' : 'bg-brand-500'}`}
-                          style={{ width: `${Math.min(100, Math.round((studentSummary.lessonsUsed / studentSummary.lessonsTotal) * 100))}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-400">
-                        <span>{Math.round((studentSummary.lessonsUsed / studentSummary.lessonsTotal) * 100)}%</span>
-                        <span className={studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 ? 'text-red-500 font-medium' : ''}>
-                          เหลือ {studentSummary.lessonsTotal - studentSummary.lessonsUsed} ครั้ง
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                {/* วนแต่ละคอร์ส */}
+                {studentSummary.courses.map((course, ci) => {
+                  const remaining = course.lessonsTotal - course.lessonsUsed
+                  const pct = course.lessonsTotal > 0 ? Math.round((course.lessonsUsed / course.lessonsTotal) * 100) : 0
+                  return (
+                    <div key={ci} className="mb-4 border border-gray-100 dark:border-gray-700 rounded-xl p-3">
+                      <div className="font-medium text-sm text-brand-700 dark:text-brand-300 mb-2">📖 {course.courseName}</div>
 
-                {/* history */}
-                {studentSummary.history.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 max-h-44 overflow-y-auto">
-                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">ประวัติการเรียน</div>
-                    <div className="space-y-1.5">
-                      {studentSummary.history.map(h => {
-                        const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-                        return (
-                          <div key={h.lesson_number} className="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-300">
-                            <span className="w-16 shrink-0 font-medium">ครั้งที่ {h.lesson_number}</span>
-                            <span className="text-gray-400">—</span>
-                            <span>{d}</span>
-                            {h.topic && <span className="text-gray-400 truncate">({h.topic})</span>}
+                      {/* progress */}
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-gray-500">เรียนไปแล้ว</span>
+                        <span className="font-semibold">{course.lessonsUsed} / {course.lessonsTotal} ครั้ง</span>
+                      </div>
+                      {course.lessonsTotal > 0 && (
+                        <>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1">
+                            <div className={`h-2 rounded-full ${remaining <= 2 ? 'bg-red-500' : remaining <= 4 ? 'bg-amber-400' : 'bg-brand-500'}`}
+                              style={{ width: `${Math.min(100, pct)}%` }} />
                           </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
+                          <div className="flex justify-between text-xs text-gray-400 mb-2">
+                            <span>{pct}%</span>
+                            <span className={remaining <= 2 ? 'text-red-500 font-medium' : ''}>เหลือ {remaining} ครั้ง</span>
+                          </div>
+                        </>
+                      )}
 
-                {studentSummary.lessonsTotal - studentSummary.lessonsUsed <= 2 && studentSummary.lessonsTotal > 0 && (
-                  <div className={`text-sm rounded-xl px-4 py-2.5 mb-4 ${studentSummary.lessonsUsed >= studentSummary.lessonsTotal ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'}`}>
-                    {studentSummary.lessonsUsed >= studentSummary.lessonsTotal
-                      ? '🎓 หมดคอร์สแล้ว! อย่าลืมแจ้งผู้ปกครองต่อคอร์ส'
-                      : '⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์ส'}
-                  </div>
-                )}
+                      {/* history */}
+                      {course.history.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 max-h-36 overflow-y-auto">
+                          <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">ประวัติการเรียน</div>
+                          <div className="space-y-1">
+                            {course.history.map(h => {
+                              const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                              return (
+                                <div key={h.lesson_number} className="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                  <span className="w-14 shrink-0 font-medium">ครั้งที่ {h.lesson_number}</span>
+                                  <span className="text-gray-400">—</span>
+                                  <span>{d}</span>
+                                  {h.topic && <span className="text-gray-400 truncate">({h.topic})</span>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {remaining <= 2 && course.lessonsTotal > 0 && (
+                        <div className={`text-xs rounded-lg px-3 py-2 mt-2 ${course.lessonsUsed >= course.lessonsTotal ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'}`}>
+                          {course.lessonsUsed >= course.lessonsTotal ? '🎓 หมดคอร์สแล้ว! แนะนำต่อคอร์ส' : '⚠️ เหลือน้อยมาก แนะนำต่อคอร์ส'}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
 
                 <button
                   className="btn-outline w-full mb-2"
                   onClick={async () => {
-                    const remaining = studentSummary.lessonsTotal - studentSummary.lessonsUsed
-                    const historyLines = studentSummary.history.map(h => {
-                      const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-                      return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
-                    }).join('\n')
+                    const blocks = studentSummary.courses.map(course => {
+                      const remaining = course.lessonsTotal - course.lessonsUsed
+                      const historyLines = course.history.map(h => {
+                        const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+                        return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
+                      }).join('\n')
+                      const note = course.lessonsUsed >= course.lessonsTotal
+                        ? '  ⚠️ หมดคอร์สแล้ว กรุณาต่อคอร์สนะคะ'
+                        : remaining <= 2 ? '  ⚠️ เหลือน้อยมาก แนะนำต่อคอร์สนะคะ' : ''
+                      return [
+                        `📖 ${course.courseName}`,
+                        historyLines || '  (ยังไม่มีประวัติ)',
+                        `  📊 เรียนไปแล้ว ${course.lessonsUsed}/${course.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
+                        note,
+                      ].filter(Boolean).join('\n')
+                    }).join('\n\n')
                     const msg = [
                       `📚 สรุปการเรียน Mando House`,
                       `👤 น้อง${studentSummary.name}`,
-                      `📖 ${studentSummary.courseName}`,
                       ``,
-                      `📋 ประวัติการเรียน`,
-                      historyLines || '  (ยังไม่มีประวัติ)',
+                      blocks,
                       ``,
-                      `📊 เรียนไปแล้ว ${studentSummary.lessonsUsed}/${studentSummary.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
-                      studentSummary.lessonsUsed >= studentSummary.lessonsTotal
-                        ? `⚠️ หมดคอร์สแล้ว กรุณาติดต่อต่อคอร์สได้เลยนะคะ 🙏`
-                        : remaining <= 2
-                        ? `⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ 🙏`
-                        : `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
+                      `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
                     ].join('\n')
                     await navigator.clipboard.writeText(msg)
                     alert('คัดลอกข้อความแล้ว ✅ นำไปวางใน LINE ผู้ปกครองได้เลย')
@@ -1157,42 +1185,16 @@ export default function CheckinPage() {
               )
             })}
           </div>
-          </> /* end tab: รายชื่อวันนี้ */}
+          </>}
 
           {/* ── TAB: สรุปรายคน ── */}
           {checkinPanelTab === 'lookup' && (
             <div className="p-4">
               <StudentLookup
                 students={students}
-                onSelect={async (student) => {
-                  setLoadingSummary(true)
-                  setStudentSummary(null)
-                  const { data: enrollments } = await supabase
-                    .from('enrollments')
-                    .select('id, lessons_used, lessons_total, course:courses(name)')
-                    .eq('student_id', student.id)
-                    .eq('status', 'active')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                  const enroll = enrollments?.[0]
-                  if (!enroll) {
-                    toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
-                    setLoadingSummary(false)
-                    return
-                  }
-                  const { data: historyData } = await supabase
-                    .from('lesson_logs')
-                    .select('lesson_number, lesson_date, topic')
-                    .eq('enrollment_id', enroll.id)
-                    .order('lesson_number', { ascending: true })
-                  setStudentSummary({
-                    name: student.nickname || student.full_name || '?',
-                    courseName: (enroll.course as any)?.name || '—',
-                    lessonsUsed: enroll.lessons_used ?? 0,
-                    lessonsTotal: enroll.lessons_total ?? 0,
-                    history: historyData ?? [],
-                  })
-                  setLoadingSummary(false)
+                onSelect={(student) => {
+                  const name = student.nickname || student.full_name || '?'
+                  loadStudentSummaryById(student.id, name)
                 }}
               />
             </div>
