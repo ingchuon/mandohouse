@@ -111,12 +111,20 @@ export default async function DashboardPage() {
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
     .slice(0, 8)
 
-  // สีธีม cream/yellow แต่เขียว→ฟ้า
-  const cardBg = 'bg-white dark:bg-[#242d3f]'
-  const sectionBorder = 'border border-[#F0E9D8] dark:border-[#2a3245]'
+  // สีธีม — ฟ้า เหลือง สลับกัน
+  const financeCards = [
+    { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, bg: '#3B9EE0', href: '/staff/receipts' },
+    { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              bg: '#F5A623', href: '/staff/expenses' },
+    { label: profitThisMonth >= 0 ? 'กำไร' : 'ขาดทุน',
+      value: `${profitThisMonth >= 0 ? '+' : ''}${formatThaiMoney(profitThisMonth)}`,
+      sub: 'รายรับ − รายจ่าย',
+      bg: profitThisMonth >= 0 ? '#3BBFAD' : '#E05A5A',
+      href: '/staff/settings' },
+    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, bg: '#7C6FF7', href: '/staff/settings' },
+  ]
 
   return (
-    <div className="p-4 md:p-6 flex flex-col gap-4" style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--surface, #FAF7F2)' }}>
+    <div className="p-4 md:p-6 flex flex-col gap-4 bg-[#FAF7F2] dark:bg-[#1a2030]" style={{ minHeight: 'calc(100vh - 56px)' }}>
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -127,20 +135,12 @@ export default async function DashboardPage() {
         <DashboardExport />
       </div>
 
-      {/* ── แถว 1: การ์ดการเงิน 4 ใบ ── */}
+      {/* ── แถว 1: การ์ดการเงิน ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, bg: 'bg-[#3B9EE0]', href: '/staff/receipts' },
-          { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              bg: 'bg-[#F5A623]', href: '/staff/expenses' },
-          { label: profitThisMonth >= 0 ? 'กำไร' : 'ขาดทุน',
-            value: `${profitThisMonth >= 0 ? '+' : ''}${formatThaiMoney(profitThisMonth)}`,
-            sub: 'รายรับ − รายจ่าย',
-            bg: profitThisMonth >= 0 ? 'bg-[#3BBFAD]' : 'bg-[#E05A5A]',
-            href: '/staff/settings' },
-          { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `อ้างอิง ${formatDate(anchorDate, 'd MMM yy')}`, bg: 'bg-[#7C6FF7]', href: '/staff/settings' },
-        ].map((c, i) => (
+        {financeCards.map((c, i) => (
           <Link key={i} href={c.href}
-            className={`${c.bg} rounded-2xl p-4 text-white shadow-sm hover:-translate-y-0.5 transition-all`}>
+            className="rounded-2xl p-4 text-white shadow-sm hover:-translate-y-0.5 transition-all"
+            style={{ background: c.bg }}>
             <div className="text-xs font-medium opacity-80 mb-1">{c.label}</div>
             <div className="text-xl md:text-2xl font-bold truncate leading-tight">{c.value}</div>
             <div className="text-[10px] opacity-70 mt-1">{c.sub}</div>
@@ -149,12 +149,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── แถว 2: กราฟแท่ง ── */}
-      <div className={`${cardBg} ${sectionBorder} rounded-2xl p-4 shadow-sm`}>
+      <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">📊 รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
           <div className="flex gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block bg-[#3B9EE0]"></span>รายรับ</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block bg-[#F5A623]"></span>รายจ่าย</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#3B9EE0' }}></span>รายรับ</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#F5A623' }}></span>รายจ่าย</span>
           </div>
         </div>
         <div className="flex items-end gap-2 md:gap-4 h-28">
@@ -177,9 +177,9 @@ export default async function DashboardPage() {
       {/* ── แถว 3: กราฟวงกลม + เช็กอิน + ใกล้หมด ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
 
-        {/* กราฟวงกลม — ใหญ่เต็มการ์ด */}
-        <div className={`${cardBg} ${sectionBorder} rounded-2xl p-4 shadow-sm flex flex-col`}>
-          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">🎯 รายได้ตามวิชาเดือนนี้</div>
+        {/* กราฟวงกลม — เต็มการ์ด */}
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
+          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">🎯 รายได้ตามวิชาเดือนนี้</div>
           {pieTotal === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center">
               <div className="text-3xl mb-1">📭</div>
@@ -187,15 +187,17 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
-              <div className="flex-1 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" style={{ width: '100%', maxWidth: '220px', height: 'auto' }}>
+              {/* กราฟเต็มพื้นที่ */}
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
                   {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
                   <circle cx={CX} cy={CY} r={R_IN - 1} fill="white" className="dark:fill-[#242d3f]" />
                   <text x={CX} y={CY - 3} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
                   <text x={CX} y={CY + 6} textAnchor="middle" style={{ fontSize: '8px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">{formatThaiMoney(pieTotal)}</text>
                 </svg>
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-2 border-t border-gray-100 dark:border-[#2a3245]">
+              {/* legend */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-2 border-t border-gray-100 dark:border-[#2a3245] flex-shrink-0">
                 {pieData.map(d => (
                   <div key={d.key} className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
@@ -209,10 +211,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* เช็กอิน */}
-        <div className={`${cardBg} ${sectionBorder} rounded-2xl p-4 shadow-sm flex flex-col`}>
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">🕐 เช็กอินวันนี้</div>
-            <Link href="/staff/checkin" className="text-[11px] text-[#3B9EE0] hover:underline font-medium">จัดการ →</Link>
+            <Link href="/staff/checkin" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>จัดการ →</Link>
           </div>
           {!(recentCheckins ?? []).length ? (
             <div className="flex-1 flex flex-col items-center justify-center">
@@ -239,10 +241,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* ใกล้หมดคอร์ส */}
-        <div className={`${cardBg} ${sectionBorder} rounded-2xl p-4 shadow-sm flex flex-col`}>
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">⚠️ ใกล้หมดคอร์ส</div>
-            <Link href="/staff/alerts" className="text-[11px] text-[#3B9EE0] hover:underline font-medium">ดูทั้งหมด →</Link>
+            <Link href="/staff/alerts" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูทั้งหมด →</Link>
           </div>
           {urgentExpiring.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center">
@@ -273,6 +275,7 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+
       </div>
     </div>
   )
