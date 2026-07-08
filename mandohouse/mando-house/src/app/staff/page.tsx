@@ -179,23 +179,26 @@ export default async function DashboardPage() {
               <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* กราฟเต็มพื้นที่ */}
-              <div className="flex-1 min-h-0 flex items-center justify-center py-2">
-                <svg viewBox="0 0 100 100" style={{ width: '75%', maxWidth: '200px', height: 'auto' }}>
+            <div className="flex-1 flex items-center gap-3 min-h-0">
+              {/* กราฟวงกลม */}
+              <div className="flex-1 min-w-0 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', maxHeight: '240px' }}>
                   {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
                   <circle cx={CX} cy={CY} r={R_IN - 1} fill="white" className="dark:fill-[#242d3f]" />
-                  <text x={CX} y={CY - 3} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
-                  <text x={CX} y={CY + 6} textAnchor="middle" style={{ fontSize: '8px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">{formatThaiMoney(pieTotal)}</text>
+                  <text x={CX} y={CY - 4} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
+                  <text x={CX} y={CY + 6} textAnchor="middle" style={{ fontSize: '8.5px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">{formatThaiMoney(pieTotal)}</text>
                 </svg>
               </div>
-              {/* legend */}
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-2 border-t border-gray-100 dark:border-[#2a3245] flex-shrink-0">
+              {/* legend ขวา */}
+              <div className="flex flex-col gap-3 flex-shrink-0 w-28">
                 {pieData.map(d => (
-                  <div key={d.key} className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
-                    <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">{d.label}</span>
-                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-100">{Math.round((d.value / pieTotal) * 100)}%</span>
+                  <div key={d.key} className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                      <span className="text-xs text-gray-600 dark:text-gray-300">{d.label}</span>
+                    </div>
+                    <div className="pl-4 text-sm font-bold text-gray-800 dark:text-gray-100">{Math.round((d.value / pieTotal) * 100)}%</div>
+                    <div className="pl-4 text-[10px] text-gray-400">{formatThaiMoney(d.value)}</div>
                   </div>
                 ))}
               </div>
