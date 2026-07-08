@@ -139,9 +139,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {financeCards.map((c, i) => (
           <Link key={i} href={c.href}
-            style={{ background: c.color, borderRadius: '1rem', padding: '1rem', color: 'white', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,.1)', transition: 'transform .15s', textDecoration: 'none' }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = '')}>
+            style={{ background: c.color, borderRadius: '1rem', padding: '1rem', color: 'white', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,.1)', textDecoration: 'none' }}
+            className="hover:-translate-y-0.5 transition-transform">
             <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '4px' }}>{c.label}</div>
             <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.value}</div>
             <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '4px' }}>{c.sub}</div>
