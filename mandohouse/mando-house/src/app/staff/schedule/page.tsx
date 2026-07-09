@@ -184,6 +184,9 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold">ตารางสอน</h1>
+          <a href="/staff/schedule/connect" className="btn-outline text-sm flex items-center gap-1.5">
+            🗓 เชื่อมต่อ Google Calendar
+          </a>
           <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
         </div>
         <div className="flex items-center gap-2">
