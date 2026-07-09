@@ -184,14 +184,14 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold">ตารางสอน</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
+        </div>
+        <div className="flex items-center gap-2">
           <a href="/staff/schedule/connect"
             className="text-sm px-4 py-2 rounded-xl text-white font-medium hover:-translate-y-0.5 transition-all"
             style={{ background: '#3B9EE0' }}>
             Connect Google Calendar
           </a>
-          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">{rooms.length} ห้อง · {schedules.length} คลาส/สัปดาห์</p>
-        </div>
-        <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-gray-200 dark:border-[#3a4560] overflow-hidden">
             <button
               onClick={() => setSelectedDay(null)}
