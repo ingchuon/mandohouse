@@ -139,30 +139,30 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* ซ้าย — การ์ดการเงิน */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-2 gap-3 content-start items-start">
           {financeCards.map((c, i) => (
             <Link key={i} href={c.href}
-              className="relative overflow-hidden rounded-2xl p-5 hover:-translate-y-0.5 transition-transform"
-              style={{ background: c.bg, color: c.text, minHeight: '100px', textDecoration: 'none' }}>
+              className="relative overflow-hidden rounded-2xl hover:-translate-y-0.5 transition-transform"
+              style={{ background: c.bg, color: c.text, textDecoration: 'none', padding: '14px 16px', display: 'block' }}>
 
               {/* วงกลมตกแต่งมุมขวาล่าง */}
               <span style={{
-                position: 'absolute', right: '-18px', bottom: '-18px',
-                width: '90px', height: '90px', borderRadius: '999px',
+                position: 'absolute', right: '-14px', bottom: '-14px',
+                width: '70px', height: '70px', borderRadius: '999px',
                 background: 'rgba(255,255,255,0.28)',
               }} />
 
               <div style={{
-                width: '28px', height: '28px', borderRadius: '8px',
+                width: '26px', height: '26px', borderRadius: '8px',
                 background: 'rgba(255,255,255,0.45)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '14px', marginBottom: '8px',
+                fontSize: '13px', marginBottom: '6px',
               }}>{c.icon}</div>
 
-              <div style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.75, fontWeight: 600 }}>
+              <div style={{ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.75, fontWeight: 600 }}>
                 {c.label}
               </div>
-              <div style={{ fontSize: 'clamp(17px,2vw,24px)', fontWeight: 800, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 'clamp(16px,1.8vw,22px)', fontWeight: 800, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {c.value}
               </div>
               <div style={{ fontSize: '10px', opacity: 0.65, marginTop: '2px' }}>{c.sub}</div>
