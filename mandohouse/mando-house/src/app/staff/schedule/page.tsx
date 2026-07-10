@@ -22,7 +22,10 @@ type AccountInfo = {
   count: number
 }
 
+type ViewMode = 'day' | 'week' | 'month'
+
 const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์']
+const DAYS_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
 const ACCOUNT_META: Record<string, { label: string; color: string }> = {
   main: { label: 'ปฏิทินหลัก', color: '#3B9EE0' },
@@ -34,17 +37,34 @@ function metaOf(tag: string) {
   return ACCOUNT_META[tag] ?? { label: tag, color: '#9CA3AF' }
 }
 
-/** วันอาทิตย์ของสัปดาห์ที่ date อยู่ (เวลา 00:00) */
-function startOfWeek(date: Date) {
+function startOfDay(date: Date) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function startOfWeek(date: Date) {
+  const d = startOfDay(date)
   d.setDate(d.getDate() - d.getDay())
+  return d
+}
+
+function startOfMonth(date: Date) {
+  const d = startOfDay(date)
+  d.setDate(1)
   return d
 }
 
 function addDays(date: Date, n: number) {
   const d = new Date(date)
   d.setDate(d.getDate() + n)
+  return d
+}
+
+function addMonths(date: Date, n: number) {
+  const d = new Date(date)
+  d.setDate(1)
+  d.setMonth(d.getMonth() + n)
   return d
 }
 
@@ -63,29 +83,64 @@ function fmtTime(iso: string) {
 }
 
 function fmtThaiDate(date: Date) {
+  return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+}
+
+function fmtThaiMonth(date: Date) {
+  return date.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+}
+
+function fmtThaiFull(date: Date) {
   return date.toLocaleDateString('th-TH', {
+    weekday: 'long',
     day: 'numeric',
-    month: 'short',
+    month: 'long',
+    year: 'numeric',
   })
 }
 
 export default function SchedulePage() {
-  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
+  const [view, setView] = useState<ViewMode>('week')
+  const [cursor, setCursor] = useState<Date>(() => startOfDay(new Date()))
   const [events, setEvents] = useState<GCalEvent[]>([])
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
   const [hidden, setHidden] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [errMsg, setErrMsg] = useState('')
 
-  const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart])
+  // อ่าน ?view= และ ?date= จาก URL (เช่น คลิกมาจากการ์ดปฏิทินใน Dashboard)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const v = sp.get('view')
+    const d = sp.get('date')
+    if (v === 'day' || v === 'week' || v === 'month') setView(v)
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const parsed = new Date(`${d}T00:00:00`)
+      if (!isNaN(parsed.getTime())) setCursor(parsed)
+    }
+  }, [])
+
+  // ช่วงเวลาที่ต้องดึงตาม view
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    if (view === 'day') {
+      const s = startOfDay(cursor)
+      return { rangeStart: s, rangeEnd: addDays(s, 1) }
+    }
+    if (view === 'week') {
+      const s = startOfWeek(cursor)
+      return { rangeStart: s, rangeEnd: addDays(s, 7) }
+    }
+    const gridStart = startOfWeek(startOfMonth(cursor))
+    return { rangeStart: gridStart, rangeEnd: addDays(gridStart, 42) }
+  }, [view, cursor])
 
   const load = useCallback(async () => {
     setLoading(true)
     setErrMsg('')
     try {
       const params = new URLSearchParams({
-        from: weekStart.toISOString(),
-        to: weekEnd.toISOString(),
+        from: rangeStart.toISOString(),
+        to: rangeEnd.toISOString(),
       })
       const res = await fetch(`/api/calendar/events?${params.toString()}`, {
         cache: 'no-store',
@@ -104,7 +159,7 @@ export default function SchedulePage() {
     } finally {
       setLoading(false)
     }
-  }, [weekStart, weekEnd])
+  }, [rangeStart, rangeEnd])
 
   useEffect(() => {
     load()
@@ -116,9 +171,11 @@ export default function SchedulePage() {
     )
   }
 
-  const visibleEvents = events.filter((e) => !hidden.includes(e.account))
+  const visibleEvents = useMemo(
+    () => events.filter((e) => !hidden.includes(e.account)),
+    [events, hidden]
+  )
 
-  // จัดกลุ่มตามวัน (คีย์ = YYYY-MM-DD)
   const byDay = useMemo(() => {
     const map: Record<string, GCalEvent[]> = {}
     for (const e of visibleEvents) {
@@ -129,20 +186,41 @@ export default function SchedulePage() {
     return map
   }, [visibleEvents])
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const todayKey = ymd(new Date())
+
+  const step = (dir: number) => {
+    if (view === 'day') setCursor(addDays(cursor, dir))
+    else if (view === 'week') setCursor(addDays(cursor, dir * 7))
+    else setCursor(addMonths(cursor, dir))
+  }
+
+  const goToday = () => setCursor(startOfDay(new Date()))
+
+  const openDay = (date: Date) => {
+    setCursor(startOfDay(date))
+    setView('day')
+  }
+
+  const headerLabel = () => {
+    if (view === 'day') return fmtThaiFull(cursor)
+    if (view === 'week') {
+      const s = startOfWeek(cursor)
+      return `${fmtThaiDate(s)} – ${fmtThaiDate(addDays(s, 6))}`
+    }
+    return fmtThaiMonth(cursor)
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] dark:bg-[#1a2030] p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">
-              ตารางสอน (Google Calendar)
+              ตารางสอน
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {fmtThaiDate(weekStart)} – {fmtThaiDate(addDays(weekStart, 6))}
+              {headerLabel()}
               {' · '}
               <a
                 href="/staff/schedule/connect"
@@ -153,24 +231,48 @@ export default function SchedulePage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View switcher */}
+            <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+              {(['day', 'week', 'month'] as ViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className="px-3 py-2 text-sm"
+                  style={
+                    view === v
+                      ? { backgroundColor: '#3B9EE0', color: '#ffffff' }
+                      : undefined
+                  }
+                >
+                  <span
+                    className={
+                      view === v ? '' : 'text-gray-600 dark:text-gray-300'
+                    }
+                  >
+                    {v === 'day' ? 'วัน' : v === 'week' ? 'สัปดาห์' : 'เดือน'}
+                  </span>
+                </button>
+              ))}
+            </div>
+
             <button
-              onClick={() => setWeekStart(addDays(weekStart, -7))}
+              onClick={() => step(-1)}
               className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
             >
-              ← ก่อนหน้า
+              ←
             </button>
             <button
-              onClick={() => setWeekStart(startOfWeek(new Date()))}
+              onClick={goToday}
               className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
             >
-              สัปดาห์นี้
+              วันนี้
             </button>
             <button
-              onClick={() => setWeekStart(addDays(weekStart, 7))}
+              onClick={() => step(1)}
               className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
             >
-              ถัดไป →
+              →
             </button>
             <button
               onClick={load}
@@ -201,9 +303,7 @@ export default function SchedulePage() {
                   {m.label}
                 </span>
                 <span className="text-gray-400 text-xs">({a.count})</span>
-                {!a.ok && (
-                  <span className="text-red-500 text-xs">token เสีย</span>
-                )}
+                {!a.ok && <span className="text-red-500 text-xs">token เสีย</span>}
               </button>
             )
           })}
@@ -224,9 +324,17 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {!loading && (
+        {/* ---------- DAY VIEW ---------- */}
+        {!loading && view === 'day' && (
+          <DayView date={cursor} events={byDay[ymd(cursor)] ?? []} />
+        )}
+
+        {/* ---------- WEEK VIEW ---------- */}
+        {!loading && view === 'week' && (
           <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-            {weekDays.map((day, i) => {
+            {Array.from({ length: 7 }, (_, i) =>
+              addDays(startOfWeek(cursor), i)
+            ).map((day, i) => {
               const key = ymd(day)
               const list = byDay[key] ?? []
               const isToday = key === todayKey
@@ -236,63 +344,26 @@ export default function SchedulePage() {
                   className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-3 min-h-[140px]"
                   style={isToday ? { borderColor: '#3B9EE0' } : undefined}
                 >
-                  <div className="mb-2 pb-2 border-b border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => openDay(day)}
+                    className="w-full text-left mb-2 pb-2 border-b border-gray-100 dark:border-gray-700"
+                  >
                     <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                       {DAYS[i]}
                     </div>
                     <div className="text-xs text-gray-400">
                       {fmtThaiDate(day)}
                     </div>
-                  </div>
+                  </button>
 
                   {list.length === 0 && (
                     <div className="text-xs text-gray-400 py-2">ไม่มีคลาส</div>
                   )}
 
                   <div className="space-y-2">
-                    {list.map((e) => {
-                      const m = metaOf(e.account)
-                      return (
-                        <div
-                          key={e.id}
-                          className="rounded-lg p-2 text-xs"
-                          style={{
-                            backgroundColor: `${m.color}1A`,
-                            borderLeft: `3px solid ${m.color}`,
-                            opacity: e.cancelled ? 0.5 : 1,
-                          }}
-                        >
-                          <div
-                            className="font-medium text-gray-800 dark:text-gray-100"
-                            style={
-                              e.cancelled
-                                ? { textDecoration: 'line-through' }
-                                : undefined
-                            }
-                          >
-                            {e.title}
-                          </div>
-                          <div className="text-gray-500 dark:text-gray-400 mt-0.5">
-                            {e.allDay
-                              ? 'ทั้งวัน'
-                              : `${fmtTime(e.start)} - ${fmtTime(e.end)}`}
-                          </div>
-                          <div className="text-[10px] mt-0.5" style={{ color: m.color }}>
-                            {m.label}
-                          </div>
-                          {e.meetLink && (
-                            <a
-                              href={e.meetLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] underline text-blue-600 dark:text-blue-400"
-                            >
-                              เข้า Google Meet
-                            </a>
-                          )}
-                        </div>
-                      )
-                    })}
+                    {list.map((e) => (
+                      <EventChip key={e.id} e={e} />
+                    ))}
                   </div>
                 </div>
               )
@@ -300,11 +371,201 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {!loading && visibleEvents.length === 0 && !errMsg && (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            ไม่มี event ในสัปดาห์นี้
+        {/* ---------- MONTH VIEW ---------- */}
+        {!loading && view === 'month' && (
+          <div className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-2 md:p-3">
+            <div className="grid grid-cols-7 mb-1">
+              {DAYS_SHORT.map((d) => (
+                <div
+                  key={d}
+                  className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 42 }, (_, i) =>
+                addDays(startOfWeek(startOfMonth(cursor)), i)
+              ).map((day) => {
+                const key = ymd(day)
+                const list = byDay[key] ?? []
+                const inMonth = day.getMonth() === cursor.getMonth()
+                const isToday = key === todayKey
+                return (
+                  <button
+                    key={key}
+                    onClick={() => openDay(day)}
+                    className="rounded-lg p-1.5 min-h-[68px] md:min-h-[92px] text-left border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition"
+                    style={{
+                      opacity: inMonth ? 1 : 0.35,
+                      backgroundColor: isToday
+                        ? 'rgba(59,158,224,0.10)'
+                        : undefined,
+                      borderColor: isToday ? '#3B9EE0' : undefined,
+                    }}
+                  >
+                    <div className="text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                      {day.getDate()}
+                    </div>
+
+                    <div className="space-y-0.5">
+                      {list.slice(0, 2).map((e) => {
+                        const m = metaOf(e.account)
+                        return (
+                          <div
+                            key={e.id}
+                            className="text-[9px] md:text-[10px] truncate rounded px-1"
+                            style={{
+                              backgroundColor: `${m.color}22`,
+                              color: m.color,
+                              textDecoration: e.cancelled
+                                ? 'line-through'
+                                : undefined,
+                            }}
+                          >
+                            {e.allDay ? '' : `${fmtTime(e.start)} `}
+                            {e.title}
+                          </div>
+                        )
+                      })}
+                      {list.length > 2 && (
+                        <div className="text-[9px] text-gray-400 px-1">
+                          +{list.length - 2} คลาส
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
+
+        {!loading &&
+          visibleEvents.length === 0 &&
+          !errMsg &&
+          view !== 'month' && (
+            <div className="text-center py-8 text-gray-400 text-sm">
+              ไม่มี event ในช่วงนี้
+            </div>
+          )}
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- sub components ---------------- */
+
+function EventChip({ e }: { e: GCalEvent }) {
+  const m = metaOf(e.account)
+  return (
+    <div
+      className="rounded-lg p-2 text-xs"
+      style={{
+        backgroundColor: `${m.color}1A`,
+        borderLeft: `3px solid ${m.color}`,
+        opacity: e.cancelled ? 0.5 : 1,
+      }}
+    >
+      <div
+        className="font-medium text-gray-800 dark:text-gray-100"
+        style={e.cancelled ? { textDecoration: 'line-through' } : undefined}
+      >
+        {e.title}
+      </div>
+      <div className="text-gray-500 dark:text-gray-400 mt-0.5">
+        {e.allDay ? 'ทั้งวัน' : `${fmtTime(e.start)} - ${fmtTime(e.end)}`}
+      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: m.color }}>
+        {m.label}
+      </div>
+      {e.meetLink && (
+        <a
+          href={e.meetLink}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] underline text-blue-600 dark:text-blue-400"
+        >
+          เข้า Google Meet
+        </a>
+      )}
+    </div>
+  )
+}
+
+function DayView({ date, events }: { date: Date; events: GCalEvent[] }) {
+  const sorted = [...events].sort((a, b) => a.start.localeCompare(b.start))
+
+  return (
+    <div className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100">
+          {fmtThaiFull(date)}
+        </h2>
+        <span className="text-sm text-gray-400">{sorted.length} คลาส</span>
+      </div>
+
+      {sorted.length === 0 && (
+        <div className="text-center py-10 text-gray-400 text-sm">
+          วันนี้ไม่มีคลาส
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {sorted.map((e) => {
+          const m = metaOf(e.account)
+          return (
+            <div
+              key={e.id}
+              className="flex items-start gap-3 p-3 rounded-lg"
+              style={{
+                backgroundColor: `${m.color}12`,
+                borderLeft: `4px solid ${m.color}`,
+                opacity: e.cancelled ? 0.5 : 1,
+              }}
+            >
+              <div className="w-24 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-200">
+                {e.allDay ? 'ทั้งวัน' : fmtTime(e.start)}
+                {!e.allDay && (
+                  <div className="text-xs text-gray-400 font-normal">
+                    ถึง {fmtTime(e.end)}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-medium text-gray-800 dark:text-gray-100"
+                  style={
+                    e.cancelled ? { textDecoration: 'line-through' } : undefined
+                  }
+                >
+                  {e.title}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: m.color }}>
+                  {m.label}
+                </div>
+                {e.location && (
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    📍 {e.location}
+                  </div>
+                )}
+                {e.meetLink && (
+                  <a
+                    href={e.meetLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs underline text-blue-600 dark:text-blue-400"
+                  >
+                    เข้า Google Meet
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
