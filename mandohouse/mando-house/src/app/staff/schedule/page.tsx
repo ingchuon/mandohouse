@@ -28,7 +28,7 @@ const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร
 const DAYS_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
 const ACCOUNT_META: Record<string, { label: string; color: string }> = {
-  main: { label: 'ปฏิทินหลัก', color: '#3B9EE0' },
+  main: { label: 'ครูในสถาบัน', color: '#3B9EE0' },
   aom: { label: 'ครูออม', color: '#F5A623' },
   nalin: { label: 'ครูบี', color: '#7C6FF7' },
 }
