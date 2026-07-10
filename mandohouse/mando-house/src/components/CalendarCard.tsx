@@ -74,18 +74,6 @@ export default function CalendarCard() {
     return map
   }, [events])
 
-  // streak — วันติดกันย้อนหลังที่มีคลาส
-  const streak = useMemo(() => {
-    let count = 0
-    const d = new Date()
-    while (count < 30) {
-      if (!(byDay[ymd(d)]?.length)) break
-      count++
-      d.setDate(d.getDate() - 1)
-    }
-    return count
-  }, [byDay])
-
   const monthTotal = useMemo(() =>
     Object.entries(byDay)
       .filter(([k]) => k.slice(0,7) === `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}`)
@@ -95,7 +83,7 @@ export default function CalendarCard() {
   const goDay = (day: Date) => router.push(`/staff/schedule?view=day&date=${ymd(day)}`)
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] shadow-sm p-4 flex flex-col gap-3 h-full">
+    <div className="rounded-2xl bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] shadow-sm p-4 flex flex-col gap-2">
 
       {/* header */}
       <div className="flex items-center justify-between">
@@ -126,7 +114,7 @@ export default function CalendarCard() {
       </div>
 
       {/* grid */}
-      <div className="grid grid-cols-7 gap-y-1.5 flex-1">
+      <div className="grid grid-cols-7 gap-y-1">
         {Array.from({length:42}, (_,i) => addDays(gridStart,i)).map(day => {
           const key = ymd(day)
           const list = byDay[key] ?? []
@@ -162,34 +150,15 @@ export default function CalendarCard() {
         })}
       </div>
 
-      {/* streak bar */}
-      <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex-wrap">
-        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">🔥 Teaching Streak</span>
-        <div className="flex gap-0.5 flex-1 min-w-[100px]">
-          {Array.from({length:20}, (_,i) => {
-            const d = addDays(new Date(), -(19-i))
-            const has = (byDay[ymd(d)]?.length ?? 0) > 0
-            return (
-              <div key={i} className="flex-1 h-2 rounded-sm"
-                style={{ backgroundColor: has ? '#1a1a2e' : '#E5E7EB' }} />
-            )
-          })}
-        </div>
-        <span className="text-[10px] text-gray-400 shrink-0">
-          ต่อเนื่อง <b className="text-gray-700 dark:text-gray-200">{streak}</b> · เดือนนี้ <b className="text-gray-700 dark:text-gray-200">{monthTotal}</b>
+      <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700 mt-1">
+        <span className="text-[10px] text-gray-400">
+          {loading ? 'กำลังโหลด...' : `เดือนนี้ ${monthTotal} คลาส`}
         </span>
+        <button onClick={() => router.push('/staff/schedule')}
+          className="text-[10px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>
+          ดูตารางสอน →
+        </button>
       </div>
-
-      {/* CTA */}
-      <button
-        onClick={() => router.push('/staff/schedule')}
-        className="w-full rounded-xl py-2.5 text-white text-sm font-medium"
-        style={{ backgroundColor: '#1a1a2e' }}
-      >
-        📅 ดูตารางสอนทั้งหมด
-      </button>
-
-      {loading && <div className="text-center text-[10px] text-gray-400">กำลังโหลด...</div>}
     </div>
   )
 }
