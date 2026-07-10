@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatThaiMoney, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import DashboardExport from '@/components/layout/DashboardExport'
+import CalendarCard from '@/components/CalendarCard'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -67,7 +68,7 @@ export default async function DashboardPage() {
   }))
   const chartMax = Math.max(...chartData.flatMap(d => [d.rev, d.exp]), 1)
 
-  // กราฟวงกลม — path arc ไม่มีรอยโหว่
+  // กราฟวงกลม
   const subjectPalette: Record<string, string> = { chi: '#FB7185', math: '#FBBF24', eng: '#38BDF8', other: '#A78BFA' }
   const subjectLabels:  Record<string, string> = { chi: 'จีน', math: 'คณิต', eng: 'อังกฤษ', other: 'อื่นๆ' }
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
@@ -104,7 +105,6 @@ export default async function DashboardPage() {
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
     .slice(0, 8)
 
-  // สีธีม — ฟ้า เหลือง สลับกัน
   const financeCards = [
     { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, color: '#3B9EE0', href: '/staff/receipts' },
     { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              color: '#F5A623', href: '/staff/expenses' },
@@ -167,10 +167,10 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── แถว 3: กราฟวงกลม + เช็กอิน + ใกล้หมด ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
+      {/* ── แถว 3: กราฟวงกลม + ปฏิทิน ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* กราฟวงกลม — เต็มการ์ด */}
+        {/* กราฟวงกลม */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">🎯 รายได้ตามวิชาเดือนนี้</div>
           {pieTotal === 0 ? (
@@ -180,16 +180,14 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center gap-3 min-h-0">
-              {/* กราฟวงกลม */}
               <div className="flex-1 min-w-0 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', maxHeight: '240px' }}>
+                <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', maxHeight: '200px' }}>
                   {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
                   <circle cx={CX} cy={CY} r={R_IN - 1} fill="white" className="dark:fill-[#242d3f]" />
                   <text x={CX} y={CY - 4} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
                   <text x={CX} y={CY + 6} textAnchor="middle" style={{ fontSize: '8.5px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">{formatThaiMoney(pieTotal)}</text>
                 </svg>
               </div>
-              {/* legend ขวา */}
               <div className="flex flex-col gap-3 flex-shrink-0 w-28">
                 {pieData.map(d => (
                   <div key={d.key} className="flex flex-col gap-0.5">
@@ -205,6 +203,14 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* การ์ดปฏิทิน — Client Component */}
+        <CalendarCard />
+
+      </div>
+
+      {/* ── แถว 4: เช็กอิน + ใกล้หมดคอร์ส ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* เช็กอิน */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
