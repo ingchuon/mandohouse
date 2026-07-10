@@ -19,7 +19,7 @@ const ACCOUNT_COLOR: Record<string, string> = {
   nalin: '#7C6FF7',
 }
 const ACCOUNT_LABEL: Record<string, string> = {
-  main: 'ปฏิทินหลัก',
+  main: 'ครูในสถาบัน',
   aom: 'ครูออม',
   nalin: 'ครูบี',
 }
