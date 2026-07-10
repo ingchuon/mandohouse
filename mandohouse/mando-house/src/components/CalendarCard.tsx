@@ -83,7 +83,7 @@ export default function CalendarCard() {
   const goDay = (day: Date) => router.push(`/staff/schedule?view=day&date=${ymd(day)}`)
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] shadow-sm p-4 flex flex-col gap-2">
+    <div className="rounded-2xl bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] shadow-sm p-3 flex flex-col gap-1.5">
 
       {/* header */}
       <div className="flex items-center justify-between">
@@ -109,13 +109,13 @@ export default function CalendarCard() {
       {/* weekday */}
       <div className="grid grid-cols-7">
         {DAYS_SHORT.map(d => (
-          <div key={d} className="text-center text-[10px] text-gray-400 font-medium pb-1">{d}</div>
+          <div key={d} className="text-center text-[9px] text-gray-400 font-medium pb-0.5">{d}</div>
         ))}
       </div>
 
-      {/* grid */}
-      <div className="grid grid-cols-7 gap-y-1">
-        {Array.from({length:42}, (_,i) => addDays(gridStart,i)).map(day => {
+      {/* grid — 5 แถว 35 วัน */}
+      <div className="grid grid-cols-7">
+        {Array.from({length:35}, (_,i) => addDays(gridStart,i)).map(day => {
           const key = ymd(day)
           const list = byDay[key] ?? []
           const inMonth = day.getMonth() === cursor.getMonth()
@@ -125,10 +125,10 @@ export default function CalendarCard() {
 
           return (
             <button key={key} onClick={() => goDay(day)}
-              className="flex flex-col items-center gap-0.5 rounded-lg py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
+              className="flex flex-col items-center gap-0 rounded-md py-0.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
               style={{ opacity: inMonth ? 1 : 0.25 }}>
               <span
-                className="w-7 h-7 flex items-center justify-center rounded-full text-xs"
+                className="w-6 h-6 flex items-center justify-center rounded-full text-[11px]"
                 style={
                   isToday
                     ? { backgroundColor: '#1a1a2e', color: '#ffffff', fontWeight: 700 }
