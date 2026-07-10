@@ -4,6 +4,7 @@ import { formatThaiMoney, formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import DashboardExport from '@/components/layout/DashboardExport'
 import CalendarCard from '@/components/CalendarCard'
+import TodayScheduleCard from '@/components/TodayScheduleCard'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -60,7 +61,6 @@ export default async function DashboardPage() {
   const carryOver = Number((monthlyBalance as any)?.carry_over ?? 0)
   const cashBalance = carryOver + revenueThisMonth - expensesTotal
 
-  // กราฟ 6 เดือน
   const chartData = last6Months.map(m => ({
     ...m,
     rev: (allReceipts6m ?? []).filter((r: any) => String(r.issued_at ?? '').slice(0, 7) === m.key).reduce((s: number, r: any) => s + Number(r.amount), 0),
@@ -68,7 +68,6 @@ export default async function DashboardPage() {
   }))
   const chartMax = Math.max(...chartData.flatMap(d => [d.rev, d.exp]), 1)
 
-  // กราฟวงกลม
   const subjectPalette: Record<string, string> = { chi: '#FB7185', math: '#FBBF24', eng: '#38BDF8', other: '#A78BFA' }
   const subjectLabels:  Record<string, string> = { chi: 'จีน', math: 'คณิต', eng: 'อังกฤษ', other: 'อื่นๆ' }
   const subjectRevenue: Record<string, number> = { chi: 0, math: 0, eng: 0, other: 0 }
@@ -105,15 +104,23 @@ export default async function DashboardPage() {
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
     .slice(0, 8)
 
+  // การ์ดการเงินสีพาสเทล — เรียง 2x2
   const financeCards = [
-    { label: 'รายรับ',   value: formatThaiMoney(revenueThisMonth), sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}%`, color: '#3B9EE0', href: '/staff/receipts' },
-    { label: 'รายจ่าย', value: formatThaiMoney(expensesTotal),     sub: currentMonth,              color: '#F5A623', href: '/staff/expenses' },
-    { label: profitThisMonth >= 0 ? 'กำไร' : 'ขาดทุน',
+    { label: 'รายรับเดือนนี้', icon: '💰', value: formatThaiMoney(revenueThisMonth),
+      sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}% จากเดือนที่แล้ว`,
+      bg: '#CFE4F5', text: '#1e3a5f', href: '/staff/receipts' },
+    { label: 'รายจ่ายเดือนนี้', icon: '📤', value: formatThaiMoney(expensesTotal),
+      sub: currentMonth,
+      bg: '#D9E5B8', text: '#3a4520', href: '/staff/expenses' },
+    { label: profitThisMonth >= 0 ? 'กำไรเดือนนี้' : 'ขาดทุนเดือนนี้', icon: '📈',
       value: `${profitThisMonth >= 0 ? '+' : ''}${formatThaiMoney(profitThisMonth)}`,
       sub: 'รายรับ − รายจ่าย',
-      color: profitThisMonth >= 0 ? '#3BBFAD' : '#E05A5A',
+      bg: profitThisMonth >= 0 ? '#F5DE8E' : '#F5C2C2',
+      text: profitThisMonth >= 0 ? '#5a4a10' : '#5f1e1e',
       href: '/staff/settings' },
-    { label: 'คงเหลือ', value: formatThaiMoney(cashBalance), sub: `ยกมา ${formatThaiMoney(carryOver)}`, color: '#7C6FF7', href: '/staff/settings' },
+    { label: 'เงินคงเหลือ', icon: '🏦', value: formatThaiMoney(cashBalance),
+      sub: `ยกมา ${formatThaiMoney(carryOver)}`,
+      bg: '#F3CFE0', text: '#5f1e42', href: '/staff/settings' },
   ]
 
   return (
@@ -122,73 +129,101 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">สวัสดีครับ {profile?.full_name} 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">สวัสดีครับ {profile?.full_name} 👋</h1>
           <p className="text-xs text-gray-400 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
         <DashboardExport />
       </div>
 
-      {/* ── แถว 1: การ์ดการเงิน ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {financeCards.map((c, i) => (
-          <Link key={i} href={c.href}
-            style={{ background: c.color, borderRadius: '1rem', padding: '1rem', color: 'white', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,.1)', textDecoration: 'none' }}
-            className="hover:-translate-y-0.5 transition-transform">
-            <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '4px' }}>{c.label}</div>
-            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.value}</div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '4px' }}>{c.sub}</div>
-          </Link>
-        ))}
+      {/* ── แถว 1: การ์ดการเงิน 2x2 (ซ้าย) + ปฏิทิน (ขวา) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* ซ้าย — การ์ดการเงิน */}
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {financeCards.map((c, i) => (
+            <Link key={i} href={c.href}
+              className="relative overflow-hidden rounded-2xl p-5 hover:-translate-y-0.5 transition-transform"
+              style={{ background: c.bg, color: c.text, minHeight: '130px', textDecoration: 'none' }}>
+
+              {/* วงกลมตกแต่งมุมขวาล่าง */}
+              <span style={{
+                position: 'absolute', right: '-18px', bottom: '-18px',
+                width: '90px', height: '90px', borderRadius: '999px',
+                background: 'rgba(255,255,255,0.28)',
+              }} />
+
+              <div style={{
+                width: '34px', height: '34px', borderRadius: '10px',
+                background: 'rgba(255,255,255,0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '16px', marginBottom: '12px',
+              }}>{c.icon}</div>
+
+              <div style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.75, fontWeight: 600 }}>
+                {c.label}
+              </div>
+              <div style={{ fontSize: 'clamp(20px,2.4vw,30px)', fontWeight: 800, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {c.value}
+              </div>
+              <div style={{ fontSize: '10px', opacity: 0.65, marginTop: '2px' }}>{c.sub}</div>
+            </Link>
+          ))}
+        </div>
+
+        {/* ขวา — ปฏิทิน */}
+        <div className="lg:col-span-1">
+          <CalendarCard />
+        </div>
       </div>
 
-      {/* ── แถว 2: กราฟแท่ง ── */}
-      <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">📊 รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
-          <div className="flex gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#3B9EE0' }}></span>รายรับ</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#F5A623' }}></span>รายจ่าย</span>
+      {/* ── แถว 2: กราฟแท่ง + กราฟวงกลม ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* กราฟแท่ง */}
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">📊 รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
+            <div className="flex gap-3 text-[10px] text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#3B9EE0' }}></span>รายรับ</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#F5A623' }}></span>รายจ่าย</span>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 md:gap-4 h-40">
+            {chartData.map((m, i) => {
+              const revH = chartMax > 0 ? Math.round((m.rev / chartMax) * 100) : 0
+              const expH = chartMax > 0 ? Math.round((m.exp / chartMax) * 100) : 0
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                  <div className="w-full flex items-end justify-center gap-0.5 flex-1">
+                    <div className="w-5 rounded-t-lg" style={{ height: `${revH}%`, background: '#3B9EE0', minHeight: m.rev > 0 ? '4px' : '0' }} />
+                    <div className="w-5 rounded-t-lg" style={{ height: `${expH}%`, background: '#F5A623', minHeight: m.exp > 0 ? '4px' : '0' }} />
+                  </div>
+                  <div className="text-[10px] text-gray-400">{m.label}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
-        <div className="flex items-end gap-2 md:gap-4 h-28">
-          {chartData.map((m, i) => {
-            const revH = chartMax > 0 ? Math.round((m.rev / chartMax) * 100) : 0
-            const expH = chartMax > 0 ? Math.round((m.exp / chartMax) * 100) : 0
-            return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                <div className="w-full flex items-end justify-center gap-0.5 flex-1">
-                  <div className="w-5 rounded-t-lg" style={{ height: `${revH}%`, background: '#3B9EE0', minHeight: m.rev > 0 ? '4px' : '0' }} />
-                  <div className="w-5 rounded-t-lg" style={{ height: `${expH}%`, background: '#F5A623', minHeight: m.exp > 0 ? '4px' : '0' }} />
-                </div>
-                <div className="text-[10px] text-gray-400">{m.label}</div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── แถว 3: กราฟวงกลม + ปฏิทิน ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* กราฟวงกลม */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
-          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">🎯 รายได้ตามวิชาเดือนนี้</div>
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">🎯 รายได้ตามวิชาเดือนนี้</div>
           {pieTotal === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-8">
               <div className="text-3xl mb-1">📭</div>
               <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
             </div>
           ) : (
             <div className="flex-1 flex items-center gap-3 min-h-0">
               <div className="flex-1 min-w-0 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', maxHeight: '200px' }}>
+                <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', maxHeight: '170px' }}>
                   {piePaths.map((p, i) => <path key={i} d={p.path} fill={p.color} />)}
                   <circle cx={CX} cy={CY} r={R_IN - 1} fill="white" className="dark:fill-[#242d3f]" />
                   <text x={CX} y={CY - 4} textAnchor="middle" style={{ fontSize: '5.5px', fill: '#9ca3af' }}>รวมเดือนนี้</text>
                   <text x={CX} y={CY + 6} textAnchor="middle" style={{ fontSize: '8.5px', fontWeight: 700 }} className="fill-gray-800 dark:fill-gray-100">{formatThaiMoney(pieTotal)}</text>
                 </svg>
               </div>
-              <div className="flex flex-col gap-3 flex-shrink-0 w-28">
+              <div className="flex flex-col gap-2.5 flex-shrink-0 w-28">
                 {pieData.map(d => (
                   <div key={d.key} className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5">
@@ -203,14 +238,10 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-
-        {/* การ์ดปฏิทิน — Client Component */}
-        <CalendarCard />
-
       </div>
 
-      {/* ── แถว 4: เช็กอิน + ใกล้หมดคอร์ส ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── แถว 3: เช็กอิน + ตารางเรียนวันนี้ + ใกล้หมดคอร์ส ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* เช็กอิน */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
@@ -219,12 +250,12 @@ export default async function DashboardPage() {
             <Link href="/staff/checkin" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>จัดการ →</Link>
           </div>
           {!(recentCheckins ?? []).length ? (
-            <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-6">
               <div className="text-3xl mb-1">😴</div>
               <p className="text-xs text-gray-400">ยังไม่มีการเช็กอิน</p>
             </div>
           ) : (
-            <div className="space-y-1 overflow-y-auto flex-1">
+            <div className="space-y-1 overflow-y-auto flex-1 max-h-64">
               {(recentCheckins ?? []).map((c: any) => (
                 <Link href="/staff/checkin" key={c.id}
                   className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 hover:bg-[#FAF7F2] dark:hover:bg-[#2a3245] transition">
@@ -242,6 +273,9 @@ export default async function DashboardPage() {
           )}
         </div>
 
+        {/* ตารางเรียนวันนี้ — Client Component */}
+        <TodayScheduleCard />
+
         {/* ใกล้หมดคอร์ส */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
@@ -249,12 +283,12 @@ export default async function DashboardPage() {
             <Link href="/staff/alerts" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูทั้งหมด →</Link>
           </div>
           {urgentExpiring.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-6">
               <div className="text-3xl mb-1">🎉</div>
               <p className="text-xs text-gray-400">ไม่มีคอร์สที่ใกล้หมด</p>
             </div>
           ) : (
-            <div className="space-y-1 overflow-y-auto flex-1">
+            <div className="space-y-1 overflow-y-auto flex-1 max-h-64">
               {urgentExpiring.map((e: any) => {
                 const remaining = e.lessons_total - e.lessons_used
                 const name = e.student?.nickname || e.student?.full_name || '?'
