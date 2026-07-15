@@ -13,39 +13,39 @@ const navItems = [
   {
     group: 'ภาพรวม',
     items: [
-      { href: '/staff', label: 'Dashboard', icon: '⊞' },
+      { href: '/staff', label: 'Dashboard' },
     ],
   },
   {
     group: 'นักเรียน',
     items: [
-      { href: '/staff/students', label: 'ข้อมูลนักเรียน',      icon: '👥' },
-      { href: '/staff/checkin',  label: 'เช็กอิน / เช็กเอาท์', icon: '🕐' },
+      { href: '/staff/students', label: 'ข้อมูลนักเรียน' },
+      { href: '/staff/checkin',  label: 'เช็กอิน / เช็กเอาท์' },
     ],
   },
   {
     group: 'การสอน',
     items: [
-      { href: '/staff/teaching-report', label: 'ชั่วโมงสอน',    icon: '⏱' },
-      { href: '/staff/teachers',        label: 'ครูผู้สอน',     icon: '🧑‍🏫' },
-      { href: '/staff/schedule',        label: 'ตารางสอน',       icon: '🗓' },
-      { href: '/staff/courses',         label: 'คอร์สและราคา',  icon: '📚' },
+      { href: '/staff/teaching-report', label: 'ชั่วโมงสอน' },
+      { href: '/staff/teachers',        label: 'ครูผู้สอน' },
+      { href: '/staff/schedule',        label: 'ตารางสอน' },
+      { href: '/staff/courses',         label: 'คอร์สและราคา' },
     ],
   },
   {
     group: 'การเงิน',
     items: [
-      { href: '/staff/receipts', label: 'รายรับ',        icon: '🧾' },
-      { href: '/staff/expenses', label: 'รายจ่าย',       icon: '📤' },
-      { href: '/staff/settings', label: 'Finance',       icon: '💰' },
-      { href: '/staff/import',   label: 'Download file', icon: '📥' },
+      { href: '/staff/receipts', label: 'รายรับ' },
+      { href: '/staff/expenses', label: 'รายจ่าย' },
+      { href: '/staff/settings', label: 'Finance' },
+      { href: '/staff/import',   label: 'Download file' },
     ],
   },
   {
     group: 'ทีมงาน',
     items: [
-      { href: '/staff/team', label: 'จัดการทีม',      icon: '🎓' },
-      { href: '/staff/help', label: 'คู่มือการใช้งาน', icon: '📖' },
+      { href: '/staff/team', label: 'จัดการทีม' },
+      { href: '/staff/help', label: 'คู่มือการใช้งาน' },
     ],
   },
 ]
@@ -75,6 +75,11 @@ export default function StaffSidebar() {
 
   useEffect(() => { setOpen(false) }, [pathname])
 
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   async function handleLogout() {
     await supabase.auth.signOut()
     toast.success('ออกจากระบบแล้ว')
@@ -83,15 +88,15 @@ export default function StaffSidebar() {
 
   const initials = name ? name.slice(0, 2) : '..'
 
-  const sidebarContent = (
-    <aside className="w-56 flex-shrink-0 bg-brand-500 dark:bg-[#141b2d] min-h-screen flex flex-col">
+  const inner = (
+    <>
       <div className="px-5 py-5 border-b border-white/15 dark:border-[#2a3245]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
             <img src="/logo.png" alt={SCHOOL_CONFIG.name} className="w-full h-full object-cover" />
           </div>
-          <div>
-            <div className="text-white font-semibold text-sm tracking-wide">{SCHOOL_CONFIG.name}</div>
+          <div className="min-w-0">
+            <div className="text-white font-semibold text-sm tracking-wide truncate">{SCHOOL_CONFIG.name}</div>
             <div className="text-white/60 text-[10px]">ระบบหลังบ้าน</div>
           </div>
         </div>
@@ -113,11 +118,13 @@ export default function StaffSidebar() {
             <div className="px-5 py-1 text-[10px] font-medium text-white/50 dark:text-gray-500 uppercase tracking-widest">
               {group}
             </div>
-            {items.map(({ href, label, icon }) => {
+            {items.map(({ href, label }) => {
               const active = href === '/staff' ? pathname === '/staff' : pathname.startsWith(href)
               const showBadge = href === '/staff/alerts' && alertCount > 0
               return (
-                <Link key={href} href={href}
+                <Link
+                  key={href}
+                  href={href}
                   className={cn(
                     'flex items-center gap-2.5 px-5 py-2.5 text-sm transition-all',
                     active
@@ -125,10 +132,9 @@ export default function StaffSidebar() {
                       : 'text-white/80 hover:text-white hover:bg-white/10 border-l-2 border-transparent dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-[#2a3245]'
                   )}
                 >
-                  <span className="text-base w-5 text-center">{icon}</span>
-                  <span className="flex-1">{label}</span>
+                  <span className="flex-1 min-w-0 truncate">{label}</span>
                   {showBadge && (
-                    <span className="w-5 h-5 rounded-full bg-accent-500 text-white text-[10px] flex items-center justify-center font-bold">
+                    <span className="w-5 h-5 rounded-full bg-accent-500 text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
                       {alertCount}
                     </span>
                   )}
@@ -141,47 +147,73 @@ export default function StaffSidebar() {
 
       <div className="px-5 py-4 border-t border-white/15 dark:border-[#2a3245] space-y-1">
         <ThemeToggle />
-        <button onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors w-full">
-          <span className="text-base">↩</span>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors w-full"
+        >
           <span>ออกจากระบบ</span>
         </button>
       </div>
-    </aside>
+    </>
   )
 
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden md:block">
-        {sidebarContent}
-      </div>
+      <aside className="hidden md:flex w-56 flex-shrink-0 flex-col min-h-screen bg-brand-500 dark:bg-[#141b2d]">
+        {inner}
+      </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-brand-500 dark:bg-[#141b2d] flex items-center justify-between px-4 py-3 border-b border-white/15 dark:border-[#2a3245]">
-        <div className="flex items-center gap-2.5">
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-brand-500 dark:bg-[#141b2d] flex items-center justify-between px-4 border-b border-white/15 dark:border-[#2a3245]">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
             <img src="/logo.png" alt={SCHOOL_CONFIG.name} className="w-full h-full object-cover" />
           </div>
-          <span className="text-white font-semibold text-sm">{SCHOOL_CONFIG.name}</span>
+          <span className="text-white font-semibold text-sm truncate">{SCHOOL_CONFIG.name}</span>
         </div>
         <button
-          onClick={() => setOpen(!open)}
-          className="text-white/80 hover:text-white p-1"
+          onClick={() => setOpen(true)}
+          aria-label="เปิดเมนู"
+          className="text-white/90 hover:text-white p-2 -mr-2 text-lg flex-shrink-0"
         >
-          {open ? '✕' : '☰'}
+          ☰
         </button>
-      </div>
+      </header>
 
       {/* Mobile drawer */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
-          <div className="w-64 h-full overflow-y-auto">
-            {sidebarContent}
+      <div
+        className={cn(
+          'md:hidden fixed inset-0 z-50',
+          open ? 'visible' : 'invisible pointer-events-none'
+        )}
+        aria-hidden={!open}
+      >
+        <div
+          onClick={() => setOpen(false)}
+          className={cn(
+            'absolute inset-0 bg-black/50 transition-opacity duration-300',
+            open ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+        <aside
+          className={cn(
+            'absolute top-0 left-0 h-full w-64 max-w-[80%] flex flex-col bg-brand-500 dark:bg-[#141b2d] overflow-y-auto shadow-2xl transition-transform duration-300 ease-out',
+            open ? 'translate-x-0' : '-translate-x-full'
+          )}
+        >
+          <div className="flex justify-end px-3 pt-3">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="ปิดเมนู"
+              className="text-white/80 hover:text-white p-1 text-lg"
+            >
+              X
+            </button>
           </div>
-        </div>
-      )}
+          {inner}
+        </aside>
+      </div>
     </>
   )
 }
