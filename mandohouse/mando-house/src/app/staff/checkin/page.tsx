@@ -97,7 +97,6 @@ export default function CheckinPage() {
   const [noteCheckin, setNoteCheckin] = useState<any>(null)
   const [noteText, setNoteText] = useState('')
 
-  // ฟอร์มบันทึกการสอน (ครู / เวลา / หัวข้อ / การบ้าน)
   const [durationMinutes, setDurationMinutes] = useState(60)
   const [subjectName, setSubjectName] = useState('')
   const [topic, setTopic] = useState('')
@@ -114,12 +113,8 @@ export default function CheckinPage() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    loadCheckins(selectedDate)
-  }, [selectedDate])
+  useEffect(() => { loadCheckins(selectedDate) }, [selectedDate])
 
-  // เมื่อเลือกนักเรียน → หา enrollment active
-  // 1 คอร์ส → set อัตโนมัติ / หลายคอร์ส → รอให้เลือก
   useEffect(() => {
     if (!selectedStudent) { setSelectedEnrollmentId(''); return }
     const list = enrollments.filter(e => e.student_id === selectedStudent)
@@ -138,20 +133,15 @@ export default function CheckinPage() {
 
   async function loadTeachers() {
     const { data } = await supabase
-      .from('teachers')
-      .select('id, full_name, subject')
-      .eq('is_active', true)
-      .not('full_name', 'ilike', '%&%')
-      .order('full_name')
+      .from('teachers').select('id, full_name, subject')
+      .eq('is_active', true).not('full_name', 'ilike', '%&%').order('full_name')
     setTeachers((data as Teacher[]) ?? [])
   }
 
   async function loadCheckins(date: string) {
-    // Auto-close checkins ที่ค้างข้ามวัน (ตั้ง check_out_at = 20:00 ของวันนั้น)
     if (date === todayStr) {
       try { await supabase.rpc('close_overnight_checkins') } catch (_) {}
     }
-
     const { data: c } = await supabase
       .from('checkins')
       .select('*, student:students(full_name, nickname), enrollment:enrollments(*, course:courses(name))')
@@ -168,21 +158,16 @@ export default function CheckinPage() {
   async function handleCheckin() {
     if (!selectedStudent) { toast.error('กรุณาเลือกนักเรียน'); return }
     const list = enrollments.filter(e => e.student_id === selectedStudent)
-    if (list.length > 1 && !selectedEnrollmentId) {
-      toast.error('กรุณาเลือกคอร์สที่จะเช็กอิน'); return
-    }
+    if (list.length > 1 && !selectedEnrollmentId) { toast.error('กรุณาเลือกคอร์สที่จะเช็กอิน'); return }
     if (isBackdate && !customDate) { toast.error('กรุณาเลือกวันที่และเวลา'); return }
 
     setLoading(true)
     const enrollmentId = selectedEnrollmentId || list[0]?.id || null
-    const checkinTime = isBackdate && customDate
-      ? new Date(customDate).toISOString()
-      : new Date().toISOString()
+    const checkinTime = isBackdate && customDate ? new Date(customDate).toISOString() : new Date().toISOString()
     const lessonDate = checkinTime.slice(0, 10)
     const enroll = enrollments.find(e => e.id === enrollmentId)
     const teacher = teachers.find(t => t.id === selectedTeacherId)
 
-    // 1) บันทึกเช็กอิน
     const { error } = await supabase.from('checkins').insert({
       student_id: selectedStudent,
       enrollment_id: enrollmentId,
@@ -190,14 +175,10 @@ export default function CheckinPage() {
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
 
-    // 2) ถ้าระบุครู/หัวข้อ/การบ้าน → บันทึกชั่วโมงสอนด้วย (lesson_logs)
     if (enrollmentId && (teacher || topic || homework)) {
-      // ตรวจสอบบันทึกซ้ำ: enrollment นี้ + วันนี้ มีบันทึกอยู่แล้วหรือไม่ (เช่น ครูกรอกที่ /teach ไปแล้ว)
       const { data: existing } = await supabase
-        .from('lesson_logs')
-        .select('id, teacher_name, duration_minutes, subject_name')
-        .eq('enrollment_id', enrollmentId)
-        .eq('lesson_date', lessonDate)
+        .from('lesson_logs').select('id, teacher_name, duration_minutes, subject_name')
+        .eq('enrollment_id', enrollmentId).eq('lesson_date', lessonDate)
 
       const courseName = enroll?.course?.name ?? ''
       const isSpecialCourse = /special/i.test(courseName)
@@ -216,54 +197,33 @@ export default function CheckinPage() {
           )
           if (!confirmed) {
             toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
-            setSelectedStudent('')
-            setSelectedEnrollmentId('')
-            setSelectedTeacherId('')
-            setStudentSearch('')
-            setCustomDate('')
-            setDurationMinutes(60)
-            setSubjectName('')
-            setTopic('')
-            setHomework('')
+            setSelectedStudent(''); setSelectedEnrollmentId(''); setSelectedTeacherId('')
+            setStudentSearch(''); setCustomDate(''); setDurationMinutes(60)
+            setSubjectName(''); setTopic(''); setHomework('')
             if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
-            loadData()
-            setLoading(false)
-            return
+            loadData(); setLoading(false); return
           }
           skipLessonCount = true
         } else {
           const confirmed = confirm(
             `วันนี้มีบันทึกชั่วโมงสอนของคอร์สนี้อยู่แล้ว (${courseName})\n` +
             `บันทึกโดย: ${who}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
-            `ต้องการเช็กอิน + บันทึกชั่วโมงสอนซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = เช็กอินอย่างเดียว ไม่บันทึกชั่วโมงสอนซ้ำ)`
+            `ต้องการเช็กอิน + บันทึกชั่วโมงสอนซ้ำอีกครั้งหรือไม่?\n(กด ตกลง = บันทึกเพิ่ม / ยกเลิก = เช็กอินอย่างเดียว)`
           )
           if (!confirmed) {
             toast.success(isBackdate ? 'บันทึกย้อนหลังสำเร็จ! (เช็กอินอย่างเดียว)' : 'เช็กอินสำเร็จ! (ไม่บันทึกชั่วโมงสอนซ้ำ)')
-            setSelectedStudent('')
-            setSelectedEnrollmentId('')
-            setSelectedTeacherId('')
-            setStudentSearch('')
-            setCustomDate('')
-            setDurationMinutes(60)
-            setSubjectName('')
-            setTopic('')
-            setHomework('')
+            setSelectedStudent(''); setSelectedEnrollmentId(''); setSelectedTeacherId('')
+            setStudentSearch(''); setCustomDate(''); setDurationMinutes(60)
+            setSubjectName(''); setTopic(''); setHomework('')
             if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
-            loadData()
-            setLoading(false)
-            return
+            loadData(); setLoading(false); return
           }
         }
       }
 
-      // คำนวณ lesson_number จากจำนวน checkins ที่เกิดขึ้นก่อนหรือในวันนี้
-      // วิธีนี้ทำให้เช็กอินย้อนหลังได้ lesson_number ที่ถูกต้องเสมอ
       const { count: checkinsBefore } = await supabase
-        .from('checkins')
-        .select('*', { count: 'exact', head: true })
-        .eq('enrollment_id', enrollmentId)
-        .lte('check_in_at', checkinTime)
-
+        .from('checkins').select('*', { count: 'exact', head: true })
+        .eq('enrollment_id', enrollmentId).lte('check_in_at', checkinTime)
       const nextLesson = checkinsBefore ?? 1
 
       const { error: logError } = await supabase.from('lesson_logs').insert({
@@ -278,142 +238,82 @@ export default function CheckinPage() {
         homework: homework || null,
       })
 
-      // ถ้าเป็นการย้อนหลัง ต้อง renumber lesson_logs ทั้งหมดของ enrollment นี้
-      // เพื่อให้ครั้งที่แทรกกลางไม่ทำให้เลขซ้ำ
       if (isBackdate && !logError) {
-        const { data: allCheckins } = await supabase
-          .from('checkins')
-          .select('id, check_in_at, check_in_at')
-          .eq('enrollment_id', enrollmentId)
-          .order('check_in_at', { ascending: true })
-
-        if (allCheckins) {
-          const { data: allLogs } = await supabase
-            .from('lesson_logs')
-            .select('id, lesson_date')
-            .eq('enrollment_id', enrollmentId)
-            .order('lesson_date', { ascending: true })
-
-          if (allLogs) {
-            for (let i = 0; i < allLogs.length; i++) {
-              await supabase
-                .from('lesson_logs')
-                .update({ lesson_number: i + 1 })
-                .eq('id', allLogs[i].id)
-            }
+        const { data: allLogs } = await supabase
+          .from('lesson_logs').select('id, lesson_date')
+          .eq('enrollment_id', enrollmentId).order('lesson_date', { ascending: true })
+        if (allLogs) {
+          for (let i = 0; i < allLogs.length; i++) {
+            await supabase.from('lesson_logs').update({ lesson_number: i + 1 }).eq('id', allLogs[i].id)
           }
         }
       }
 
       if (!logError && enroll && !skipLessonCount) {
-        // อัปเดต lessons_used จาก count จริงของ checkins
         const { count: totalCheckins } = await supabase
-          .from('checkins')
-          .select('*', { count: 'exact', head: true })
-          .eq('enrollment_id', enrollmentId)
-        await supabase
-          .from('enrollments')
-          .update({ lessons_used: totalCheckins ?? enroll.lessons_used + 1 })
-          .eq('id', enrollmentId)
+          .from('checkins').select('*', { count: 'exact', head: true }).eq('enrollment_id', enrollmentId)
+        await supabase.from('enrollments')
+          .update({ lessons_used: totalCheckins ?? enroll.lessons_used + 1 }).eq('id', enrollmentId)
       }
     }
 
-    const courseName = enroll?.course?.name ?? ''
-    // lessons_used ที่อัปเดตแล้ว — ดึงค่าใหม่จาก DB เพื่อความแม่นยำ
     const { data: freshEnroll } = await supabase
-      .from('enrollments')
-      .select('lessons_used, lessons_total')
-      .eq('id', enrollmentId ?? '')
-      .single()
+      .from('enrollments').select('lessons_used, lessons_total').eq('id', enrollmentId ?? '').single()
     const newLessonsUsed = freshEnroll?.lessons_used ?? (enroll?.lessons_used ?? 0)
-    const lessonNum = newLessonsUsed
 
-    // ดึง lesson_number จริงจาก lesson_log ที่เพิ่งบันทึก
     const { data: lastLog } = await supabase
-      .from('lesson_logs')
-      .select('lesson_number')
-      .eq('enrollment_id', enrollmentId ?? '')
-      .order('lesson_number', { ascending: false })
-      .limit(1)
-      .single()
+      .from('lesson_logs').select('lesson_number').eq('enrollment_id', enrollmentId ?? '')
+      .order('lesson_number', { ascending: false }).limit(1).single()
 
     const st = students.find(s => s.id === selectedStudent)
     const studentName = st?.nickname || st?.full_name || ''
     const checkinDateStr = isBackdate && customDate ? customDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const courseName = enroll?.course?.name ?? ''
 
-    // ดึงประวัติการเรียนทั้งหมดของ enrollment นี้
     const { data: historyData } = await supabase
-      .from('lesson_logs')
-      .select('lesson_number, lesson_date, topic')
-      .eq('enrollment_id', enrollmentId ?? '')
-      .order('lesson_number', { ascending: true })
+      .from('lesson_logs').select('lesson_number, lesson_date, topic')
+      .eq('enrollment_id', enrollmentId ?? '').order('lesson_number', { ascending: true })
 
     if (isBackdate) {
       toast.success('บันทึกย้อนหลังสำเร็จ!')
     } else {
       setCheckinSummary({
-        studentName,
-        courseName,
-        lessonDate: checkinDateStr,
-        lessonNumber: lastLog?.lesson_number ?? lessonNum,
+        studentName, courseName, lessonDate: checkinDateStr,
+        lessonNumber: lastLog?.lesson_number ?? newLessonsUsed,
         lessonsUsed: newLessonsUsed,
         lessonsTotal: freshEnroll?.lessons_total ?? enroll?.lessons_total ?? 0,
         lessonHistory: historyData ?? [],
       })
     }
 
-    setSelectedStudent('')
-    setSelectedEnrollmentId('')
-    setSelectedTeacherId('')
-    setStudentSearch('')
-    setCustomDate('')
-    setDurationMinutes(60)
-    setSubjectName('')
-    setTopic('')
-    setHomework('')
+    setSelectedStudent(''); setSelectedEnrollmentId(''); setSelectedTeacherId('')
+    setStudentSearch(''); setCustomDate(''); setDurationMinutes(60)
+    setSubjectName(''); setTopic(''); setHomework('')
     if (isBackdate && customDate) setSelectedDate(customDate.slice(0, 10))
-    loadData()
-    setLoading(false)
+    loadData(); setLoading(false)
   }
 
   async function handleDelete(id: string) {
     const item = checkins.find(c => c.id === id)
     if (!item) return
-
-    // หา lesson_log ที่สร้างพร้อมกับ checkin นี้ (enrollment เดียวกัน + วันเดียวกัน)
     const lessonDate = item.check_in_at.slice(0, 10)
     const { data: relatedLogs } = await supabase
-      .from('lesson_logs')
-      .select('id, enrollment_id, lesson_number')
-      .eq('enrollment_id', item.enrollment_id)
-      .eq('lesson_date', lessonDate)
+      .from('lesson_logs').select('id, enrollment_id, lesson_number')
+      .eq('enrollment_id', item.enrollment_id).eq('lesson_date', lessonDate)
 
-    // ซ่อนออกจาก UI ทันที
     setCheckins(prev => prev.filter(c => c.id !== id))
-
     let undone = false
     const timeoutId = setTimeout(async () => {
       if (undone) return
-
-      // 1) ลบ checkin
       const { error } = await supabase.from('checkins').delete().eq('id', id)
       if (error) { toast.error('ลบไม่สำเร็จ'); loadCheckins(selectedDate); return }
-
-      // 2) ลบ lesson_logs ที่เกี่ยวข้อง
       if (relatedLogs && relatedLogs.length > 0) {
-        await supabase.from('lesson_logs').delete()
-          .in('id', relatedLogs.map(l => l.id))
-
-        // 3) คืน lessons_used (ลดลงเท่ากับจำนวน lesson_logs ที่ลบ)
+        await supabase.from('lesson_logs').delete().in('id', relatedLogs.map(l => l.id))
         if (item.enrollment_id) {
-          const { data: enroll } = await supabase
-            .from('enrollments')
-            .select('lessons_used')
-            .eq('id', item.enrollment_id)
-            .single()
+          const { data: enroll } = await supabase.from('enrollments')
+            .select('lessons_used').eq('id', item.enrollment_id).single()
           if (enroll && enroll.lessons_used > 0) {
-            await supabase
-              .from('enrollments')
+            await supabase.from('enrollments')
               .update({ lessons_used: Math.max(0, enroll.lessons_used - relatedLogs.length) })
               .eq('id', item.enrollment_id)
           }
@@ -423,29 +323,24 @@ export default function CheckinPage() {
 
     const studentName = item.student?.nickname || item.student?.full_name || 'นักเรียน'
     const logCount = relatedLogs?.length ?? 0
-
     toast(
       (t) => (
         <span className="flex items-center gap-3">
           <span>
             ลบเช็กอิน {studentName} แล้ว
-            {logCount > 0 && <span className="text-xs text-gray-400 dark:text-gray-300 ml-1">(คืน {logCount} ครั้ง)</span>}
+            {logCount > 0 && <span className="text-xs text-gray-400 ml-1">(คืน {logCount} ครั้ง)</span>}
           </span>
           <button
             onClick={() => {
-              undone = true
-              clearTimeout(timeoutId)
+              undone = true; clearTimeout(timeoutId)
               setCheckins(prev => {
                 if (prev.some(c => c.id === item.id)) return prev
                 return [item, ...prev].sort((a, b) => new Date(b.check_in_at).getTime() - new Date(a.check_in_at).getTime())
               })
-              toast.dismiss(t.id)
-              toast.success('เลิกทำแล้ว')
+              toast.dismiss(t.id); toast.success('เลิกทำแล้ว')
             }}
             className="font-medium text-brand-600 underline whitespace-nowrap"
-          >
-            เลิกทำ (Undo)
-          </button>
+          >เลิกทำ (Undo)</button>
         </span>
       ),
       { duration: 6000 }
@@ -473,24 +368,15 @@ export default function CheckinPage() {
       lesson_note: editForm.lesson_note || null,
     }).eq('id', editCheckin.id)
     if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
-    toast.success('แก้ไขแล้ว')
-    setEditCheckin(null)
-    loadCheckins(selectedDate)
+    toast.success('แก้ไขแล้ว'); setEditCheckin(null); loadCheckins(selectedDate)
   }
 
-  function openNote(c: any) {
-    setNoteCheckin(c)
-    setNoteText(c.lesson_note || '')
-  }
+  function openNote(c: any) { setNoteCheckin(c); setNoteText(c.lesson_note || '') }
 
   async function handleSaveNote() {
-    const { error } = await supabase.from('checkins')
-      .update({ lesson_note: noteText })
-      .eq('id', noteCheckin.id)
+    const { error } = await supabase.from('checkins').update({ lesson_note: noteText }).eq('id', noteCheckin.id)
     if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
-    toast.success('บันทึกบทเรียนแล้ว ✅')
-    setNoteCheckin(null)
-    loadCheckins(selectedDate)
+    toast.success('บันทึกบทเรียนแล้ว'); setNoteCheckin(null); loadCheckins(selectedDate)
   }
 
   function goDate(offset: number) {
@@ -503,36 +389,25 @@ export default function CheckinPage() {
   function formatDateTH(dateStr: string) {
     const d = new Date(dateStr + 'T12:00:00')
     if (dateStr === todayStr) return 'วันนี้'
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
     if (dateStr === yesterday.toISOString().split('T')[0]) return 'เมื่อวาน'
     return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
   async function loadStudentSummaryById(studentId: string, name: string) {
-    setLoadingSummary(true)
-    setStudentSummary(null)
-    // ดึงทุกคอร์สที่ยัง active ของนักเรียนคนนี้
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('id, lessons_used, lessons_total, course:courses(name)')
-      .eq('student_id', studentId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: true })
+    setLoadingSummary(true); setStudentSummary(null)
+    const { data: enrolls } = await supabase
+      .from('enrollments').select('id, lessons_used, lessons_total, course:courses(name)')
+      .eq('student_id', studentId).eq('status', 'active').order('created_at', { ascending: true })
 
-    if (!enrollments || enrollments.length === 0) {
-      toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่')
-      setLoadingSummary(false)
-      return
+    if (!enrolls || enrolls.length === 0) {
+      toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่'); setLoadingSummary(false); return
     }
 
-    // ดึงประวัติของแต่ละคอร์สแยกกัน
-    const courses = await Promise.all(enrollments.map(async (en: any) => {
+    const courses = await Promise.all(enrolls.map(async (en: any) => {
       const { data: hist } = await supabase
-        .from('lesson_logs')
-        .select('lesson_number, lesson_date, topic')
-        .eq('enrollment_id', en.id)
-        .order('lesson_number', { ascending: true })
+        .from('lesson_logs').select('lesson_number, lesson_date, topic')
+        .eq('enrollment_id', en.id).order('lesson_number', { ascending: true })
       return {
         courseName: (en.course as any)?.name || '—',
         lessonsUsed: en.lessons_used ?? 0,
@@ -540,9 +415,7 @@ export default function CheckinPage() {
         history: hist ?? [],
       }
     }))
-
-    setStudentSummary({ name, courses })
-    setLoadingSummary(false)
+    setStudentSummary({ name, courses }); setLoadingSummary(false)
   }
 
   async function loadStudentSummary(c: any) {
@@ -567,37 +440,23 @@ export default function CheckinPage() {
     s.full_name.toLowerCase().includes(studentSearch.toLowerCase())
   )
 
-  const studentEnrollments = selectedStudent
-    ? enrollments.filter(e => e.student_id === selectedStudent)
-    : []
+  const studentEnrollments = selectedStudent ? enrollments.filter(e => e.student_id === selectedStudent) : []
   const hasMultipleCourses = studentEnrollments.length > 1
   const autoEnrollment = studentEnrollments.length === 1 ? studentEnrollments[0] : null
 
-  const checkinDisabled = loading
-    || !selectedStudent
-    || !selectedTeacherId
-    || (hasMultipleCourses && !selectedEnrollmentId)
-    || (isBackdate && !customDate)
+  const checkinDisabled = loading || !selectedStudent || !selectedTeacherId
+    || (hasMultipleCourses && !selectedEnrollmentId) || (isBackdate && !customDate)
 
   const fmt = (d: Date) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-
-  function fmtDuration(min: number | null) {
-    if (!min) return null
-    if (min < 60) return `${min} น.`
-    const h = Math.floor(min / 60)
-    const m = min % 60
-    return m ? `${h}ชม. ${m}น.` : `${h} ชม.`
-  }
 
   return (
     <div className="p-4 md:p-6">
 
-      {/* ── Popup สรุปหลังเช็กอิน ── */}
+      {/* Popup สรุปหลังเช็กอิน */}
       {checkinSummary && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
-            <div className="text-4xl mb-3">✅</div>
-            <h3 className="font-semibold text-lg mb-1">เช็กอินสำเร็จ!</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl text-center max-h-[90vh] overflow-y-auto">
+            <h3 className="font-semibold text-lg mb-1">เช็กอินสำเร็จ</h3>
             <p className="text-brand-600 font-semibold text-base mb-4">{checkinSummary.studentName}</p>
 
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-5 text-left space-y-2.5">
@@ -616,20 +475,16 @@ export default function CheckinPage() {
               <div className="border-t border-gray-200 dark:border-gray-700 pt-2.5">
                 <div className="flex justify-between text-sm mb-1.5">
                   <span className="text-gray-500">เรียนไปแล้ว</span>
-                  <span className="font-semibold">
-                    {checkinSummary.lessonsUsed} / {checkinSummary.lessonsTotal} ครั้ง
-                  </span>
+                  <span className="font-semibold">{checkinSummary.lessonsUsed} / {checkinSummary.lessonsTotal} ครั้ง</span>
                 </div>
                 {checkinSummary.lessonsTotal > 0 && (
                   <>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1">
                       <div
                         className={`h-2 rounded-full transition-all ${
-                          checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 2
-                            ? 'bg-red-500'
-                            : checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 4
-                            ? 'bg-amber-400'
-                            : 'bg-brand-500'
+                          checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 2 ? 'bg-red-500'
+                          : checkinSummary.lessonsTotal - checkinSummary.lessonsUsed <= 4 ? 'bg-amber-400'
+                          : 'bg-brand-500'
                         }`}
                         style={{ width: `${Math.min(100, Math.round((checkinSummary.lessonsUsed / checkinSummary.lessonsTotal) * 100))}%` }}
                       />
@@ -652,26 +507,26 @@ export default function CheckinPage() {
                   : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
               }`}>
                 {checkinSummary.lessonsUsed >= checkinSummary.lessonsTotal
-                  ? '🎓 นี่คือครั้งสุดท้ายของคอร์สนี้แล้ว! อย่าลืมแจ้งผู้ปกครองต่อคอร์สด้วยนะคะ'
-                  : `⚠️ เหลือครั้งเรียนน้อยมาก — แนะนำต่อคอร์สเพิ่ม`
+                  ? 'นี่คือครั้งสุดท้ายของคอร์สนี้แล้ว อย่าลืมแจ้งผู้ปกครองต่อคอร์สด้วยนะคะ'
+                  : 'เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่ม'
                 }
               </div>
             )}
 
             {checkinSummary.lessonHistory.length > 0 && (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 max-h-40 overflow-y-auto">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">📋 ประวัติการเรียน</div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 max-h-40 overflow-y-auto text-left">
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">ประวัติการเรียน</div>
                 <div className="space-y-1.5">
                   {checkinSummary.lessonHistory.map(h => {
                     const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-                    const isToday = h.lesson_number === checkinSummary.lessonNumber
+                    const isCurrent = h.lesson_number === checkinSummary.lessonNumber
                     return (
-                      <div key={h.lesson_number} className={`flex items-baseline gap-2 text-xs ${isToday ? 'text-brand-600 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
+                      <div key={h.lesson_number} className={`flex items-baseline gap-2 text-xs ${isCurrent ? 'text-brand-600 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
                         <span className="w-16 shrink-0">ครั้งที่ {h.lesson_number}</span>
                         <span className="text-gray-400 dark:text-gray-500">—</span>
                         <span>{d}</span>
                         {h.topic && <span className="text-gray-400 dark:text-gray-500 truncate">({h.topic})</span>}
-                        {isToday && <span className="ml-auto shrink-0">← วันนี้</span>}
+                        {isCurrent && <span className="ml-auto shrink-0">← วันนี้</span>}
                       </div>
                     )
                   })}
@@ -689,38 +544,33 @@ export default function CheckinPage() {
                   return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
                 }).join('\n')
                 const msg = [
-                  `📚 สรุปการเรียน Mando House`,
-                  `👤 น้อง${checkinSummary.studentName}`,
-                  `📖 ${checkinSummary.courseName}`,
+                  `สรุปการเรียน Mando House`,
+                  `น้อง${checkinSummary.studentName}`,
+                  `${checkinSummary.courseName}`,
                   ``,
-                  `📋 ประวัติการเรียน`,
+                  `ประวัติการเรียน`,
                   historyLines,
                   ``,
-                  `📅 วันนี้: ครั้งที่ ${checkinSummary.lessonNumber} (${dateStr})`,
-                  `📊 เรียนไปแล้ว ${checkinSummary.lessonsUsed}/${checkinSummary.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
+                  `วันนี้: ครั้งที่ ${checkinSummary.lessonNumber} (${dateStr})`,
+                  `เรียนไปแล้ว ${checkinSummary.lessonsUsed}/${checkinSummary.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
                   checkinSummary.lessonsUsed >= checkinSummary.lessonsTotal
-                    ? `⚠️ ครั้งนี้เป็นครั้งสุดท้ายของคอร์สแล้ว กรุณาติดต่อต่อคอร์สได้เลยนะคะ 🙏`
+                    ? `ครั้งนี้เป็นครั้งสุดท้ายของคอร์สแล้ว กรุณาติดต่อต่อคอร์สได้เลยนะคะ`
                     : remaining <= 2
-                    ? `⚠️ เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ 🙏`
-                    : `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
+                    ? `เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ`
+                    : `ขอบคุณที่ไว้วางใจ Mando House นะคะ`,
                 ].join('\n')
                 await navigator.clipboard.writeText(msg)
-                alert('คัดลอกข้อความแล้ว ✅ นำไปวางใน LINE ผู้ปกครองได้เลย')
+                alert('คัดลอกข้อความแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
               }}
             >
-              📋 คัดลอกส่งผู้ปกครอง
+              คัดลอกส่งผู้ปกครอง
             </button>
-            <button
-              className="btn-brand w-full"
-              onClick={() => setCheckinSummary(null)}
-            >
-              รับทราบ
-            </button>
+            <button className="btn-brand w-full" onClick={() => setCheckinSummary(null)}>รับทราบ</button>
           </div>
         </div>
       )}
 
-      {/* ── Modal สรุปรายคน (กดจากรายการเช็กอิน) ── */}
+      {/* Modal สรุปรายคน */}
       {(loadingSummary || studentSummary) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl max-h-[90vh] overflow-y-auto">
@@ -729,20 +579,16 @@ export default function CheckinPage() {
             ) : studentSummary && (
               <>
                 <div className="text-center mb-4">
-                  <div className="text-3xl mb-2">📋</div>
                   <h3 className="font-semibold text-lg">{studentSummary.name}</h3>
                   <p className="text-xs text-gray-400">{studentSummary.courses.length} คอร์สที่กำลังเรียน</p>
                 </div>
 
-                {/* วนแต่ละคอร์ส */}
                 {studentSummary.courses.map((course, ci) => {
                   const remaining = course.lessonsTotal - course.lessonsUsed
                   const pct = course.lessonsTotal > 0 ? Math.round((course.lessonsUsed / course.lessonsTotal) * 100) : 0
                   return (
                     <div key={ci} className="mb-4 border border-gray-100 dark:border-gray-700 rounded-xl p-3">
-                      <div className="font-medium text-sm text-brand-700 dark:text-brand-300 mb-2">📖 {course.courseName}</div>
-
-                      {/* progress */}
+                      <div className="font-medium text-sm text-brand-700 dark:text-brand-300 mb-2">{course.courseName}</div>
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-gray-500">เรียนไปแล้ว</span>
                         <span className="font-semibold">{course.lessonsUsed} / {course.lessonsTotal} ครั้ง</span>
@@ -759,8 +605,6 @@ export default function CheckinPage() {
                           </div>
                         </>
                       )}
-
-                      {/* history */}
                       {course.history.length > 0 && (
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 max-h-36 overflow-y-auto">
                           <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">ประวัติการเรียน</div>
@@ -779,10 +623,9 @@ export default function CheckinPage() {
                           </div>
                         </div>
                       )}
-
                       {remaining <= 2 && course.lessonsTotal > 0 && (
                         <div className={`text-xs rounded-lg px-3 py-2 mt-2 ${course.lessonsUsed >= course.lessonsTotal ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'}`}>
-                          {course.lessonsUsed >= course.lessonsTotal ? '🎓 หมดคอร์สแล้ว! แนะนำต่อคอร์ส' : '⚠️ เหลือน้อยมาก แนะนำต่อคอร์ส'}
+                          {course.lessonsUsed >= course.lessonsTotal ? 'หมดคอร์สแล้ว แนะนำต่อคอร์ส' : 'เหลือน้อยมาก แนะนำต่อคอร์ส'}
                         </div>
                       )}
                     </div>
@@ -799,45 +642,39 @@ export default function CheckinPage() {
                         return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
                       }).join('\n')
                       const note = course.lessonsUsed >= course.lessonsTotal
-                        ? '  ⚠️ หมดคอร์สแล้ว กรุณาต่อคอร์สนะคะ'
-                        : remaining <= 2 ? '  ⚠️ เหลือน้อยมาก แนะนำต่อคอร์สนะคะ' : ''
-                      return [
-                        `📖 ${course.courseName}`,
-                        historyLines || '  (ยังไม่มีประวัติ)',
-                        `  📊 เรียนไปแล้ว ${course.lessonsUsed}/${course.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`,
-                        note,
+                        ? '  หมดคอร์สแล้ว กรุณาต่อคอร์สนะคะ'
+                        : remaining <= 2 ? '  เหลือน้อยมาก แนะนำต่อคอร์สนะคะ' : ''
+                      return [`${course.courseName}`, historyLines || '  (ยังไม่มีประวัติ)',
+                        `  เรียนไปแล้ว ${course.lessonsUsed}/${course.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`, note,
                       ].filter(Boolean).join('\n')
                     }).join('\n\n')
                     const msg = [
-                      `📚 สรุปการเรียน Mando House`,
-                      `👤 น้อง${studentSummary.name}`,
-                      ``,
-                      blocks,
-                      ``,
-                      `ขอบคุณที่ไว้วางใจ Mando House นะคะ 🙏`,
+                      `สรุปการเรียน Mando House`,
+                      `น้อง${studentSummary.name}`, ``, blocks, ``,
+                      `ขอบคุณที่ไว้วางใจ Mando House นะคะ`,
                     ].join('\n')
                     await navigator.clipboard.writeText(msg)
-                    alert('คัดลอกข้อความแล้ว ✅ นำไปวางใน LINE ผู้ปกครองได้เลย')
+                    alert('คัดลอกข้อความแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
                   }}
-                >
-                  📋 คัดลอกส่งผู้ปกครอง
-                </button>
+                >คัดลอกส่งผู้ปกครอง</button>
                 <button className="btn-brand w-full" onClick={() => setStudentSummary(null)}>ปิด</button>
               </>
             )}
           </div>
         </div>
       )}
-      <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
+
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">บันทึกเวลาเข้าออกของนักเรียน พร้อมข้อมูลการสอน</p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Quick check-in panel */}
+
+        {/* เช็กอินด่วน */}
         <div className="card">
           <div className="card-header"><h3 className="font-medium">เช็กอินด่วน</h3></div>
           <div className="p-5 space-y-4">
-            <div className="text-center bg-brand-50 rounded-xl p-4">
-              <div className="text-3xl font-semibold text-brand-700">{fmt(now)}</div>
-              <div className="text-xs text-brand-600 mt-1">เวลาปัจจุบัน</div>
+            <div className="text-center bg-brand-50 dark:bg-brand-900/20 rounded-xl p-4">
+              <div className="text-3xl font-semibold text-brand-700 dark:text-brand-300">{fmt(now)}</div>
+              <div className="text-xs text-brand-600 dark:text-brand-400 mt-1">เวลาปัจจุบัน</div>
             </div>
 
             <div>
@@ -846,26 +683,18 @@ export default function CheckinPage() {
                 className="input mb-2"
                 placeholder="พิมพ์ชื่อหรือชื่อเล่น..."
                 value={studentSearch}
-                onChange={e => {
-                  setStudentSearch(e.target.value)
-                  setSelectedStudent('')
-                  setSelectedEnrollmentId('')
-                }}
+                onChange={e => { setStudentSearch(e.target.value); setSelectedStudent(''); setSelectedEnrollmentId('') }}
               />
               <select
                 className="input"
                 value={selectedStudent}
-                onChange={e => {
-                  setSelectedStudent(e.target.value)
-                  setStudentSearch('')
-                }}
+                onChange={e => { setSelectedStudent(e.target.value); setStudentSearch('') }}
                 size={Math.min(filteredStudents.length + 1, 6)}
               >
                 <option value="">— เลือกนักเรียน —</option>
                 {filteredStudents.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.nickname || s.full_name}
-                    {s.nickname ? ` (${s.full_name})` : ''}
+                    {s.nickname || s.full_name}{s.nickname ? ` (${s.full_name})` : ''}
                   </option>
                 ))}
               </select>
@@ -874,15 +703,13 @@ export default function CheckinPage() {
               )}
             </div>
 
-            {/* แสดงหลังเลือกนักเรียน */}
             {selectedStudent && (
               <div className="space-y-3">
-                {/* คอร์สเดียว — auto */}
                 {autoEnrollment && (
-                  <div className="flex items-center gap-2 bg-brand-50 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center gap-2 bg-brand-50 dark:bg-brand-900/20 rounded-xl px-3 py-2.5">
                     <span className="text-brand-500 text-base">✓</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-brand-700 truncate">
+                      <div className="text-sm font-medium text-brand-700 dark:text-brand-300 truncate">
                         {autoEnrollment.course?.name || 'ไม่มีชื่อคอร์ส'}
                       </div>
                       <div className="text-xs text-brand-400">เลือกอัตโนมัติ (คอร์สเดียว)</div>
@@ -890,7 +717,6 @@ export default function CheckinPage() {
                   </div>
                 )}
 
-                {/* หลายคอร์ส — ให้เลือก */}
                 {hasMultipleCourses && (
                   <div>
                     <label className="label flex items-center gap-1.5">
@@ -899,26 +725,18 @@ export default function CheckinPage() {
                     </label>
                     <div className="flex flex-col gap-2">
                       {studentEnrollments.map(enr => (
-                        <button
-                          key={enr.id}
-                          onClick={() => setSelectedEnrollmentId(enr.id)}
+                        <button key={enr.id} onClick={() => setSelectedEnrollmentId(enr.id)}
                           className={`w-full text-left px-3 py-2.5 rounded-xl border-2 transition-all ${
                             selectedEnrollmentId === enr.id
-                              ? 'border-brand-500 bg-brand-50'
+                              ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
                               : 'border-gray-200 dark:border-[#3a4560] hover:border-gray-300 bg-white dark:bg-[#242d3f]'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                              selectedEnrollmentId === enr.id ? 'border-brand-500' : 'border-gray-300'
-                            }`}>
-                              {selectedEnrollmentId === enr.id && (
-                                <div className="w-2 h-2 rounded-full bg-brand-500" />
-                              )}
+                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${selectedEnrollmentId === enr.id ? 'border-brand-500' : 'border-gray-300'}`}>
+                              {selectedEnrollmentId === enr.id && <div className="w-2 h-2 rounded-full bg-brand-500" />}
                             </div>
-                            <span className={`text-sm font-medium truncate ${
-                              selectedEnrollmentId === enr.id ? 'text-brand-700' : 'text-gray-700 dark:text-gray-200'
-                            }`}>
+                            <span className={`text-sm font-medium truncate ${selectedEnrollmentId === enr.id ? 'text-brand-700 dark:text-brand-300' : 'text-gray-700 dark:text-gray-200'}`}>
                               {enr.course?.name || 'ไม่มีชื่อคอร์ส'}
                             </span>
                           </div>
@@ -928,21 +746,15 @@ export default function CheckinPage() {
                   </div>
                 )}
 
-                {/* ไม่มีคอร์ส */}
                 {studentEnrollments.length === 0 && (
                   <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 text-sm text-orange-700">
-                    ⚠️ นักเรียนไม่มีคอร์ส active
+                    นักเรียนไม่มีคอร์ส active
                   </div>
                 )}
 
-                {/* ครูผู้สอน */}
                 <div>
                   <label className="label">ครูผู้สอน <span className="text-red-400">*</span></label>
-                  <select
-                    className="input"
-                    value={selectedTeacherId}
-                    onChange={e => setSelectedTeacherId(e.target.value)}
-                  >
+                  <select className="input" value={selectedTeacherId} onChange={e => setSelectedTeacherId(e.target.value)}>
                     <option value="">— ไม่ระบุ —</option>
                     {teachers.map(t => (
                       <option key={t.id} value={t.id}>{t.full_name}{t.subject ? ` (${t.subject})` : ''}</option>
@@ -950,80 +762,57 @@ export default function CheckinPage() {
                   </select>
                 </div>
 
-                {/* วิชาที่สอน (สำหรับคอร์สพิเศษหลายวิชา) */}
                 <div>
                   <label className="label">วิชาที่สอน (ถ้ามี)</label>
                   <div className="grid grid-cols-2 gap-1.5">
                     {['ภาษาจีน', 'คณิตศาสตร์', 'ภาษาอังกฤษ', 'วิทยาศาสตร์'].map(subj => (
-                      <button
-                        key={subj}
-                        onClick={() => setSubjectName(prev => prev === subj ? '' : subj)}
+                      <button key={subj} onClick={() => setSubjectName(prev => prev === subj ? '' : subj)}
                         className={`py-2 rounded-lg text-xs font-medium border transition-all ${
                           subjectName === subj
                             ? 'bg-brand-500 text-white border-brand-500'
                             : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                         }`}
-                      >
-                        {subj}
-                      </button>
+                      >{subj}</button>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
-                    ใส่สำหรับคอร์สพิเศษหลายวิชา (Special) เพื่อให้นับชั่วโมงสอนแยกตามวิชา
-                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">ใส่สำหรับคอร์สพิเศษหลายวิชา (Special)</p>
                 </div>
 
-                {/* ระยะเวลา */}
                 <div>
                   <label className="label">ระยะเวลาเรียน</label>
                   <div className="grid grid-cols-5 gap-1.5">
                     {[30, 45, 60, 90, 120].map(m => (
-                      <button
-                        key={m}
-                        onClick={() => setDurationMinutes(m)}
+                      <button key={m} onClick={() => setDurationMinutes(m)}
                         className={`py-2 rounded-lg text-xs font-medium border transition-all ${
                           durationMinutes === m
                             ? 'bg-brand-500 text-white border-brand-500'
                             : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                         }`}
-                      >
-                        {m >= 60 ? `${m / 60}ชม.` : `${m}น.`}
-                      </button>
+                      >{m >= 60 ? `${m / 60}ชม.` : `${m}น.`}</button>
                     ))}
                   </div>
                 </div>
 
-                {/* หัวข้อที่สอน */}
                 <div>
                   <label className="label">สอนอะไรบ้าง (ถ้ามี)</label>
-                  <input
-                    className="input"
-                    placeholder="เช่น บทที่ 3 คำศัพท์เรื่องครอบครัว"
-                    value={topic}
-                    onChange={e => setTopic(e.target.value)}
-                  />
+                  <input className="input" placeholder="เช่น บทที่ 3 คำศัพท์เรื่องครอบครัว"
+                    value={topic} onChange={e => setTopic(e.target.value)} />
                 </div>
 
-                {/* การบ้าน */}
                 <div>
                   <label className="label">การบ้าน (ถ้ามี)</label>
-                  <input
-                    className="input"
-                    placeholder="เช่น ฝึกพินอิน หน้า 20-25"
-                    value={homework}
-                    onChange={e => setHomework(e.target.value)}
-                  />
+                  <input className="input" placeholder="เช่น ฝึกพินอิน หน้า 20-25"
+                    value={homework} onChange={e => setHomework(e.target.value)} />
                 </div>
               </div>
             )}
 
-            {/* ย้อนหลัง toggle */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setIsBackdate(!isBackdate); setCustomDate('') }}
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isBackdate ? 'bg-brand-500' : 'bg-gray-200'}`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[#242d3f] shadow transition-transform ${isBackdate ? 'translate-x-4' : 'translate-x-0'}`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isBackdate ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
               <span className="text-sm text-gray-600 dark:text-gray-300">บันทึกย้อนหลัง</span>
             </div>
@@ -1031,195 +820,179 @@ export default function CheckinPage() {
             {isBackdate && (
               <div>
                 <label className="label">วันที่และเวลา</label>
-                <input
-                  type="datetime-local"
-                  className="input"
-                  value={customDate}
+                <input type="datetime-local" className="input" value={customDate}
                   onChange={e => setCustomDate(e.target.value)}
-                  max={new Date().toISOString().slice(0, 16)}
-                />
+                  max={new Date().toISOString().slice(0, 16)} />
               </div>
             )}
 
             {selectedStudent && !selectedTeacherId && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-sm text-amber-700">
-                ⚠️ กรุณาเลือกครูผู้สอนก่อนกดเช็กอิน
+                กรุณาเลือกครูผู้สอนก่อนกดเช็กอิน
               </div>
             )}
 
-            <button
-              onClick={handleCheckin}
-              disabled={checkinDisabled}
-              className="btn-brand w-full justify-center py-2.5"
-            >
-              {loading ? 'กำลังบันทึก...' : isBackdate ? '📅 บันทึกย้อนหลัง' : '✓ เช็กอิน'}
+            <button onClick={handleCheckin} disabled={checkinDisabled} className="btn-brand w-full justify-center py-2.5">
+              {loading ? 'กำลังบันทึก...' : isBackdate ? 'บันทึกย้อนหลัง' : 'เช็กอิน'}
             </button>
           </div>
         </div>
 
-        {/* Attendance panel */}
+        {/* รายชื่อผู้เข้าเรียน */}
         <div className="md:col-span-2 card">
           <div className="card-header gap-2 flex-wrap">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
               <button onClick={() => goDate(-1)} className="btn-outline btn-sm px-2.5 py-1">←</button>
-              <div className="relative flex-1 max-w-[180px]">
-                <input
-                  type="date"
-                  className="input text-sm py-1.5 pr-8"
-                  value={selectedDate}
-                  max={todayStr}
-                  onChange={e => e.target.value && setSelectedDate(e.target.value)}
-                />
-              </div>
-              <button
-                onClick={() => goDate(1)}
-                disabled={selectedDate >= todayStr}
-                className="btn-outline btn-sm px-2.5 py-1 disabled:opacity-30"
-              >→</button>
+              <input
+                type="date"
+                className="input text-sm py-1.5 w-auto"
+                value={selectedDate}
+                max={todayStr}
+                onChange={e => e.target.value && setSelectedDate(e.target.value)}
+              />
+              <button onClick={() => goDate(1)} disabled={selectedDate >= todayStr}
+                className="btn-outline btn-sm px-2.5 py-1 disabled:opacity-30">→</button>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
                 {formatDateTH(selectedDate)}
               </span>
               {!isToday && (
-                <button
-                  onClick={() => setSelectedDate(todayStr)}
-                  className="btn-outline btn-sm px-2.5 py-1 text-brand-600 border-brand-200 hover:bg-brand-50"
-                >วันนี้</button>
+                <button onClick={() => setSelectedDate(todayStr)}
+                  className="btn-outline btn-sm px-2.5 py-1 text-brand-600 border-brand-200 hover:bg-brand-50">
+                  วันนี้
+                </button>
               )}
             </div>
             <span className="badge badge-green">{presentCount} คน</span>
           </div>
 
-          {/* Tab bar */}
+          {/* Tab */}
           <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-gray-100 dark:border-[#2a3245]">
             <button
               onClick={() => setCheckinPanelTab('list')}
               className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-all -mb-px border-b-2 ${checkinPanelTab === 'list' ? 'border-brand-600 text-brand-600 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-            >🗒 รายชื่อวันนี้</button>
+            >รายชื่อวันนี้</button>
             <button
               onClick={() => setCheckinPanelTab('lookup')}
               className={`px-3 py-1.5 text-xs font-medium rounded-t-lg transition-all -mb-px border-b-2 ${checkinPanelTab === 'lookup' ? 'border-brand-600 text-brand-600 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-            >🔍 สรุปรายคน</button>
+            >สรุปรายคน</button>
           </div>
 
-          {/* ── TAB: รายชื่อวันนี้ ── */}
-          {checkinPanelTab === 'list' && <>
-          {/* ช่องค้นหานักเรียนในรายการ */}
-          {presentCount > 1 && (
-            <div className="px-4 pt-3 pb-1">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-                <input
-                  type="text"
-                  className="input text-sm pl-8 py-1.5"
-                  placeholder="ค้นหาชื่อนักเรียน..."
-                  value={listStudentFilter}
-                  onChange={e => setListStudentFilter(e.target.value)}
-                />
-                {listStudentFilter && (
-                  <button
-                    onClick={() => setListStudentFilter('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-                  >✕</button>
-                )}
-              </div>
-              {listStudentFilter && (
-                <p className="text-xs text-gray-400 mt-1.5 px-1">
-                  แสดง {filteredCheckins.length} จาก {presentCount} คน
-                </p>
-              )}
-            </div>
-          )}
-
-          {presentCount > 0 && (
-            <div className="px-5 py-3 border-b border-gray-50 flex gap-4 text-sm flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
-                <span className="text-gray-600 dark:text-gray-300">มาเรียน</span>
-                <span className="font-semibold text-brand-700">{presentCount} คน</span>
-              </div>
-              {checkedOutCount > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
-                  <span className="text-gray-600 dark:text-gray-300">ออกแล้ว</span>
-                  <span className="font-semibold text-gray-700 dark:text-gray-200">{checkedOutCount} คน</span>
-                </div>
-              )}
-              {stillInCount > 0 && isToday && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                  <span className="text-gray-600 dark:text-gray-300">ยังอยู่</span>
-                  <span className="font-semibold text-yellow-700">{stillInCount} คน</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="divide-y divide-gray-50">
-            {checkins.length === 0 && (
-              <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
-                {isToday ? 'ยังไม่มีการเช็กอินวันนี้' : `ไม่มีข้อมูลวันที่ ${formatDateTH(selectedDate)}`}
-              </p>
-            )}
-            {checkins.length > 0 && filteredCheckins.length === 0 && (
-              <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
-                ไม่พบ "{listStudentFilter}"
-              </p>
-            )}
-            {filteredCheckins.map(c => {
-              const name = c.student?.nickname || c.student?.full_name || '?'
-              const inTime = new Date(c.check_in_at)
-              const outTime = c.check_out_at ? new Date(c.check_out_at) : null
-              const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
-              return (
-                <div key={c.id} className="px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold flex-shrink-0">
-                      {name.slice(0, 2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-900 dark:text-white">{name}</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-300 truncate">
-                        {c.enrollment?.course?.name || 'ไม่มีคอร์ส'}
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm">
-                        <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
-                        {outTime && <span className="text-gray-400 dark:text-gray-300"> → {fmt(outTime)}</span>}
-                      </div>
-                      {duration && <div className="text-xs text-gray-400 dark:text-gray-300">{duration} นาที</div>}
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0 flex-wrap">
-                      {c.check_out_at
-                        ? <span className="badge badge-gray text-xs">ออกแล้ว</span>
-                        : <span className="badge badge-green text-xs">อยู่</span>
-                      }
-                      <button
-                        onClick={() => openNote(c)}
-                        className={`btn-outline btn-sm px-2 ${c.lesson_note ? 'text-green-600' : 'text-gray-400 dark:text-gray-300'}`}
-                        title="บันทึกบทเรียน"
-                      >📝</button>
-                      <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2">✎</button>
-                      <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
-                      <button
-                        onClick={() => loadStudentSummary(c)}
-                        className="btn-outline btn-sm px-2 text-brand-500"
-                        title="สรุปส่งผู้ปกครอง"
-                      >📋</button>
-                    </div>
+          {checkinPanelTab === 'list' && (
+            <>
+              {presentCount > 1 && (
+                <div className="px-4 pt-3 pb-1">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="input text-sm pl-4 py-1.5"
+                      placeholder="ค้นหาชื่อนักเรียน..."
+                      value={listStudentFilter}
+                      onChange={e => setListStudentFilter(e.target.value)}
+                    />
+                    {listStudentFilter && (
+                      <button onClick={() => setListStudentFilter('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
+                        X
+                      </button>
+                    )}
                   </div>
-                  {c.lesson_note && (
-                    <div className="mt-2 ml-12 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 bg-yellow-50 rounded-lg px-3 py-2 border border-yellow-100">
-                      📖 {c.lesson_note}
+                  {listStudentFilter && (
+                    <p className="text-xs text-gray-400 mt-1.5 px-1">แสดง {filteredCheckins.length} จาก {presentCount} คน</p>
+                  )}
+                </div>
+              )}
+
+              {presentCount > 0 && (
+                <div className="px-5 py-3 border-b border-gray-50 dark:border-[#2a3245] flex gap-4 text-sm flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
+                    <span className="text-gray-600 dark:text-gray-300">มาเรียน</span>
+                    <span className="font-semibold text-brand-700">{presentCount} คน</span>
+                  </div>
+                  {checkedOutCount > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
+                      <span className="text-gray-600 dark:text-gray-300">ออกแล้ว</span>
+                      <span className="font-semibold text-gray-700 dark:text-gray-200">{checkedOutCount} คน</span>
+                    </div>
+                  )}
+                  {stillInCount > 0 && isToday && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
+                      <span className="text-gray-600 dark:text-gray-300">ยังอยู่</span>
+                      <span className="font-semibold text-yellow-700">{stillInCount} คน</span>
                     </div>
                   )}
                 </div>
-              )
-            })}
-          </div>
-          </>}
+              )}
 
-          {/* ── TAB: สรุปรายคน ── */}
+              <div className="divide-y divide-gray-50 dark:divide-[#2a3245]">
+                {checkins.length === 0 && (
+                  <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
+                    {isToday ? 'ยังไม่มีการเช็กอินวันนี้' : `ไม่มีข้อมูลวันที่ ${formatDateTH(selectedDate)}`}
+                  </p>
+                )}
+                {checkins.length > 0 && filteredCheckins.length === 0 && (
+                  <p className="text-center text-gray-400 dark:text-gray-300 py-10 text-sm">
+                    ไม่พบ "{listStudentFilter}"
+                  </p>
+                )}
+
+                {filteredCheckins.map(c => {
+                  const name = c.student?.nickname || c.student?.full_name || '?'
+                  const inTime = new Date(c.check_in_at)
+                  const outTime = c.check_out_at ? new Date(c.check_out_at) : null
+                  const duration = outTime ? Math.round((outTime.getTime() - inTime.getTime()) / 60000) : null
+                  return (
+                    <div key={c.id} className="px-4 py-3">
+                      {/* แถวบน: avatar + ชื่อ + เวลา */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-300 text-xs font-bold flex-shrink-0">
+                          {name.slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-gray-900 dark:text-white truncate">{name}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-300 truncate">
+                            {c.enrollment?.course?.name || 'ไม่มีคอร์ส'}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm whitespace-nowrap">
+                            <span className="text-brand-600 font-medium">{fmt(inTime)}</span>
+                            {outTime && <span className="text-gray-400 dark:text-gray-300"> → {fmt(outTime)}</span>}
+                          </div>
+                          {duration && <div className="text-xs text-gray-400 dark:text-gray-300">{duration} นาที</div>}
+                        </div>
+                      </div>
+
+                      {/* แถวล่าง: badge + ปุ่ม */}
+                      <div className="flex items-center gap-1.5 mt-2 ml-12 flex-wrap">
+                        {c.check_out_at
+                          ? <span className="badge badge-gray text-xs">ออกแล้ว</span>
+                          : <span className="badge badge-green text-xs">อยู่</span>
+                        }
+                        <button
+                          onClick={() => openNote(c)}
+                          className={`btn-outline btn-sm px-2 text-xs ${c.lesson_note ? 'text-green-600' : 'text-gray-400 dark:text-gray-300'}`}
+                          title="บันทึกบทเรียน"
+                        >บันทึก</button>
+                        <button onClick={() => openEdit(c)} className="btn-outline btn-sm px-2 text-xs">แก้ไข</button>
+                        <button onClick={() => handleDelete(c.id)} className="btn-outline btn-sm px-2 text-xs text-red-400 hover:bg-red-50">ลบ</button>
+                        <button onClick={() => loadStudentSummary(c)} className="btn-outline btn-sm px-2 text-xs text-brand-500" title="สรุปส่งผู้ปกครอง">สรุป</button>
+                      </div>
+
+                      {c.lesson_note && (
+                        <div className="mt-2 ml-12 text-xs text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg px-3 py-2 border border-yellow-100 dark:border-yellow-900/30">
+                          {c.lesson_note}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
           {checkinPanelTab === 'lookup' && (
             <div className="p-4">
               <StudentLookup
@@ -1231,31 +1004,27 @@ export default function CheckinPage() {
               />
             </div>
           )}
-
         </div>
       </div>
 
-      {/* Lesson Note Modal */}
+      {/* Modal บันทึกบทเรียน */}
       {noteCheckin && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
             <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <div>
-                <h2 className="font-semibold">📝 บันทึกบทเรียน</h2>
+                <h2 className="font-semibold">บันทึกบทเรียน</h2>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-0.5">
                   {noteCheckin.student?.nickname || noteCheckin.student?.full_name} — {noteCheckin.enrollment?.course?.name || 'ไม่มีคอร์ส'}
                 </p>
               </div>
-              <button onClick={() => setNoteCheckin(null)} className="text-gray-400 dark:text-gray-300">✕</button>
+              <button onClick={() => setNoteCheckin(null)} className="text-gray-400 dark:text-gray-300">X</button>
             </div>
             <div className="p-5 space-y-3">
               <label className="label">เนื้อหาที่สอนวันนี้</label>
-              <textarea
-                className="input min-h-[120px] resize-none"
+              <textarea className="input min-h-[120px] resize-none"
                 placeholder="เช่น บทที่ 3 คำศัพท์เรื่องครอบครัว, ฝึกอ่านประโยค..."
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-              />
+                value={noteText} onChange={e => setNoteText(e.target.value)} />
               <div className="flex gap-2 pt-1">
                 <button onClick={handleSaveNote} className="btn-brand flex-1 justify-center">บันทึก</button>
                 <button onClick={() => setNoteCheckin(null)} className="btn-outline flex-1 justify-center">ยกเลิก</button>
@@ -1265,13 +1034,13 @@ export default function CheckinPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Modal แก้ไขเวลา */}
       {editCheckin && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-sm shadow-xl">
             <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">แก้ไขเวลา</h2>
-              <button onClick={() => setEditCheckin(null)} className="text-gray-400 dark:text-gray-300">✕</button>
+              <button onClick={() => setEditCheckin(null)} className="text-gray-400 dark:text-gray-300">X</button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-3">
               <div>
@@ -1286,12 +1055,8 @@ export default function CheckinPage() {
               </div>
               <div>
                 <label className="label">บันทึกบทเรียน</label>
-                <textarea
-                  className="input min-h-[80px] resize-none"
-                  placeholder="เนื้อหาที่สอน..."
-                  value={editForm.lesson_note}
-                  onChange={e => setEditForm({ ...editForm, lesson_note: e.target.value })}
-                />
+                <textarea className="input min-h-[80px] resize-none" placeholder="เนื้อหาที่สอน..."
+                  value={editForm.lesson_note} onChange={e => setEditForm({ ...editForm, lesson_note: e.target.value })} />
               </div>
               <div className="flex gap-2 pt-1">
                 <button type="submit" className="btn-brand flex-1 justify-center">บันทึก</button>
