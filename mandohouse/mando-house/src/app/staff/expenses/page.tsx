@@ -78,12 +78,8 @@ export default function ExpensesPage() {
       const y = d.getFullYear()
       const m = d.getMonth() + 1
       const key = `${y}-${String(m).padStart(2,'0')}`
-      const income = recs
-        .filter(r => r.issued_at?.startsWith(key))
-        .reduce((s, r) => s + Number(r.amount), 0)
-      const expense = exps
-        .filter(e => e.expense_date?.startsWith(key))
-        .reduce((s, e) => s + Number(e.amount), 0)
+      const income = recs.filter(r => r.issued_at?.startsWith(key)).reduce((s, r) => s + Number(r.amount), 0)
+      const expense = exps.filter(e => e.expense_date?.startsWith(key)).reduce((s, e) => s + Number(e.amount), 0)
       months.push({ key, label: `${MONTHS_TH[m-1]} ${y}`, income, expense, profit: income - expense })
     }
     return months
@@ -164,36 +160,38 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div>
+    <div className="p-4 md:p-6">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+        <div className="flex-1">
           <h1 className="text-xl font-semibold">รายจ่าย</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">ติดตามค่าใช้จ่ายและกำไรขาดทุน</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ติดตามค่าใช้จ่ายและกำไรขาดทุน</p>
         </div>
         <div className="flex items-center gap-2">
           <select className="input w-auto text-sm" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
             {monthOptions.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
-          <button onClick={() => { setEditExpense(null); resetForm(); setShowForm(true) }} className="btn-brand">
+          <button onClick={() => { setEditExpense(null); resetForm(); setShowForm(true) }} className="btn-brand whitespace-nowrap">
             + บันทึกรายจ่าย
           </button>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      {/* Summary cards — 1 col mobile, 3 col desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="card p-4">
-          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">💰 รายได้เดือนนี้</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">รายได้เดือนนี้</div>
           <div className="text-2xl font-semibold text-brand-600">{formatThaiMoney(totalIncome)}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">จากใบเสร็จ</div>
+          <div className="text-xs text-gray-400 mt-1">จากใบเสร็จ</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">📤 รายจ่ายเดือนนี้</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">รายจ่ายเดือนนี้</div>
           <div className="text-2xl font-semibold text-red-500">{formatThaiMoney(totalExpense)}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">{expenses.length} รายการ</div>
+          <div className="text-xs text-gray-400 mt-1">{expenses.length} รายการ</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-2 flex items-center gap-1.5">📊 กำไรสุทธิ</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">กำไรสุทธิ</div>
           <div className={`text-2xl font-semibold ${profit >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
             {profit >= 0 ? '+' : ''}{formatThaiMoney(profit)}
           </div>
@@ -205,9 +203,9 @@ export default function ExpensesPage() {
 
       {/* 6-month chart */}
       <div className="card p-5 mb-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="font-medium text-gray-800 dark:text-gray-100">รายรับ-รายจ่าย 6 เดือน</h3>
-          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300">
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm bg-blue-400 inline-block"></span>รายได้
             </span>
@@ -216,9 +214,9 @@ export default function ExpensesPage() {
             </span>
           </div>
         </div>
-        <div className="flex items-end gap-3 h-36">
+        <div className="flex items-end gap-2 h-36">
           {monthlySummary.map(m => (
-            <div key={m.key} className="flex-1 flex flex-col items-center gap-1">
+            <div key={m.key} className="flex-1 flex flex-col items-center gap-1 min-w-0">
               <div className="w-full flex items-end gap-0.5 h-28">
                 <div
                   className="flex-1 rounded-t-md bg-blue-400 transition-all"
@@ -231,7 +229,7 @@ export default function ExpensesPage() {
                   title={`รายจ่าย: ${formatThaiMoney(m.expense)}`}
                 />
               </div>
-              <div className="text-[10px] text-gray-400 dark:text-gray-300 text-center leading-tight">{m.label}</div>
+              <div className="text-[10px] text-gray-400 dark:text-gray-300 text-center leading-tight w-full truncate">{m.label}</div>
               <div className={`text-[10px] font-medium ${m.profit >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
                 {m.profit >= 0 ? '+' : ''}{Math.round(m.profit / 1000)}k
               </div>
@@ -240,9 +238,11 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
-        {/* Expense list */}
-        <div className="col-span-2 card overflow-hidden">
+      {/* ตาราง + category — เรียงลงบน mobile, เรียงข้างบน desktop */}
+      <div className="flex flex-col lg:flex-row gap-5">
+
+        {/* Expense list — มี horizontal scroll บน mobile */}
+        <div className="flex-1 card overflow-hidden">
           <div className="card-header">
             <h3 className="font-medium">รายการจ่ายเดือนนี้</h3>
             <span className="badge badge-red">{expenses.length} รายการ</span>
@@ -252,48 +252,63 @@ export default function ExpensesPage() {
           ) : expenses.length === 0 ? (
             <p className="text-center text-gray-300 py-10 text-sm">ยังไม่มีรายจ่าย</p>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr><th>วันที่</th><th>รายการ</th><th>หมวด</th><th>จำนวน</th><th></th></tr>
-              </thead>
-              <tbody>
-                {expenses.map(exp => (
-                  <tr key={exp.id} className="table-row-hover">
-                    <td className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 whitespace-nowrap">{formatDate(exp.expense_date, 'd MMM')}</td>
-                    <td>
-                      <div className="font-medium text-sm">{exp.title}</div>
-                      {exp.is_recurring && (
-                        <span className="text-[10px] text-blue-500">🔄 ประจำทุกวันที่ {exp.recurring_day}</span>
-                      )}
-                      {exp.notes && <div className="text-xs text-gray-400 dark:text-gray-300 truncate max-w-[160px]">{exp.notes}</div>}
-                    </td>
-                    <td>
-                      {exp.category ? (
-                        <span className="text-xs flex items-center gap-1">
-                          <span>{exp.category.icon}</span>
-                          <span style={{ color: exp.category.color }}>{exp.category.name}</span>
-                        </span>
-                      ) : <span className="text-xs text-gray-300">—</span>}
-                    </td>
-                    <td>
-                      <span className="font-semibold text-sm text-red-600">-{formatThaiMoney(exp.amount)}</span>
-                      <div className="text-[10px] text-gray-400 dark:text-gray-300">{PAYMENT_LABELS[exp.payment_method] ?? exp.payment_method}</div>
-                    </td>
-                    <td>
-                      <div className="flex gap-1">
-                        <button onClick={() => openEdit(exp)} className="btn-outline btn-sm px-2">แก้</button>
-                        <button onClick={() => deleteExpense(exp.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">✕</button>
-                      </div>
-                    </td>
+            /* wrapper ให้เลื่อนซ้าย-ขวาบนจอแคบ */
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px]">
+                <thead>
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">วันที่</th>
+                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">รายการ</th>
+                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">หมวด</th>
+                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">จำนวน</th>
+                    <th className="px-4 py-2"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {expenses.map(exp => (
+                    <tr key={exp.id} className="table-row-hover border-t border-gray-50 dark:border-[#2a3245]">
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {formatDate(exp.expense_date, 'd MMM')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-sm">{exp.title}</div>
+                        {exp.is_recurring && (
+                          <span className="text-[10px] text-blue-500">ประจำทุกวันที่ {exp.recurring_day}</span>
+                        )}
+                        {exp.notes && (
+                          <div className="text-xs text-gray-400 dark:text-gray-300 truncate max-w-[200px]">{exp.notes}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {exp.category ? (
+                          <span className="text-xs flex items-center gap-1 whitespace-nowrap">
+                            <span>{exp.category.icon}</span>
+                            <span style={{ color: exp.category.color }}>{exp.category.name}</span>
+                          </span>
+                        ) : <span className="text-xs text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span className="font-semibold text-sm text-red-600">-{formatThaiMoney(exp.amount)}</span>
+                        <div className="text-[10px] text-gray-400 dark:text-gray-300">
+                          {PAYMENT_LABELS[exp.payment_method] ?? exp.payment_method}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <button onClick={() => openEdit(exp)} className="btn-outline btn-sm px-2">แก้</button>
+                          <button onClick={() => deleteExpense(exp.id)} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">X</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        {/* Category breakdown */}
-        <div className="space-y-4">
+        {/* Category breakdown — เต็มความกว้างบน mobile */}
+        <div className="lg:w-64 space-y-4 flex-shrink-0">
           <div className="card p-5">
             <h3 className="font-medium text-gray-800 dark:text-gray-100 mb-4">แยกตามหมวด</h3>
             {catBreakdown.length === 0 ? (
@@ -325,12 +340,12 @@ export default function ExpensesPage() {
 
           {expenses.some(e => e.is_recurring) && (
             <div className="card p-4">
-              <h3 className="font-medium text-gray-800 dark:text-gray-100 text-sm mb-3">🔄 รายจ่ายประจำ</h3>
+              <h3 className="font-medium text-gray-800 dark:text-gray-100 text-sm mb-3">รายจ่ายประจำ</h3>
               <div className="space-y-2">
                 {expenses.filter(e => e.is_recurring).map(exp => (
-                  <div key={exp.id} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600 dark:text-gray-300">{exp.title}</span>
-                    <div className="text-right">
+                  <div key={exp.id} className="flex items-center justify-between text-xs gap-2">
+                    <span className="text-gray-600 dark:text-gray-300 truncate">{exp.title}</span>
+                    <div className="text-right flex-shrink-0">
                       <div className="font-medium text-red-500">-{formatThaiMoney(exp.amount)}</div>
                       <div className="text-gray-400 dark:text-gray-300">ทุกวันที่ {exp.recurring_day}</div>
                     </div>
@@ -348,7 +363,7 @@ export default function ExpensesPage() {
           <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between sticky top-0 bg-white dark:bg-[#242d3f]">
               <h2 className="font-semibold">{editExpense ? 'แก้ไขรายจ่าย' : 'บันทึกรายจ่าย'}</h2>
-              <button onClick={() => { setShowForm(false); setEditExpense(null) }} className="text-gray-400 dark:text-gray-300">✕</button>
+              <button onClick={() => { setShowForm(false); setEditExpense(null) }} className="text-gray-400 dark:text-gray-300">X</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-4">
               <div>
@@ -385,11 +400,11 @@ export default function ExpensesPage() {
               </div>
               <div>
                 <label className="label">ชำระโดย</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {Object.entries(PAYMENT_LABELS).map(([v, l]) => (
                     <button type="button" key={v}
                       onClick={() => setForm({ ...form, payment_method: v })}
-                      className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${form.payment_method === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white dark:bg-[#242d3f] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#3a4560] hover:border-gray-400'}`}>
+                      className={`py-1.5 text-xs rounded-lg border transition-colors ${form.payment_method === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white dark:bg-[#242d3f] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#3a4560] hover:border-gray-400'}`}>
                       {l}
                     </button>
                   ))}
@@ -398,7 +413,7 @@ export default function ExpensesPage() {
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={form.is_recurring}
                   onChange={e => setForm({ ...form, is_recurring: e.target.checked })} />
-                <span className="text-sm text-gray-700 dark:text-gray-200">🔄 รายจ่ายประจำทุกเดือน</span>
+                <span className="text-sm text-gray-700 dark:text-gray-200">รายจ่ายประจำทุกเดือน</span>
               </label>
               {form.is_recurring && (
                 <div>
