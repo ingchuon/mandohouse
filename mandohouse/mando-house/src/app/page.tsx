@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/page.tsx
 import { TUTORCLOUD_CONFIG } from '@/lib/tutorcloud-config'
 import Link from 'next/link'
@@ -92,7 +94,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" style={{ display: 'block', width: '100%', padding: 10, borderRadius: 8, fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none', background: plan.popular ? '#1B6B3A' : 'transparent', color: plan.popular ? '#fff' : '#1B6B3A', border: `1.5px solid #1B6B3A` }}>
+                <Link href="/register" style={{ display: 'block', width: '100%', padding: 10, borderRadius: 8, fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none', background: plan.popular ? '#1B6B3A' : 'transparent', color: plan.popular ? '#fff' : '#1B6B3A', border: '1.5px solid #1B6B3A' }}>
                   เริ่มทดลองใช้
                 </Link>
               </div>
@@ -114,6 +116,7 @@ export default function LandingPage() {
       <div style={{ background: '#f9fafb', padding: '24px 32px', textAlign: 'center', fontSize: 13, color: '#888' }}>
         TutorCloud · ระบบจัดการสถาบันสอนพิเศษ · {TUTORCLOUD_CONFIG.email}
       </div>
+
     </div>
   )
 }
