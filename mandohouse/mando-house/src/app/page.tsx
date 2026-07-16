@@ -100,18 +100,18 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ fontFamily: "'Sarabun', sans-serif", background: C.cream, color: C.dark, minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'Noto Sans Thai', 'Inter', sans-serif", background: C.cream, color: C.dark, minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         a{text-decoration:none}
         .nav-a{color:rgba(38,34,32,0.55);font-size:14px;font-weight:500;transition:color .15s}
         .nav-a:hover{color:${C.dark}}
-        .btn-primary{background:${C.brown};color:#fff;padding:11px 24px;border-radius:6px;font-size:14px;font-weight:600;display:inline-block;transition:opacity .15s;border:none;cursor:pointer}
+        .btn-primary{background:${C.brown};color:#fff;padding:11px 24px;border-radius:6px;font-size:14px;font-weight:600;display:inline-block;transition:opacity .15s;border:none;cursor:pointer;font-family:inherit}
         .btn-primary:hover{opacity:.88}
-        .btn-ghost{background:transparent;color:rgba(247,241,240,0.7);border:1px solid rgba(247,241,240,0.2);padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,color .15s;cursor:pointer}
+        .btn-ghost{background:transparent;color:rgba(247,241,240,0.7);border:1px solid rgba(247,241,240,0.2);padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all .15s;cursor:pointer;font-family:inherit}
         .btn-ghost:hover{border-color:rgba(247,241,240,0.5);color:#fff}
-        .btn-outline{background:transparent;color:${C.brown};border:1.5px solid ${C.brown};padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-block;transition:background .15s,color .15s;cursor:pointer;width:100%}
+        .btn-outline{background:transparent;color:${C.brown};border:1.5px solid ${C.brown};padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-block;transition:background .15s,color .15s;cursor:pointer;width:100%;font-family:inherit}
         .btn-outline:hover{background:${C.brown};color:#fff}
         .feat-card{background:#fff;border:1px solid ${C.brownMid};border-radius:10px;padding:22px 20px;transition:box-shadow .2s}
         .feat-card:hover{box-shadow:0 6px 20px rgba(161,92,56,.1)}
@@ -122,7 +122,7 @@ export default function LandingPage() {
         @media(max-width:680px){
           .feat-grid{grid-template-columns:1fr 1fr!important}
           .plan-grid{grid-template-columns:1fr!important}
-          .hero-h1{font-size:32px!important}
+          .hero-h1{font-size:36px!important;line-height:1.3!important}
           .contact-row{flex-direction:column!important}
           .nav-links{display:none}
           .footer-row{flex-direction:column!important;text-align:center;gap:8px!important}
@@ -130,6 +130,7 @@ export default function LandingPage() {
         }
         @media(max-width:480px){
           .feat-grid{grid-template-columns:1fr!important}
+          .hero-h1{font-size:30px!important}
         }
       `}</style>
 
@@ -150,7 +151,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: 'block', marginBottom: 6 }}>ชื่อสถาบัน</label>
-                    <input type="text" required placeholder="เช่น Easy Piano Studio" value={form.school} onChange={e => setForm({ ...form, school: e.target.value })} />
+                    <input type="text" required placeholder="ชื่อสถาบันของคุณ" value={form.school} onChange={e => setForm({ ...form, school: e.target.value })} />
                   </div>
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: 'block', marginBottom: 6 }}>เบอร์โทรศัพท์</label>
@@ -187,7 +188,7 @@ export default function LandingPage() {
         transition: 'border-color .2s, background .2s',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
-          <span style={{ color: C.dark, fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px' }}>
+          <span style={{ fontFamily: "'Inter', sans-serif", color: C.dark, fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px' }}>
             Tutor<span style={{ color: C.brown }}>cloud</span>
           </span>
           <div className="nav-links" style={{ display: 'flex', gap: 24 }}>
@@ -197,27 +198,28 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link href="https://mandohouse.vercel.app/login" className="nav-a">เข้าสู่ระบบ</Link>
+          <Link href="/login" className="nav-a">เข้าสู่ระบบ</Link>
           <button onClick={() => openModal('Growth')} className="btn-primary">ทดลองใช้ฟรี</button>
         </div>
       </nav>
 
-      {/* HERO — center aligned */}
+      {/* HERO */}
       <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #3d2e2a 100%)`, padding: '100px 40px 88px', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle, rgba(195,166,160,0.06) 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 60%, rgba(161,92,56,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle, rgba(195,166,160,0.05) 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 60%, rgba(161,92,56,0.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         <div style={{ maxWidth: 680, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(195,166,160,0.12)', border: `1px solid rgba(195,166,160,0.22)`, color: C.rose, fontSize: 13, padding: '5px 14px', borderRadius: 99, marginBottom: 28, fontWeight: 500 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(195,166,160,0.1)', border: `1px solid rgba(195,166,160,0.2)`, color: C.rose, fontSize: 13, padding: '5px 14px', borderRadius: 99, marginBottom: 36, fontWeight: 500 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.rose, display: 'inline-block' }} />
             ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต
           </div>
 
-          <h1 className="hero-h1" style={{ fontSize: 52, fontWeight: 700, color: '#fff', lineHeight: 1.15, marginBottom: 20, letterSpacing: '-1.5px' }}>
-            ระบบหลังบ้าน<br />
-            <span style={{ color: C.rose }}>สถาบันสอนพิเศษ</span><br />
-            ครบจบในที่เดียว
-          </h1>
+          {/* แยก h1 เป็น 3 บรรทัด ป้องกันไม้เอกทับ */}
+          <div className="hero-h1" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1.45, marginBottom: 24, letterSpacing: '-0.5px' }}>
+            <div style={{ color: '#fff' }}>ระบบหลังบ้าน</div>
+            <div style={{ color: C.rose }}>สถาบันสอนพิเศษ</div>
+            <div style={{ color: '#fff' }}>ครบจบในที่เดียว</div>
+          </div>
 
           <p style={{ fontSize: 16, color: 'rgba(247,241,240,0.5)', lineHeight: 1.85, marginBottom: 40, maxWidth: 440, margin: '0 auto 40px' }}>
             จัดการนักเรียน ครู ตารางเรียน และการเงิน<br />ใช้งานได้ทันที บนมือถือและคอมพิวเตอร์
@@ -227,7 +229,7 @@ export default function LandingPage() {
             <button onClick={() => openModal('Growth')} className="btn-primary" style={{ fontSize: 15, padding: '13px 32px' }}>
               ทดลองใช้ฟรี 30 วัน
             </button>
-            <Link href="https://mandohouse.vercel.app/login" className="btn-ghost" style={{ fontSize: 15, padding: '12px 24px' }}>
+            <Link href="/login" className="btn-ghost" style={{ fontSize: 15, padding: '12px 24px' }}>
               เข้าสู่ระบบ
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </Link>
@@ -235,11 +237,10 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* FEATURES — group titles centered */}
+      {/* FEATURES */}
       <div id="features" style={{ padding: '88px 40px', maxWidth: 1060, margin: '0 auto' }}>
         {features.map((group, gi) => (
           <div key={group.group} style={{ marginBottom: gi < features.length - 1 ? 72 : 0 }}>
-            {/* Group title — centered with lines */}
             <div style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16 }}>
                 <span style={{ display: 'inline-block', width: 32, height: 2, background: C.brownMid, borderRadius: 2 }} />
@@ -247,7 +248,6 @@ export default function LandingPage() {
                 <span style={{ display: 'inline-block', width: 32, height: 2, background: C.brownMid, borderRadius: 2 }} />
               </div>
             </div>
-
             <div className="feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
               {group.items.map(f => (
                 <div key={f.title} className="feat-card">
@@ -275,7 +275,7 @@ export default function LandingPage() {
               { n: '03', title: 'ใช้งานได้เลย', desc: 'เช็กอิน ออกใบเสร็จ และดู Dashboard ได้ทันที ไม่ต้องรอ' },
             ].map(s => (
               <div key={s.n}>
-                <div style={{ fontSize: 44, fontWeight: 800, color: 'rgba(247,241,240,0.15)', lineHeight: 1, marginBottom: 14 }}>{s.n}</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 44, fontWeight: 800, color: 'rgba(247,241,240,0.15)', lineHeight: 1, marginBottom: 14 }}>{s.n}</div>
                 <div style={{ width: 28, height: 2, background: 'rgba(247,241,240,0.35)', borderRadius: 2, marginBottom: 14 }} />
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 8 }}>{s.title}</h3>
                 <p style={{ fontSize: 13.5, color: 'rgba(247,241,240,0.48)', lineHeight: 1.75 }}>{s.desc}</p>
@@ -299,9 +299,9 @@ export default function LandingPage() {
                 {plan.popular && (
                   <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: C.brown, color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>ยอดนิยม</div>
                 )}
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#b8a8a4', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700, color: '#b8a8a4', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{plan.name}</div>
                 <div style={{ marginBottom: 4 }}>
-                  <span style={{ fontSize: 36, fontWeight: 800, color: C.brown, letterSpacing: '-1px' }}>฿{plan.price.toLocaleString()}</span>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 800, color: C.brown, letterSpacing: '-1px' }}>฿{plan.price.toLocaleString()}</span>
                   <span style={{ fontSize: 13, color: '#c0b0ac', marginLeft: 4 }}>/เดือน</span>
                 </div>
                 <p style={{ fontSize: 13, color: '#9a8a86', marginBottom: 18, paddingBottom: 18, borderBottom: `1px solid ${C.brownMid}` }}>{plan.desc}</p>
@@ -318,11 +318,7 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={() => openModal(plan.name)}
-                  className={plan.popular ? 'btn-primary' : 'btn-outline'}
-                  style={{ width: '100%', padding: '11px', fontSize: 14, borderRadius: 7, ...(plan.popular ? {} : {}) }}
-                >
+                <button onClick={() => openModal(plan.name)} className={plan.popular ? 'btn-primary' : 'btn-outline'} style={{ width: '100%', padding: '11px', fontSize: 14, borderRadius: 7 }}>
                   ทดลองใช้ฟรี 30 วัน
                 </button>
               </div>
@@ -333,7 +329,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <div style={{ background: C.dark, padding: '80px 40px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 10, letterSpacing: '-0.8px' }}>พร้อมเริ่มต้นวันนี้</h2>
+        <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px' }}>พร้อมเริ่มต้นวันนี้</h2>
         <p style={{ color: 'rgba(247,241,240,0.38)', marginBottom: 32, fontSize: 15, lineHeight: 1.85 }}>
           ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด<br />มีทีมช่วย onboarding ตั้งแต่วันแรก
         </p>
@@ -376,10 +372,10 @@ export default function LandingPage() {
       {/* FOOTER */}
       <div style={{ background: C.dark, padding: '22px 40px' }}>
         <div className="footer-row" style={{ maxWidth: 1060, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <span style={{ color: 'rgba(247,241,240,0.35)', fontSize: 14, fontWeight: 700 }}>
+          <span style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(247,241,240,0.35)', fontSize: 14, fontWeight: 700 }}>
             Tutor<span style={{ color: C.rose }}>cloud</span>
           </span>
-          <span style={{ color: 'rgba(247,241,240,0.22)', fontSize: 12 }}>ระบบจัดการสถาบันสอนพิเศษ · 063-359-5978</span>
+          <span style={{ fontSize: 12, color: 'rgba(247,241,240,0.22)' }}>ระบบจัดการสถาบันสอนพิเศษ · 063-359-5978</span>
         </div>
       </div>
     </div>
