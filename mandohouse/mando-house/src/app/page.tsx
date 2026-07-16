@@ -1,6 +1,10 @@
 'use client'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+const EMAILJS_SERVICE = 'service_h7wjciz'
+const EMAILJS_TEMPLATE = 'template_s43bj5f'
+const EMAILJS_KEY = 'nqHnnP_lMHfSwx1sw'
 
 const C = {
   cream: '#F7F1F0',
@@ -80,11 +84,24 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [form, setForm] = useState({ name: '', school: '', phone: '' })
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const emailjsLoaded = useRef(false)
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', fn)
     return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  useEffect(() => {
+    if (emailjsLoaded.current) return
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
+    script.onload = () => {
+      ;(window as any).emailjs.init(EMAILJS_KEY)
+      emailjsLoaded.current = true
+    }
+    document.head.appendChild(script)
   }, [])
 
   function openModal(plan: string) {
@@ -94,9 +111,22 @@ export default function LandingPage() {
     setForm({ name: '', school: '', phone: '' })
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSubmitted(true)
+    setSending(true)
+    try {
+      await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+        name: form.name,
+        school: form.school,
+        phone: form.phone,
+        plan: selectedPlan,
+      })
+      setSubmitted(true)
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -111,18 +141,18 @@ export default function LandingPage() {
         .btn-primary:hover{opacity:.88}
         .btn-ghost{background:transparent;color:rgba(247,241,240,0.7);border:1px solid rgba(247,241,240,0.2);padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all .15s;cursor:pointer;font-family:inherit}
         .btn-ghost:hover{border-color:rgba(247,241,240,0.5);color:#fff}
-        .btn-outline{background:transparent;color:${C.brown};border:1.5px solid ${C.brown};padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;display:inline-block;transition:background .15s,color .15s;cursor:pointer;width:100%;font-family:inherit}
+        .btn-outline{background:transparent;color:${C.brown};border:1.5px solid ${C.brown};padding:10px 22px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;width:100%;font-family:inherit;transition:background .15s,color .15s}
         .btn-outline:hover{background:${C.brown};color:#fff}
         .feat-card{background:#fff;border:1px solid ${C.brownMid};border-radius:10px;padding:22px 20px;transition:box-shadow .2s}
         .feat-card:hover{box-shadow:0 6px 20px rgba(161,92,56,.1)}
         .plan-card{background:#fff;border:1.5px solid ${C.brownMid};border-radius:14px;padding:28px 22px;position:relative}
         .plan-card.pop{border-color:${C.brown}}
-        input[type=text],input[type=tel]{width:100%;padding:10px 12px;border:1.5px solid ${C.brownMid};border-radius:6px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff}
+        input[type=text],input[type=tel]{width:100%;padding:10px 12px;border:1.5px solid ${C.brownMid};border-radius:6px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:${C.dark}}
         input:focus{border-color:${C.brown}}
         @media(max-width:680px){
           .feat-grid{grid-template-columns:1fr 1fr!important}
           .plan-grid{grid-template-columns:1fr!important}
-          .hero-h1{font-size:36px!important;line-height:1.3!important}
+          .hero-h1{font-size:36px!important;line-height:1.45!important}
           .contact-row{flex-direction:column!important}
           .nav-links{display:none}
           .footer-row{flex-direction:column!important;text-align:center;gap:8px!important}
@@ -158,8 +188,12 @@ export default function LandingPage() {
                     <input type="tel" required placeholder="0XX-XXX-XXXX" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                   </div>
                   <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-                    <button type="submit" className="btn-primary" style={{ flex: 1, padding: '12px', fontSize: 14 }}>ส่งข้อมูล</button>
-                    <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '11px', fontSize: 14, background: C.cream, border: `1px solid ${C.brownMid}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', color: C.dark }}>ยกเลิก</button>
+                    <button type="submit" disabled={sending} className="btn-primary" style={{ flex: 1, padding: '12px', fontSize: 14, opacity: sending ? 0.6 : 1 }}>
+                      {sending ? 'กำลังส่ง...' : 'ส่งข้อมูล'}
+                    </button>
+                    <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '11px', fontSize: 14, background: C.cream, border: `1px solid ${C.brownMid}`, borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', color: C.dark }}>
+                      ยกเลิก
+                    </button>
                   </div>
                 </form>
               </>
@@ -168,8 +202,11 @@ export default function LandingPage() {
                 <div style={{ width: 52, height: 52, borderRadius: '50%', background: C.brownLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke={C.brown} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ได้รับข้อมูลแล้ว</h2>
-                <p style={{ fontSize: 14, color: '#9a8a86', marginBottom: 24, lineHeight: 1.7 }}>ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมงครับ</p>
+                <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ส่งข้อมูลสำเร็จ</h2>
+                <p style={{ fontSize: 14, color: '#9a8a86', marginBottom: 24, lineHeight: 1.75 }}>
+                  ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมงครับ<br />
+                  <span style={{ fontSize: 13, color: C.brown }}>063-359-5978</span>
+                </p>
                 <button onClick={() => setShowModal(false)} className="btn-primary" style={{ padding: '11px 36px' }}>ปิด</button>
               </div>
             )}
@@ -178,15 +215,7 @@ export default function LandingPage() {
       )}
 
       {/* NAV */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: scrolled ? 'rgba(247,241,240,0.97)' : C.cream,
-        backdropFilter: 'blur(8px)',
-        padding: '0 40px', height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: `1px solid ${scrolled ? C.brownMid : 'transparent'}`,
-        transition: 'border-color .2s, background .2s',
-      }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: scrolled ? 'rgba(247,241,240,0.97)' : C.cream, backdropFilter: 'blur(8px)', padding: '0 40px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${scrolled ? C.brownMid : 'transparent'}`, transition: 'border-color .2s, background .2s' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
           <span style={{ fontFamily: "'Inter', sans-serif", color: C.dark, fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px' }}>
             Tutor<span style={{ color: C.brown }}>cloud</span>
@@ -207,28 +236,21 @@ export default function LandingPage() {
       <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #3d2e2a 100%)`, padding: '100px 40px 88px', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle, rgba(195,166,160,0.05) 1px, transparent 1px)`, backgroundSize: '28px 28px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 60%, rgba(161,92,56,0.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
-
         <div style={{ maxWidth: 680, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(195,166,160,0.1)', border: `1px solid rgba(195,166,160,0.2)`, color: C.rose, fontSize: 13, padding: '5px 14px', borderRadius: 99, marginBottom: 36, fontWeight: 500 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.rose, display: 'inline-block' }} />
             ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต
           </div>
-
-          {/* แยก h1 เป็น 3 บรรทัด ป้องกันไม้เอกทับ */}
           <div className="hero-h1" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1.45, marginBottom: 24, letterSpacing: '-0.5px' }}>
             <div style={{ color: '#fff' }}>ระบบหลังบ้าน</div>
             <div style={{ color: C.rose }}>สถาบันสอนพิเศษ</div>
             <div style={{ color: '#fff' }}>ครบจบในที่เดียว</div>
           </div>
-
           <p style={{ fontSize: 16, color: 'rgba(247,241,240,0.5)', lineHeight: 1.85, marginBottom: 40, maxWidth: 440, margin: '0 auto 40px' }}>
             จัดการนักเรียน ครู ตารางเรียน และการเงิน<br />ใช้งานได้ทันที บนมือถือและคอมพิวเตอร์
           </p>
-
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button onClick={() => openModal('Growth')} className="btn-primary" style={{ fontSize: 15, padding: '13px 32px' }}>
-              ทดลองใช้ฟรี 30 วัน
-            </button>
+            <button onClick={() => openModal('Growth')} className="btn-primary" style={{ fontSize: 15, padding: '13px 32px' }}>ทดลองใช้ฟรี 30 วัน</button>
             <Link href="/login" className="btn-ghost" style={{ fontSize: 15, padding: '12px 24px' }}>
               เข้าสู่ระบบ
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -244,7 +266,7 @@ export default function LandingPage() {
             <div style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16 }}>
                 <span style={{ display: 'inline-block', width: 32, height: 2, background: C.brownMid, borderRadius: 2 }} />
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: C.dark, letterSpacing: '-0.3px' }}>{group.group}</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: C.dark }}>{group.group}</h2>
                 <span style={{ display: 'inline-block', width: 32, height: 2, background: C.brownMid, borderRadius: 2 }} />
               </div>
             </div>
@@ -267,7 +289,7 @@ export default function LandingPage() {
       <div style={{ background: C.brown, padding: '72px 40px' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(247,241,240,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>เริ่มต้น</div>
-          <h2 style={{ fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 48 }}>พร้อมใช้งานใน 3 ขั้นตอน</h2>
+          <h2 style={{ fontSize: 30, fontWeight: 700, color: '#fff', marginBottom: 48 }}>พร้อมใช้งานใน 3 ขั้นตอน</h2>
           <div className="step-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, textAlign: 'left' }}>
             {[
               { n: '01', title: 'สมัครและตั้งค่า', desc: 'กรอกชื่อสถาบัน ใส่โลโก้ และข้อมูลเบื้องต้น ใช้เวลาไม่เกิน 5 นาที' },
@@ -290,7 +312,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.brown, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
-            <h2 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 10 }}>เลือกแพ็กเกจที่เหมาะกับสถาบัน</h2>
+            <h2 style={{ fontSize: 34, fontWeight: 700, marginBottom: 10 }}>เลือกแพ็กเกจที่เหมาะกับสถาบัน</h2>
             <p style={{ color: '#9a8a86', fontSize: 15 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต ยกเลิกได้ทุกเมื่อ</p>
           </div>
           <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -329,7 +351,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <div style={{ background: C.dark, padding: '80px 40px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px' }}>พร้อมเริ่มต้นวันนี้</h2>
+        <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 10 }}>พร้อมเริ่มต้นวันนี้</h2>
         <p style={{ color: 'rgba(247,241,240,0.38)', marginBottom: 32, fontSize: 15, lineHeight: 1.85 }}>
           ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด<br />มีทีมช่วย onboarding ตั้งแต่วันแรก
         </p>
@@ -342,7 +364,7 @@ export default function LandingPage() {
       <div id="contact" style={{ background: '#fff', padding: '64px 40px' }}>
         <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.brown, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>ติดต่อเรา</div>
-          <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 32, letterSpacing: '-0.3px' }}>มีคำถาม? ทีมงานพร้อมช่วยเสมอ</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 32 }}>มีคำถาม? ทีมงานพร้อมช่วยเสมอ</h2>
           <div className="contact-row" style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
             <a href="https://www.facebook.com/profile.php?id=61591839025304" target="_blank" rel="noreferrer"
               style={{ display: 'flex', alignItems: 'center', gap: 12, background: C.cream, border: `1px solid ${C.brownMid}`, borderRadius: 12, padding: '16px 22px', color: C.dark, minWidth: 210 }}>
