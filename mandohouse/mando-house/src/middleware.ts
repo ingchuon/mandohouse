@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    // ดึง school_id จาก profiles
     const { data: profile } = await supabase
       .from('profiles')
       .select('school_id')
@@ -35,7 +34,6 @@ export async function middleware(request: NextRequest) {
 
     const schoolId = profile?.school_id ?? 'mando'
 
-    // เก็บ school_id ใน header เพื่อให้ทุก page อ่านได้
     supabaseResponse.headers.set('x-school-id', schoolId)
     supabaseResponse.cookies.set('school_id', schoolId, {
       httpOnly: false,
