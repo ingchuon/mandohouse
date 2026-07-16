@@ -10,17 +10,15 @@ const C = {
   bg: '#F5F0E8',
   dark: '#1C2B1A',
   green: '#1C3A2A',
-  greenMid: '#2D5A3D',
   gold: '#E8A020',
   goldLight: '#FEF3D0',
   text: '#2C2C2C',
   textMid: '#6B6B6B',
   border: '#E2D9CC',
-  white: '#FFFFFF',
 }
 
 const features = [
-  { n: '01', title: 'ข้อมูลนักเรียน', desc: 'บันทึกข้อมูล ติดตามประวัติการเรียน และดูสถานะคอร์สของนักเรียนแต่ละคนได้ทันที', featured: true },
+  { n: '01', title: 'ข้อมูลนักเรียน', desc: 'บันทึกข้อมูล ติดตามประวัติการเรียน และดูสถานะคอร์สแต่ละคนได้ทันที', featured: true },
   { n: '02', title: 'ตารางสอน', desc: 'จัดตารางเรียนรายสัปดาห์ กำหนดห้องและครู ดูภาพรวมทั้งสถาบันในหน้าเดียว', featured: false },
   { n: '03', title: 'จัดการครู', desc: 'บันทึกชั่วโมงสอน คำนวณค่าตอบแทน และดูรายงานการสอนของครูแต่ละคน', featured: false },
   { n: '04', title: 'เช็กอิน / เช็กเอาท์', desc: 'บันทึกการเข้าเรียน นับครั้งอัตโนมัติ แจ้งเตือนเมื่อคอร์สใกล้หมด', featured: false },
@@ -74,66 +72,86 @@ const plans = [
 
 function DashboardIllustration() {
   return (
-    <svg viewBox="0 0 520 400" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: 560, filter: 'drop-shadow(0 24px 48px rgba(0,0,0,0.25))' }}>
-      <rect width="520" height="400" rx="16" fill="#F8F7F4"/>
-      <rect width="110" height="400" rx="16" fill="#1C3A2A"/>
-      <rect x="0" y="0" width="16" height="400" fill="#1C3A2A"/>
-      <circle cx="55" cy="36" r="14" fill="#2D5A3D"/>
-      <text x="55" y="41" textAnchor="middle" fill="#E8A020" fontSize="11" fontWeight="700">TC</text>
-      {['Dashboard','นักเรียน','เช็กอิน','ตารางสอน','การเงิน'].map((m, i) => (
-        <g key={m}>
-          <rect x="8" y={70 + i * 36} width="94" height="28" rx="6" fill={i === 0 ? '#E8A020' : 'transparent'} opacity={i === 0 ? 1 : 0.3}/>
-          <text x="55" y={88 + i * 36} textAnchor="middle" fill={i === 0 ? '#1C3A2A' : 'rgba(255,255,255,0.7)'} fontSize="9" fontWeight={i === 0 ? '700' : '400'}>{m}</text>
-        </g>
+    <svg viewBox="0 0 480 380" fill="none" xmlns="http://www.w3.org/2000/svg"
+      style={{ width: '100%', maxWidth: 520, filter: 'drop-shadow(0 20px 40px rgba(28,58,42,0.18))' }}>
+      {/* bg */}
+      <rect width="480" height="380" rx="14" fill="#F8F7F4"/>
+      {/* sidebar */}
+      <rect width="88" height="380" rx="14" fill="#1C3A2A"/>
+      <rect width="12" height="380" fill="#1C3A2A"/>
+      {/* logo */}
+      <circle cx="44" cy="28" r="11" fill="#2D5A3D"/>
+      <text x="44" y="33" textAnchor="middle" fill="#E8A020" fontSize="9" fontWeight="700">TC</text>
+      {/* menu */}
+      <rect x="6" y="52" width="76" height="22" rx="5" fill="#E8A020"/>
+      <text x="44" y="67" textAnchor="middle" fill="#1C3A2A" fontSize="8" fontWeight="700">Dashboard</text>
+      {['นักเรียน','เช็กอิน','ตารางสอน','การเงิน'].map((m,i) => (
+        <text key={m} x="44" y={100 + i*20} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="7.5">{m}</text>
       ))}
-      <rect x="120" y="16" width="116" height="72" rx="10" fill="#EBF4FF"/>
-      <text x="132" y="38" fill="#6B9DC2" fontSize="8">รายรับเดือนนี้</text>
-      <text x="132" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
-      <text x="132" y="74" fill="#4A9B6F" fontSize="8">↑ +12.4%</text>
-      <rect x="244" y="16" width="116" height="72" rx="10" fill="#FEF3D0"/>
-      <text x="256" y="38" fill="#B8860B" fontSize="8">รายจ่ายเดือนนี้</text>
-      <text x="256" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
-      <text x="256" y="74" fill="#E8A020" fontSize="8">↓ -8.7%</text>
-      <rect x="368" y="16" width="140" height="72" rx="10" fill="#E8F5EE"/>
-      <text x="380" y="38" fill="#4A9B6F" fontSize="8">เงินคงเหลือ</text>
-      <text x="380" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
-      <rect x="120" y="104" width="234" height="160" rx="10" fill="white" opacity="0.8"/>
-      <text x="132" y="122" fill="#2C2C2C" fontSize="9" fontWeight="600">รายรับ-รายจ่าย 6 เดือนล่าสุด</text>
-      {[{x:140,h1:40,h2:55},{x:172,h1:60,h2:45},{x:204,h1:50,h2:70},{x:236,h1:80,h2:60},{x:268,h1:100,h2:75},{x:300,h1:70,h2:50}].map((b,i) => (
+
+      {/* === ROW 1: stat cards === */}
+      <rect x="100" y="12" width="118" height="60" rx="8" fill="#EBF4FF"/>
+      <text x="112" y="29" fill="#6B9DC2" fontSize="7">รายรับเดือนนี้</text>
+      <text x="112" y="48" fill="#1C3A2A" fontSize="13" fontWeight="700">฿ ●●,●●●</text>
+      <text x="112" y="62" fill="#4A9B6F" fontSize="7">↑ +12.4%</text>
+
+      <rect x="224" y="12" width="118" height="60" rx="8" fill="#FEF3D0"/>
+      <text x="236" y="29" fill="#B8860B" fontSize="7">รายจ่ายเดือนนี้</text>
+      <text x="236" y="48" fill="#1C3A2A" fontSize="13" fontWeight="700">฿ ●●,●●●</text>
+      <text x="236" y="62" fill="#E8A020" fontSize="7">↓ -8.7%</text>
+
+      <rect x="348" y="12" width="122" height="60" rx="8" fill="#E8F5EE"/>
+      <text x="360" y="29" fill="#4A9B6F" fontSize="7">เงินคงเหลือ</text>
+      <text x="360" y="48" fill="#1C3A2A" fontSize="13" fontWeight="700">฿ ●●,●●●</text>
+
+      {/* === ROW 2: charts === */}
+      {/* bar chart */}
+      <rect x="100" y="82" width="218" height="148" rx="8" fill="white" opacity="0.85"/>
+      <text x="112" y="98" fill="#2C2C2C" fontSize="8" fontWeight="600">รายรับ-รายจ่าย 6 เดือน</text>
+      {[
+        {x:118,h1:38,h2:28},{x:138,h1:55,h2:40},{x:158,h1:45,h2:58},
+        {x:178,h1:72,h2:52},{x:198,h1:88,h2:65},{x:218,h1:62,h2:48},
+      ].map((b,i) => (
         <g key={i}>
-          <rect x={b.x} y={240-b.h1} width="12" height={b.h1} rx="3" fill="#1C3A2A" opacity="0.8"/>
-          <rect x={b.x+14} y={240-b.h2} width="12" height={b.h2} rx="3" fill="#E8A020" opacity="0.8"/>
+          <rect x={b.x} y={214-b.h1} width="9" height={b.h1} rx="2" fill="#1C3A2A" opacity="0.8"/>
+          <rect x={b.x+11} y={214-b.h2} width="9" height={b.h2} rx="2" fill="#E8A020" opacity="0.8"/>
         </g>
       ))}
-      <line x1="132" y1="240" x2="342" y2="240" stroke="#E2D9CC" strokeWidth="1"/>
-      <rect x="362" y="104" width="146" height="160" rx="10" fill="white" opacity="0.8"/>
-      <text x="374" y="122" fill="#2C2C2C" fontSize="9" fontWeight="600">รายได้ตามวิชา</text>
-      <circle cx="420" cy="195" r="38" fill="none" stroke="#E8A020" strokeWidth="22" strokeDasharray="95 145"/>
-      <circle cx="420" cy="195" r="38" fill="none" stroke="#1C3A2A" strokeWidth="22" strokeDasharray="55 185" strokeDashoffset="-95"/>
-      <circle cx="420" cy="195" r="38" fill="none" stroke="#4A9B6F" strokeWidth="22" strokeDasharray="30 210" strokeDashoffset="-150"/>
-      <circle cx="420" cy="195" r="38" fill="none" stroke="#A8D5BC" strokeWidth="22" strokeDasharray="20 230" strokeDashoffset="-180"/>
-      <circle cx="420" cy="195" r="22" fill="white"/>
-      <text x="420" y="191" textAnchor="middle" fill="#6B6B6B" fontSize="7">รวม</text>
-      <text x="420" y="202" textAnchor="middle" fill="#1C3A2A" fontSize="9" fontWeight="700">฿ ●●●K</text>
-      <rect x="120" y="276" width="180" height="112" rx="10" fill="white" opacity="0.8"/>
-      <text x="132" y="294" fill="#2C2C2C" fontSize="9" fontWeight="600">เช็กอินวันนี้</text>
-      {['นักเรียน A','นักเรียน B','นักเรียน C'].map((n,i) => (
-        <g key={n}>
-          <circle cx="140" cy={312+i*26} r="9" fill="#E8A020" opacity="0.3"/>
-          <text x="140" y={316+i*26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{String.fromCharCode(65+i)}</text>
-          <text x="157" y={316+i*26} fill="#2C2C2C" fontSize="8">{n}</text>
-          <circle cx="285" cy={312+i*26} r="4" fill="#4A9B6F"/>
+      <line x1="110" y1="214" x2="308" y2="214" stroke="#E2D9CC" strokeWidth="0.8"/>
+
+      {/* donut chart */}
+      <rect x="324" y="82" width="146" height="148" rx="8" fill="white" opacity="0.85"/>
+      <text x="336" y="98" fill="#2C2C2C" fontSize="8" fontWeight="600">รายได้ตามวิชา</text>
+      <circle cx="397" cy="168" r="34" fill="none" stroke="#E8A020" strokeWidth="20" strokeDasharray="85 129"/>
+      <circle cx="397" cy="168" r="34" fill="none" stroke="#1C3A2A" strokeWidth="20" strokeDasharray="50 164" strokeDashoffset="-85"/>
+      <circle cx="397" cy="168" r="34" fill="none" stroke="#4A9B6F" strokeWidth="20" strokeDasharray="29 185" strokeDashoffset="-135"/>
+      <circle cx="397" cy="168" r="20" fill="white"/>
+      <text x="397" y="165" textAnchor="middle" fill="#6B6B6B" fontSize="6">รวม</text>
+      <text x="397" y="175" textAnchor="middle" fill="#1C3A2A" fontSize="8" fontWeight="700">฿●●●K</text>
+
+      {/* === ROW 3: checkin + near expire === */}
+      {/* checkin */}
+      <rect x="100" y="240" width="162" height="128" rx="8" fill="white" opacity="0.85"/>
+      <text x="112" y="257" fill="#2C2C2C" fontSize="8" fontWeight="600">เช็กอินวันนี้</text>
+      {['A','B','C'].map((l,i) => (
+        <g key={l}>
+          <circle cx="120" cy={274+i*28} r="9" fill="#E8A020" opacity="0.22"/>
+          <text x="120" y={278+i*28} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{l}</text>
+          <text x="136" y={278+i*28} fill="#2C2C2C" fontSize="8">นักเรียน {l}</text>
+          <circle cx="250" cy={274+i*28} r="4" fill="#4A9B6F"/>
         </g>
       ))}
-      <rect x="310" y="276" width="198" height="112" rx="10" fill="white" opacity="0.8"/>
-      <text x="322" y="294" fill="#2C2C2C" fontSize="9" fontWeight="600">ใกล้หมดคอร์ส</text>
-      {['นักเรียน X','นักเรียน Y','นักเรียน Z'].map((n,i) => (
-        <g key={n}>
-          <circle cx="322" cy={312+i*26} r="9" fill="#1C3A2A" opacity="0.2"/>
-          <text x="322" y={316+i*26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{String.fromCharCode(88+i)}</text>
-          <text x="339" y={316+i*26} fill="#2C2C2C" fontSize="8">{n}</text>
-          <rect x="440" y={305+i*26} width="56" height="14" rx="7" fill="#FEF3D0"/>
-          <text x="468" y={315+i*26} textAnchor="middle" fill="#B8860B" fontSize="7">เหลือ ● ครั้ง</text>
+
+      {/* near expire */}
+      <rect x="270" y="240" width="200" height="128" rx="8" fill="white" opacity="0.85"/>
+      <text x="282" y="257" fill="#2C2C2C" fontSize="8" fontWeight="600">ใกล้หมดคอร์ส</text>
+      {['X','Y','Z'].map((l,i) => (
+        <g key={l}>
+          <circle cx="290" cy={274+i*28} r="9" fill="#1C3A2A" opacity="0.12"/>
+          <text x="290" y={278+i*28} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{l}</text>
+          <text x="306" y={278+i*28} fill="#2C2C2C" fontSize="8">นักเรียน {l}</text>
+          <rect x="410" y={266+i*28} width="48" height="14" rx="7" fill="#FEF3D0"/>
+          <text x="434" y={276+i*28} textAnchor="middle" fill="#B8860B" fontSize="6.5">เหลือ ● ครั้ง</text>
         </g>
       ))}
     </svg>
@@ -171,7 +189,9 @@ export default function LandingPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setSending(true)
     try {
-      await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, { name: form.name, school: form.school, phone: form.phone, plan: selectedPlan })
+      await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+        name: form.name, school: form.school, phone: form.phone, plan: selectedPlan,
+      })
       setSubmitted(true)
     } catch { alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978') }
     finally { setSending(false) }
@@ -180,26 +200,29 @@ export default function LandingPage() {
   return (
     <div style={{ fontFamily: "'Noto Sans Thai', 'Inter', sans-serif", background: C.bg, color: C.text, minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         a{text-decoration:none}
-        .nav-a{color:${C.text};font-size:14px;font-weight:500;opacity:0.65;transition:opacity .15s}
+        .nav-a{color:${C.text};font-size:14px;font-weight:500;opacity:.65;transition:opacity .15s}
         .nav-a:hover{opacity:1}
         .btn-dark{background:${C.dark};color:#fff;padding:11px 24px;border-radius:99px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s}
         .btn-dark:hover{opacity:.85}
         .btn-outline-dark{background:transparent;color:${C.dark};border:1.5px solid ${C.dark};padding:10px 22px;border-radius:99px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;transition:all .15s}
         .btn-outline-dark:hover{background:${C.dark};color:#fff}
         .feat-card{background:#fff;border:1px solid ${C.border};border-radius:14px;padding:24px 20px;transition:box-shadow .2s}
-        .feat-card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+        .feat-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
         .feat-card-featured{background:${C.green};border-radius:14px;padding:24px 20px}
         input[type=text],input[type=tel]{width:100%;padding:10px 14px;border:1.5px solid ${C.border};border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:${C.text}}
         input:focus{border-color:${C.green}}
-        @media(max-width:768px){
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        @media(max-width:900px){
           .hero-grid{grid-template-columns:1fr!important}
+          .dash-img{display:none}
+          .hero-h1{font-size:38px!important}
+        }
+        @media(max-width:768px){
           .feat-grid{grid-template-columns:1fr 1fr!important}
           .plan-grid{grid-template-columns:1fr!important}
-          .hero-h1{font-size:38px!important}
-          .dash-img{display:none}
           .nav-links{display:none}
           .step-grid{grid-template-columns:1fr!important}
           .contact-row{flex-direction:column!important}
@@ -212,7 +235,7 @@ export default function LandingPage() {
 
       {/* MODAL */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,43,26,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,43,26,.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 400 }}>
             {!submitted ? (
               <>
@@ -228,14 +251,18 @@ export default function LandingPage() {
                   ].map(f => (
                     <div key={f.key}>
                       <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                      <input type={f.type} required placeholder={f.placeholder} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+                      <input type={f.type} required placeholder={f.placeholder}
+                        value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                    <button type="submit" disabled={sending} className="btn-dark" style={{ flex: 1, justifyContent: 'center', opacity: sending ? 0.6 : 1, borderRadius: 8 }}>
+                    <button type="submit" disabled={sending} className="btn-dark" style={{ flex: 1, justifyContent: 'center', opacity: sending ? .6 : 1, borderRadius: 8 }}>
                       {sending ? 'กำลังส่ง...' : 'ส่งข้อมูล'}
                     </button>
-                    <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '11px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', color: C.text, fontSize: 14 }}>ยกเลิก</button>
+                    <button type="button" onClick={() => setShowModal(false)}
+                      style={{ flex: 1, padding: '11px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', color: C.text, fontSize: 14 }}>
+                      ยกเลิก
+                    </button>
                   </div>
                 </form>
               </>
@@ -245,7 +272,10 @@ export default function LandingPage() {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ส่งข้อมูลสำเร็จ</h2>
-                <p style={{ fontSize: 14, color: C.textMid, marginBottom: 22, lineHeight: 1.75 }}>ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง<br /><span style={{ color: C.green, fontWeight: 500 }}>063-359-5978</span></p>
+                <p style={{ fontSize: 14, color: C.textMid, marginBottom: 22, lineHeight: 1.75 }}>
+                  ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง<br />
+                  <span style={{ color: C.green, fontWeight: 500 }}>063-359-5978</span>
+                </p>
                 <button onClick={() => setShowModal(false)} className="btn-dark" style={{ padding: '11px 32px', borderRadius: 8 }}>ปิด</button>
               </div>
             )}
@@ -254,13 +284,23 @@ export default function LandingPage() {
       )}
 
       {/* NAV */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: scrolled ? 'rgba(245,240,232,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(12px)' : 'none', padding: '0 48px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: scrolled ? `1px solid ${C.border}` : 'none', transition: 'all .2s' }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: scrolled ? 'rgba(245,240,232,.96)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        padding: '0 48px', height: 64,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: scrolled ? `1px solid ${C.border}` : 'none',
+        transition: 'all .2s',
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.green, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Inter',sans-serif", color: C.gold, fontWeight: 900, fontSize: 13 }}>T</span>
             </div>
-            <span style={{ fontFamily: "'Inter',sans-serif", color: C.text, fontWeight: 700, fontSize: 17, letterSpacing: '-0.3px' }}>Tutor<em style={{ fontStyle: 'italic', color: C.green }}>cloud</em></span>
+            <span style={{ fontFamily: "'Inter',sans-serif", color: C.text, fontWeight: 700, fontSize: 17, letterSpacing: '-.3px' }}>
+              Tutor<em style={{ fontStyle: 'italic', color: C.green }}>cloud</em>
+            </span>
           </div>
           <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
             <a href="#features" className="nav-a">ฟีเจอร์</a>
@@ -275,30 +315,57 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* HERO */}
-      <div style={{ padding: '80px 48px 96px', maxWidth: 1200, margin: '0 auto' }}>
-        <div className="hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+      {/* HERO — cream bg + shimmer TUTORCLOUD */}
+      <div style={{ position: 'relative', overflow: 'hidden', background: C.bg, padding: '80px 48px 96px' }}>
+        {/* shimmer text */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontFamily: "'Inter',sans-serif",
+          fontSize: 'clamp(100px, 18vw, 200px)',
+          fontWeight: 900, letterSpacing: -12,
+          whiteSpace: 'nowrap', userSelect: 'none',
+          textTransform: 'uppercase',
+          background: 'linear-gradient(105deg, transparent 15%, rgba(28,58,42,0.1) 35%, rgba(28,58,42,0.18) 50%, rgba(28,58,42,0.1) 65%, transparent 85%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          backgroundSize: '300% 100%',
+          animation: 'shimmer 5s ease-in-out infinite',
+          pointerEvents: 'none', zIndex: 0,
+        }}>TUTORCLOUD</div>
+
+        {/* vignette */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse at 28% 50%, transparent 10%, rgba(245,240,232,0.75) 55%, #F5F0E8 80%)',
+          pointerEvents: 'none', zIndex: 1,
+        }} />
+
+        <div className="hero-grid" style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'center', maxWidth: 1200, margin: '0 auto' }}>
+          {/* left */}
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: `1px solid ${C.border}`, color: C.textMid, fontSize: 12, padding: '5px 14px', borderRadius: 99, marginBottom: 28 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4A9B6F', display: 'inline-block' }} />
               ทดลองใช้ฟรี 30 วัน · ไม่ต้องใส่บัตรเครดิต
             </div>
-            <h1 className="hero-h1" style={{ fontSize: 56, fontWeight: 700, lineHeight: 1.2, marginBottom: 20, letterSpacing: '-1px' }}>
+            <h1 className="hero-h1" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1.2, marginBottom: 20, letterSpacing: '-1px' }}>
               <span style={{ color: C.dark }}>ระบบหลังบ้าน</span><br />
               <span style={{ color: C.dark }}>สถาบันสอนพิเศษ</span><br />
               <em style={{ fontStyle: 'italic', color: C.gold }}>ครบ จบ</em>
               <span style={{ color: C.dark }}> ในที่เดียว</span>
             </h1>
-            <p style={{ fontSize: 16, color: C.textMid, lineHeight: 1.8, marginBottom: 36, maxWidth: 440 }}>
-              จัดการนักเรียน ครู ตารางเรียน และการเงินของสถาบันคุณจากหน้าเดียว<br />ทำงานได้ทั้งบนคอมและมือถือ ไม่ต้องติดตั้งอะไรเพิ่ม
+            <p style={{ fontSize: 15, color: C.textMid, lineHeight: 1.85, marginBottom: 36, maxWidth: 420 }}>
+              จัดการนักเรียน ครู ตารางเรียน และการเงิน<br />ใช้งานได้ทันที บนมือถือและคอมพิวเตอร์
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
               <Link href="/login" className="btn-outline-dark" style={{ fontSize: 15, padding: '12px 24px' }}>เข้าสู่ระบบ →</Link>
             </div>
           </div>
-          <div className="dash-img" style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: -20, background: `radial-gradient(ellipse at 50% 50%, rgba(28,58,42,0.08) 0%, transparent 70%)`, borderRadius: '50%', pointerEvents: 'none' }} />
+
+          {/* right — dashboard */}
+          <div className="dash-img">
             <DashboardIllustration />
           </div>
         </div>
@@ -306,9 +373,9 @@ export default function LandingPage() {
 
       {/* FEATURES */}
       <div id="features" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ marginBottom: 52 }}>
+        <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ฟีเจอร์</div>
-          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-.5px', lineHeight: 1.2 }}>
             ทุกอย่างที่สถาบัน<br />
             <em style={{ fontStyle: 'italic', color: C.gold }}>ต้องการจริง ๆ</em>
           </h2>
@@ -316,19 +383,19 @@ export default function LandingPage() {
         <div className="feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           {features.map((f, i) => (
             <div key={f.n} className={i === 0 ? 'feat-card-featured' : 'feat-card'}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? 'rgba(255,255,255,0.4)' : C.textMid, letterSpacing: '0.1em', marginBottom: 12 }}>{f.n}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? 'rgba(255,255,255,.4)' : C.textMid, letterSpacing: '.1em', marginBottom: 12 }}>{f.n}</div>
               <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: i === 0 ? '#fff' : C.dark }}>{f.title}</h3>
-              <p style={{ fontSize: 13, color: i === 0 ? 'rgba(255,255,255,0.65)' : C.textMid, lineHeight: 1.7 }}>{f.desc}</p>
+              <p style={{ fontSize: 13, color: i === 0 ? 'rgba(255,255,255,.65)' : C.textMid, lineHeight: 1.7 }}>{f.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* HOW IT WORKS */}
-      <div id="how" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="how" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ background: C.green, borderRadius: 24, padding: '64px 56px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.gold, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>เริ่มต้น</div>
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 48, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.gold, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>เริ่มต้น</div>
+          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 48, letterSpacing: '-.5px' }}>
             พร้อมใช้งานใน <em style={{ fontStyle: 'italic', color: C.gold }}>3 ขั้นตอน</em>
           </h2>
           <div className="step-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40 }}>
@@ -340,11 +407,11 @@ export default function LandingPage() {
               <div key={s.n}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.gold, display: 'inline-block' }} />
-                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 32, fontWeight: 800, color: 'rgba(255,255,255,0.2)' }}>{s.n}</span>
+                  <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 32, fontWeight: 800, color: 'rgba(255,255,255,.2)' }}>{s.n}</span>
                 </div>
-                <div style={{ width: 32, height: 2, background: C.gold, borderRadius: 2, marginBottom: 14, opacity: 0.5 }} />
+                <div style={{ width: 32, height: 2, background: C.gold, borderRadius: 2, marginBottom: 14, opacity: .5 }} />
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 8 }}>{s.title}</h3>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>{s.desc}</p>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,.5)', lineHeight: 1.75 }}>{s.desc}</p>
               </div>
             ))}
           </div>
@@ -352,11 +419,12 @@ export default function LandingPage() {
       </div>
 
       {/* PRICING */}
-      <div id="pricing" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="pricing" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
-          <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 8 }}>
-            เลือกแพ็กเกจที่<br /><em style={{ fontStyle: 'italic', color: C.gold }}>เหมาะกับสถาบัน</em>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
+          <h2 style={{ fontSize: 40, fontWeight: 700, marginBottom: 8 }}>
+            เลือกแพ็กเกจที่<br />
+            <em style={{ fontStyle: 'italic', color: C.gold }}>เหมาะกับสถาบัน</em>
           </h2>
           <p style={{ color: C.textMid, fontSize: 15 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</p>
         </div>
@@ -366,22 +434,22 @@ export default function LandingPage() {
               {plan.popular && (
                 <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ ยอดนิยม</div>
               )}
-              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,0.5)' : C.textMid, letterSpacing: '0.1em', marginBottom: 8 }}>{plan.name}</div>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,.5)' : C.textMid, letterSpacing: '.1em', marginBottom: 8 }}>{plan.name}</div>
               <div style={{ marginBottom: 6 }}>
                 <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 40, fontWeight: 800, color: plan.popular ? '#fff' : C.dark, letterSpacing: '-1.5px' }}>฿{plan.price.toLocaleString()}</span>
-                <span style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,0.5)' : C.textMid, marginLeft: 4 }}>/เดือน</span>
+                <span style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.5)' : C.textMid, marginLeft: 4 }}>/เดือน</span>
               </div>
-              <p style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,0.55)' : C.textMid, marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${plan.popular ? 'rgba(255,255,255,0.1)' : C.border}` }}>{plan.desc}</p>
+              <p style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.55)' : C.textMid, marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${plan.popular ? 'rgba(255,255,255,.1)' : C.border}` }}>{plan.desc}</p>
               <div style={{ marginBottom: 24 }}>
                 {plan.features.map(f => (
-                  <div key={f.text} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, opacity: f.ok ? 1 : 0.35 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: f.ok ? (plan.popular ? 'rgba(232,160,32,0.2)' : '#E8F5EE') : 'transparent', border: f.ok ? 'none' : `1px solid ${plan.popular ? 'rgba(255,255,255,0.2)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div key={f.text} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, opacity: f.ok ? 1 : .35 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: f.ok ? (plan.popular ? 'rgba(232,160,32,.2)' : '#E8F5EE') : 'transparent', border: f.ok ? 'none' : `1px solid ${plan.popular ? 'rgba(255,255,255,.2)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {f.ok
                         ? <svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 4.5l2 2 4-4" stroke={plan.popular ? C.gold : '#4A9B6F'} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        : <svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 2l4 4M6 2l-4 4" stroke={plan.popular ? 'rgba(255,255,255,0.3)' : C.border} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        : <svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 2l4 4M6 2l-4 4" stroke={plan.popular ? 'rgba(255,255,255,.3)' : C.border} strokeWidth="1.5" strokeLinecap="round"/></svg>
                       }
                     </div>
-                    <span style={{ fontSize: 13.5, color: plan.popular ? (f.ok ? '#fff' : 'rgba(255,255,255,0.35)') : (f.ok ? C.dark : C.textMid), textDecoration: f.ok ? 'none' : 'line-through' }}>{f.text}</span>
+                    <span style={{ fontSize: 13.5, color: plan.popular ? (f.ok ? '#fff' : 'rgba(255,255,255,.35)') : (f.ok ? C.dark : C.textMid), textDecoration: f.ok ? 'none' : 'line-through' }}>{f.text}</span>
                   </div>
                 ))}
               </div>
@@ -399,7 +467,7 @@ export default function LandingPage() {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l2.4 7.4H21l-6.2 4.5 2.4 7.4L11 17l-6.2 4.3 2.4-7.4L1 9.4h7.6z" fill={C.gold}/></svg>
           </div>
-          <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 10 }}>
+          <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-.5px', marginBottom: 10 }}>
             พร้อมเริ่มต้น <em style={{ fontStyle: 'italic', color: C.gold }}>วันนี้</em>
           </h2>
           <p style={{ color: C.textMid, fontSize: 15, marginBottom: 28, lineHeight: 1.75 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด มีทีมช่วย onboarding ตั้งแต่วันแรก</p>
@@ -410,7 +478,7 @@ export default function LandingPage() {
       {/* CONTACT */}
       <div id="contact" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ติดต่อเรา</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ติดต่อเรา</div>
           <h2 style={{ fontSize: 30, fontWeight: 700 }}>มีคำถาม? ทีมงานพร้อมช่วยเสมอ</h2>
         </div>
         <div className="contact-row" style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
