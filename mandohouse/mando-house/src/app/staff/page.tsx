@@ -41,6 +41,7 @@ export default async function DashboardPage() {
     { data: allReceipts6m },
     { data: allExpenses6m },
     { data: monthlyBalance },
+    { data: completedEnrollments },
   ] = await Promise.all([
     supabase.from('receipts').select('amount, subject, book_fee, enrollment:enrollments(course:courses(name))').gte('issued_at', firstOfMonth),
     supabase.from('receipts').select('amount').gte('issued_at', firstOfLastMonth).lte('issued_at', lastOfLastMonth),
@@ -50,6 +51,11 @@ export default async function DashboardPage() {
     supabase.from('receipts').select('amount, issued_at').gte('issued_at', last6Months[0].key + '-01'),
     supabase.from('expenses').select('amount, expense_date').gte('expense_date', last6Months[0].key + '-01'),
     supabase.from('monthly_balance').select('carry_over').eq('month', currentMonth).single(),
+    // ดึง enrollment ที่ completed — จัดกลุ่มตามนักเรียน เอาแค่คนที่ไม่มี active เหลืออยู่
+    supabase.from('enrollments')
+      .select('id, lessons_used, lessons_total, completed_at, student:students(id, nickname, full_name), course:courses(name)')
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false }),
   ])
 
   const revenueThisMonth = receiptsThisMonth?.reduce((s: number, r: any) => s + Number(r.amount), 0) ?? 0
@@ -60,6 +66,18 @@ export default async function DashboardPage() {
 
   const carryOver = Number((monthlyBalance as any)?.carry_over ?? 0)
   const cashBalance = carryOver + revenueThisMonth - expensesTotal
+
+  // นักเรียนที่หมดคอร์สแล้วและไม่มี active เหลือ — จัดกลุ่มตาม student_id เอาคนละ 1 แถว
+  const activeStudentIds = new Set((allActiveEnrollments ?? []).map((e: any) => e.student?.id ?? e.student_id))
+  const completedByStudent = new Map<string, any>()
+  ;(completedEnrollments ?? []).forEach((e: any) => {
+    const sid = e.student?.id
+    if (!sid) return
+    // ข้ามถ้ายังมี active คอร์สอื่นอยู่
+    if (activeStudentIds.has(sid)) return
+    if (!completedByStudent.has(sid)) completedByStudent.set(sid, e)
+  })
+  const waitingRenew = Array.from(completedByStudent.values()).slice(0, 10)
 
   const chartData = last6Months.map(m => ({
     ...m,
@@ -104,7 +122,6 @@ export default async function DashboardPage() {
     .sort((a: any, b: any) => (a.lessons_total - a.lessons_used) - (b.lessons_total - b.lessons_used))
     .slice(0, 8)
 
-  // การ์ดการเงินสีพาสเทล — เรียง 2x2
   const financeCards = [
     { label: 'รายรับเดือนนี้', icon: '💰', value: formatThaiMoney(revenueThisMonth),
       sub: `${revenuePct >= 0 ? '▲' : '▼'} ${Math.abs(revenuePct)}% จากเดือนที่แล้ว`,
@@ -129,36 +146,30 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">สวัสดีครับ {profile?.full_name} 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">สวัสดีครับ {profile?.full_name}</h1>
           <p className="text-xs text-gray-400 mt-0.5">{formatDate(new Date(), 'EEEE d MMMM yyyy')}</p>
         </div>
         <DashboardExport />
       </div>
 
-      {/* ── แถว 1: การ์ดการเงิน 2x2 (ซ้าย) + ปฏิทิน (ขวา) ── */}
+      {/* แถว 1: การ์ดการเงิน + ปฏิทิน */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* ซ้าย — การ์ดการเงิน */}
         <div className="lg:col-span-2 grid grid-cols-2 gap-3 content-start items-start">
           {financeCards.map((c, i) => (
             <Link key={i} href={c.href}
               className="relative overflow-hidden rounded-2xl hover:-translate-y-0.5 transition-transform"
               style={{ background: c.bg, color: c.text, textDecoration: 'none', padding: '14px 16px', display: 'block' }}>
-
-              {/* วงกลมตกแต่งมุมขวาล่าง */}
               <span style={{
                 position: 'absolute', right: '-14px', bottom: '-14px',
                 width: '70px', height: '70px', borderRadius: '999px',
                 background: 'rgba(255,255,255,0.28)',
               }} />
-
               <div style={{
                 width: '26px', height: '26px', borderRadius: '8px',
                 background: 'rgba(255,255,255,0.45)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '13px', marginBottom: '6px',
               }}>{c.icon}</div>
-
               <div style={{ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.75, fontWeight: 600 }}>
                 {c.label}
               </div>
@@ -169,20 +180,16 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
-
-        {/* ขวา — ปฏิทิน */}
         <div className="lg:col-span-1">
           <CalendarCard />
         </div>
       </div>
 
-      {/* ── แถว 2: กราฟแท่ง + กราฟวงกลม ── */}
+      {/* แถว 2: กราฟแท่ง + กราฟวงกลม */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* กราฟแท่ง */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">📊 รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">รายรับ-รายจ่าย 6 เดือนล่าสุด</div>
             <div className="flex gap-3 text-[10px] text-gray-400">
               <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#3B9EE0' }}></span>รายรับ</span>
               <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm inline-block" style={{ background: '#F5A623' }}></span>รายจ่าย</span>
@@ -205,12 +212,10 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* กราฟวงกลม */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
-          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">🎯 รายได้ตามวิชาเดือนนี้</div>
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">รายได้ตามวิชาเดือนนี้</div>
           {pieTotal === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8">
-              <div className="text-3xl mb-1">📭</div>
               <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
             </div>
           ) : (
@@ -240,18 +245,17 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── แถว 3: เช็กอิน + ตารางเรียนวันนี้ + ใกล้หมดคอร์ส ── */}
+      {/* แถว 3: เช็กอิน + ตารางเรียน + ใกล้หมดคอร์ส */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* เช็กอิน */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">🕐 เช็กอินวันนี้</div>
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">เช็กอินวันนี้</div>
             <Link href="/staff/checkin" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>จัดการ →</Link>
           </div>
           {!(recentCheckins ?? []).length ? (
             <div className="flex-1 flex flex-col items-center justify-center py-6">
-              <div className="text-3xl mb-1">😴</div>
               <p className="text-xs text-gray-400">ยังไม่มีการเช็กอิน</p>
             </div>
           ) : (
@@ -273,18 +277,17 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* ตารางเรียนวันนี้ — Client Component */}
+        {/* ตารางเรียนวันนี้ */}
         <TodayScheduleCard />
 
         {/* ใกล้หมดคอร์ส */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">⚠️ ใกล้หมดคอร์ส</div>
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">ใกล้หมดคอร์ส</div>
             <Link href="/staff/alerts" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูทั้งหมด →</Link>
           </div>
           {urgentExpiring.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center py-6">
-              <div className="text-3xl mb-1">🎉</div>
               <p className="text-xs text-gray-400">ไม่มีคอร์สที่ใกล้หมด</p>
             </div>
           ) : (
@@ -311,8 +314,55 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-
       </div>
+
+      {/* แถว 4: รอซื้อคอร์สใหม่ */}
+      <div className="grid grid-cols-1 gap-4">
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">รอซื้อคอร์สใหม่</div>
+              {waitingRenew.length > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  {waitingRenew.length} คน
+                </span>
+              )}
+            </div>
+            <Link href="/staff/students" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูนักเรียนทั้งหมด →</Link>
+          </div>
+
+          {waitingRenew.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <p className="text-xs text-gray-400">ไม่มีนักเรียนที่รอซื้อคอร์สใหม่</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              {waitingRenew.map((e: any) => {
+                const name = e.student?.nickname || e.student?.full_name || '?'
+                return (
+                  <Link
+                    key={e.id}
+                    href="/staff/students"
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 border border-purple-100 dark:border-purple-900/30 bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-purple-200 dark:bg-purple-800/50 flex items-center justify-center text-purple-700 dark:text-purple-300 text-xs font-bold flex-shrink-0">
+                      {name.slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{name}</div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-400 truncate">{e.course?.name}</div>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-200 dark:bg-purple-800/50 text-purple-700 dark:text-purple-300 flex-shrink-0 whitespace-nowrap">
+                      {e.lessons_total} ครั้ง
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   )
 }
