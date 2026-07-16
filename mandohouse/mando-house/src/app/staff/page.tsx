@@ -45,15 +45,16 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('receipts').select('amount, subject, book_fee, enrollment:enrollments(course:courses(name))').gte('issued_at', firstOfMonth),
     supabase.from('receipts').select('amount').gte('issued_at', firstOfLastMonth).lte('issued_at', lastOfLastMonth),
-    supabase.from('enrollments').select('*, student:students(nickname,full_name), course:courses(name)').eq('status', 'active'),
+    // ── ดึง student_id ตรงๆ ด้วย เพื่อใช้ filter waitingRenew ──
+    supabase.from('enrollments').select('*, student_id, student:students(nickname,full_name), course:courses(name)').eq('status', 'active'),
     supabase.from('checkins').select('*, student:students(nickname,full_name)').gte('check_in_at', todayStart).lte('check_in_at', todayEnd).order('check_in_at', { ascending: false }).limit(10),
     supabase.from('expenses').select('amount').gte('expense_date', firstOfMonth),
     supabase.from('receipts').select('amount, issued_at').gte('issued_at', last6Months[0].key + '-01'),
     supabase.from('expenses').select('amount, expense_date').gte('expense_date', last6Months[0].key + '-01'),
     supabase.from('monthly_balance').select('carry_over').eq('month', currentMonth).single(),
-    // ดึง enrollment ที่ completed — จัดกลุ่มตามนักเรียน เอาแค่คนที่ไม่มี active เหลืออยู่
+    // ── completed enrollments พร้อม student_id ตรงๆ ──
     supabase.from('enrollments')
-      .select('id, lessons_used, lessons_total, completed_at, student:students(id, nickname, full_name), course:courses(name)')
+      .select('id, student_id, lessons_used, lessons_total, student:students(nickname, full_name), course:courses(name)')
       .eq('status', 'completed')
       .order('created_at', { ascending: false }),
   ])
@@ -67,13 +68,16 @@ export default async function DashboardPage() {
   const carryOver = Number((monthlyBalance as any)?.carry_over ?? 0)
   const cashBalance = carryOver + revenueThisMonth - expensesTotal
 
-  // นักเรียนที่หมดคอร์สแล้วและไม่มี active เหลือ — จัดกลุ่มตาม student_id เอาคนละ 1 แถว
-  const activeStudentIds = new Set((allActiveEnrollments ?? []).map((e: any) => e.student?.id ?? e.student_id))
+  // ── ใช้ student_id (คอลัมน์ตรงๆ) ไม่ใช่ relation ──
+  const activeStudentIds = new Set(
+    (allActiveEnrollments ?? []).map((e: any) => e.student_id).filter(Boolean)
+  )
+
+  // จัดกลุ่มตาม student_id เอาคนที่ไม่มี active เหลือ คนละ 1 แถว
   const completedByStudent = new Map<string, any>()
   ;(completedEnrollments ?? []).forEach((e: any) => {
-    const sid = e.student?.id
+    const sid = e.student_id
     if (!sid) return
-    // ข้ามถ้ายังมี active คอร์สอื่นอยู่
     if (activeStudentIds.has(sid)) return
     if (!completedByStudent.has(sid)) completedByStudent.set(sid, e)
   })
@@ -245,8 +249,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* แถว 3: เช็กอิน + ตารางเรียน + ใกล้หมดคอร์ส */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* แถว 3: เช็กอิน + ตารางเรียน + ใกล้หมดคอร์ส + รอซื้อคอร์สใหม่ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
         {/* เช็กอิน */}
         <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
@@ -314,11 +318,9 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* แถว 4: รอซื้อคอร์สใหม่ */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245]">
+        {/* รอซื้อคอร์สใหม่ */}
+        <div className="rounded-2xl p-4 shadow-sm bg-white dark:bg-[#242d3f] border border-[#F0E9D8] dark:border-[#2a3245] flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">รอซื้อคอร์สใหม่</div>
@@ -328,31 +330,27 @@ export default async function DashboardPage() {
                 </span>
               )}
             </div>
-            <Link href="/staff/students" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูนักเรียนทั้งหมด →</Link>
+            <Link href="/staff/students" className="text-[11px] font-medium hover:underline" style={{ color: '#3B9EE0' }}>ดูทั้งหมด →</Link>
           </div>
-
           {waitingRenew.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8">
+            <div className="flex-1 flex flex-col items-center justify-center py-6">
               <p className="text-xs text-gray-400">ไม่มีนักเรียนที่รอซื้อคอร์สใหม่</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="space-y-1 overflow-y-auto flex-1 max-h-64">
               {waitingRenew.map((e: any) => {
                 const name = e.student?.nickname || e.student?.full_name || '?'
                 return (
-                  <Link
-                    key={e.id}
-                    href="/staff/students"
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 border border-purple-100 dark:border-purple-900/30 bg-purple-50 dark:bg-purple-900/10 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-purple-200 dark:bg-purple-800/50 flex items-center justify-center text-purple-700 dark:text-purple-300 text-xs font-bold flex-shrink-0">
+                  <Link key={e.id} href="/staff/students"
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-300 text-xs font-bold flex-shrink-0">
                       {name.slice(0, 2)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{name}</div>
-                      <div className="text-[10px] text-gray-400 dark:text-gray-400 truncate">{e.course?.name}</div>
+                      <div className="text-[10px] text-gray-400 truncate">{e.course?.name}</div>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-200 dark:bg-purple-800/50 text-purple-700 dark:text-purple-300 flex-shrink-0 whitespace-nowrap">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 whitespace-nowrap">
                       {e.lessons_total} ครั้ง
                     </span>
                   </Link>
@@ -361,8 +359,8 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
+      </div>
     </div>
   )
 }
