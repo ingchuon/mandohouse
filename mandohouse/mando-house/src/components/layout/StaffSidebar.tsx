@@ -44,8 +44,9 @@ const navItems = [
   {
     group: 'ทีมงาน',
     items: [
-      { href: '/staff/team', label: 'จัดการทีม' },
-      { href: '/staff/help', label: 'คู่มือการใช้งาน' },
+      { href: '/staff/team',          label: 'จัดการทีม' },
+      { href: '/staff/subscriptions', label: 'Subscription' },
+      { href: '/staff/help',          label: 'คู่มือการใช้งาน' },
     ],
   },
 ]
@@ -57,12 +58,16 @@ export default function StaffSidebar() {
   const [name, setName] = useState('')
   const [alertCount, setAlertCount] = useState(0)
   const [open, setOpen] = useState(false)
+  const [schoolId, setSchoolId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      supabase.from('profiles').select('full_name').eq('id', user.id).single()
-        .then(({ data }) => setName(data?.full_name ?? ''))
+      supabase.from('profiles').select('full_name, school_id').eq('id', user.id).single()
+        .then(({ data }) => {
+          setName(data?.full_name ?? '')
+          setSchoolId(data?.school_id ?? null)
+        })
     })
     supabase.from('enrollments')
       .select('lessons_used, lessons_total')
@@ -87,6 +92,15 @@ export default function StaffSidebar() {
   }
 
   const initials = name ? name.slice(0, 2) : '..'
+
+  // ซ่อนเมนู Subscription ถ้าไม่ใช่ Mando House
+  const filteredNavItems = navItems.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      if (item.href === '/staff/subscriptions') return schoolId === 'mando'
+      return true
+    }),
+  })).filter(group => group.items.length > 0)
 
   const inner = (
     <>
@@ -113,7 +127,7 @@ export default function StaffSidebar() {
       </div>
 
       <nav className="flex-1 py-3 overflow-y-auto">
-        {navItems.map(({ group, items }) => (
+        {filteredNavItems.map(({ group, items }) => (
           <div key={group} className="mb-3">
             <div className="px-5 py-1 text-[10px] font-medium text-white/50 dark:text-gray-500 uppercase tracking-widest">
               {group}
