@@ -72,67 +72,40 @@ const plans = [
   },
 ]
 
-// Dashboard SVG illustration — ข้อมูลสมมติ ไม่มีชื่อจริง
 function DashboardIllustration() {
   return (
     <svg viewBox="0 0 520 400" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: 560, filter: 'drop-shadow(0 24px 48px rgba(0,0,0,0.25))' }}>
-      {/* bg card */}
       <rect width="520" height="400" rx="16" fill="#F8F7F4"/>
-      {/* sidebar */}
       <rect width="110" height="400" rx="16" fill="#1C3A2A"/>
-      <rect x="0" y="0" width="110" height="400" rx="0" fill="#1C3A2A"/>
       <rect x="0" y="0" width="16" height="400" fill="#1C3A2A"/>
-      {/* sidebar logo */}
       <circle cx="55" cy="36" r="14" fill="#2D5A3D"/>
       <text x="55" y="41" textAnchor="middle" fill="#E8A020" fontSize="11" fontWeight="700">TC</text>
-      {/* sidebar menu items */}
       {['Dashboard','นักเรียน','เช็กอิน','ตารางสอน','การเงิน'].map((m, i) => (
         <g key={m}>
-          <rect x="8" y={70 + i * 36} width="94" height="28" rx="6"
-            fill={i === 0 ? '#E8A020' : 'transparent'} opacity={i === 0 ? 1 : 0.3}/>
-          <text x="55" y={88 + i * 36} textAnchor="middle"
-            fill={i === 0 ? '#1C3A2A' : 'rgba(255,255,255,0.7)'} fontSize="9" fontWeight={i === 0 ? '700' : '400'}>
-            {m}
-          </text>
+          <rect x="8" y={70 + i * 36} width="94" height="28" rx="6" fill={i === 0 ? '#E8A020' : 'transparent'} opacity={i === 0 ? 1 : 0.3}/>
+          <text x="55" y={88 + i * 36} textAnchor="middle" fill={i === 0 ? '#1C3A2A' : 'rgba(255,255,255,0.7)'} fontSize="9" fontWeight={i === 0 ? '700' : '400'}>{m}</text>
         </g>
       ))}
-
-      {/* main area */}
-      {/* stat cards */}
       <rect x="120" y="16" width="116" height="72" rx="10" fill="#EBF4FF"/>
       <text x="132" y="38" fill="#6B9DC2" fontSize="8">รายรับเดือนนี้</text>
       <text x="132" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
       <text x="132" y="74" fill="#4A9B6F" fontSize="8">↑ +12.4%</text>
-
       <rect x="244" y="16" width="116" height="72" rx="10" fill="#FEF3D0"/>
       <text x="256" y="38" fill="#B8860B" fontSize="8">รายจ่ายเดือนนี้</text>
       <text x="256" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
       <text x="256" y="74" fill="#E8A020" fontSize="8">↓ -8.7%</text>
-
       <rect x="368" y="16" width="140" height="72" rx="10" fill="#E8F5EE"/>
       <text x="380" y="38" fill="#4A9B6F" fontSize="8">เงินคงเหลือ</text>
       <text x="380" y="58" fill="#1C3A2A" fontSize="16" fontWeight="700">฿ ●●,●●●</text>
-      <text x="380" y="74" fill="#6B6B6B" fontSize="8">ยอดสุทธิ</text>
-
-      {/* bar chart */}
       <rect x="120" y="104" width="234" height="160" rx="10" fill="white" opacity="0.8"/>
       <text x="132" y="122" fill="#2C2C2C" fontSize="9" fontWeight="600">รายรับ-รายจ่าย 6 เดือนล่าสุด</text>
-      {[
-        { x: 140, h1: 40, h2: 55 },
-        { x: 172, h1: 60, h2: 45 },
-        { x: 204, h1: 50, h2: 70 },
-        { x: 236, h1: 80, h2: 60 },
-        { x: 268, h1: 100, h2: 75 },
-        { x: 300, h1: 70, h2: 50 },
-      ].map((b, i) => (
+      {[{x:140,h1:40,h2:55},{x:172,h1:60,h2:45},{x:204,h1:50,h2:70},{x:236,h1:80,h2:60},{x:268,h1:100,h2:75},{x:300,h1:70,h2:50}].map((b,i) => (
         <g key={i}>
-          <rect x={b.x} y={240 - b.h1} width="12" height={b.h1} rx="3" fill="#1C3A2A" opacity="0.8"/>
-          <rect x={b.x + 14} y={240 - b.h2} width="12" height={b.h2} rx="3" fill="#E8A020" opacity="0.8"/>
+          <rect x={b.x} y={240-b.h1} width="12" height={b.h1} rx="3" fill="#1C3A2A" opacity="0.8"/>
+          <rect x={b.x+14} y={240-b.h2} width="12" height={b.h2} rx="3" fill="#E8A020" opacity="0.8"/>
         </g>
       ))}
       <line x1="132" y1="240" x2="342" y2="240" stroke="#E2D9CC" strokeWidth="1"/>
-
-      {/* donut chart */}
       <rect x="362" y="104" width="146" height="160" rx="10" fill="white" opacity="0.8"/>
       <text x="374" y="122" fill="#2C2C2C" fontSize="9" fontWeight="600">รายได้ตามวิชา</text>
       <circle cx="420" cy="195" r="38" fill="none" stroke="#E8A020" strokeWidth="22" strokeDasharray="95 145"/>
@@ -142,33 +115,25 @@ function DashboardIllustration() {
       <circle cx="420" cy="195" r="22" fill="white"/>
       <text x="420" y="191" textAnchor="middle" fill="#6B6B6B" fontSize="7">รวม</text>
       <text x="420" y="202" textAnchor="middle" fill="#1C3A2A" fontSize="9" fontWeight="700">฿ ●●●K</text>
-
-      {/* recent checkin */}
       <rect x="120" y="276" width="180" height="112" rx="10" fill="white" opacity="0.8"/>
       <text x="132" y="294" fill="#2C2C2C" fontSize="9" fontWeight="600">เช็กอินวันนี้</text>
-      {['นักเรียน A','นักเรียน B','นักเรียน C'].map((n, i) => (
+      {['นักเรียน A','นักเรียน B','นักเรียน C'].map((n,i) => (
         <g key={n}>
-          <circle cx="140" cy={312 + i * 26} r="9" fill="#E8A020" opacity="0.3"/>
-          <text x="140" y={316 + i * 26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">
-            {String.fromCharCode(65 + i)}
-          </text>
-          <text x="157" y={316 + i * 26} fill="#2C2C2C" fontSize="8">{n}</text>
-          <circle cx="285" cy={312 + i * 26} r="4" fill="#4A9B6F"/>
+          <circle cx="140" cy={312+i*26} r="9" fill="#E8A020" opacity="0.3"/>
+          <text x="140" y={316+i*26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{String.fromCharCode(65+i)}</text>
+          <text x="157" y={316+i*26} fill="#2C2C2C" fontSize="8">{n}</text>
+          <circle cx="285" cy={312+i*26} r="4" fill="#4A9B6F"/>
         </g>
       ))}
-
-      {/* near expire */}
       <rect x="310" y="276" width="198" height="112" rx="10" fill="white" opacity="0.8"/>
       <text x="322" y="294" fill="#2C2C2C" fontSize="9" fontWeight="600">ใกล้หมดคอร์ส</text>
-      {['นักเรียน X','นักเรียน Y','นักเรียน Z'].map((n, i) => (
+      {['นักเรียน X','นักเรียน Y','นักเรียน Z'].map((n,i) => (
         <g key={n}>
-          <circle cx="322" cy={312 + i * 26} r="9" fill="#1C3A2A" opacity="0.2"/>
-          <text x="322" y={316 + i * 26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">
-            {String.fromCharCode(88 + i)}
-          </text>
-          <text x="339" y={316 + i * 26} fill="#2C2C2C" fontSize="8">{n}</text>
-          <rect x="440" y={305 + i * 26} width="56" height="14" rx="7" fill="#FEF3D0"/>
-          <text x="468" y={315 + i * 26} textAnchor="middle" fill="#B8860B" fontSize="7">เหลือ ● ครั้ง</text>
+          <circle cx="322" cy={312+i*26} r="9" fill="#1C3A2A" opacity="0.2"/>
+          <text x="322" y={316+i*26} textAnchor="middle" fill="#1C3A2A" fontSize="7" fontWeight="600">{String.fromCharCode(88+i)}</text>
+          <text x="339" y={316+i*26} fill="#2C2C2C" fontSize="8">{n}</text>
+          <rect x="440" y={305+i*26} width="56" height="14" rx="7" fill="#FEF3D0"/>
+          <text x="468" y={315+i*26} textAnchor="middle" fill="#B8860B" fontSize="7">เหลือ ● ครั้ง</text>
         </g>
       ))}
     </svg>
@@ -194,33 +159,22 @@ export default function LandingPage() {
     if (emailjsLoaded.current) return
     const script = document.createElement('script')
     script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
-    script.onload = () => {
-      ;(window as any).emailjs.init(EMAILJS_KEY)
-      emailjsLoaded.current = true
-    }
+    script.onload = () => { ;(window as any).emailjs.init(EMAILJS_KEY); emailjsLoaded.current = true }
     document.head.appendChild(script)
   }, [])
 
   function openModal(plan: string) {
-    setSelectedPlan(plan)
-    setShowModal(true)
-    setSubmitted(false)
+    setSelectedPlan(plan); setShowModal(true); setSubmitted(false)
     setForm({ name: '', school: '', phone: '' })
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setSending(true)
+    e.preventDefault(); setSending(true)
     try {
-      await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        name: form.name, school: form.school, phone: form.phone, plan: selectedPlan,
-      })
+      await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, { name: form.name, school: form.school, phone: form.phone, plan: selectedPlan })
       setSubmitted(true)
-    } catch {
-      alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978')
-    } finally {
-      setSending(false)
-    }
+    } catch { alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978') }
+    finally { setSending(false) }
   }
 
   return (
@@ -233,8 +187,6 @@ export default function LandingPage() {
         .nav-a:hover{opacity:1}
         .btn-dark{background:${C.dark};color:#fff;padding:11px 24px;border-radius:99px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s}
         .btn-dark:hover{opacity:.85}
-        .btn-gold{background:${C.gold};color:${C.dark};padding:11px 24px;border-radius:99px;font-size:14px;font-weight:700;display:inline-block;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s}
-        .btn-gold:hover{opacity:.88}
         .btn-outline-dark{background:transparent;color:${C.dark};border:1.5px solid ${C.dark};padding:10px 22px;border-radius:99px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;transition:all .15s}
         .btn-outline-dark:hover{background:${C.dark};color:#fff}
         .feat-card{background:#fff;border:1px solid ${C.border};border-radius:14px;padding:24px 20px;transition:box-shadow .2s}
@@ -242,8 +194,6 @@ export default function LandingPage() {
         .feat-card-featured{background:${C.green};border-radius:14px;padding:24px 20px}
         input[type=text],input[type=tel]{width:100%;padding:10px 14px;border:1.5px solid ${C.border};border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:${C.text}}
         input:focus{border-color:${C.green}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-        .fade-up{animation:fadeUp .6s ease forwards}
         @media(max-width:768px){
           .hero-grid{grid-template-columns:1fr!important}
           .feat-grid{grid-template-columns:1fr 1fr!important}
@@ -278,19 +228,14 @@ export default function LandingPage() {
                   ].map(f => (
                     <div key={f.key}>
                       <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                      <input type={f.type} required placeholder={f.placeholder}
-                        value={(form as any)[f.key]}
-                        onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+                      <input type={f.type} required placeholder={f.placeholder} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     <button type="submit" disabled={sending} className="btn-dark" style={{ flex: 1, justifyContent: 'center', opacity: sending ? 0.6 : 1, borderRadius: 8 }}>
                       {sending ? 'กำลังส่ง...' : 'ส่งข้อมูล'}
                     </button>
-                    <button type="button" onClick={() => setShowModal(false)}
-                      style={{ flex: 1, padding: '11px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', color: C.text, fontSize: 14 }}>
-                      ยกเลิก
-                    </button>
+                    <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '11px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', color: C.text, fontSize: 14 }}>ยกเลิก</button>
                   </div>
                 </form>
               </>
@@ -300,10 +245,7 @@ export default function LandingPage() {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ส่งข้อมูลสำเร็จ</h2>
-                <p style={{ fontSize: 14, color: C.textMid, marginBottom: 22, lineHeight: 1.75 }}>
-                  ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง<br />
-                  <span style={{ color: C.green, fontWeight: 500 }}>063-359-5978</span>
-                </p>
+                <p style={{ fontSize: 14, color: C.textMid, marginBottom: 22, lineHeight: 1.75 }}>ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง<br /><span style={{ color: C.green, fontWeight: 500 }}>063-359-5978</span></p>
                 <button onClick={() => setShowModal(false)} className="btn-dark" style={{ padding: '11px 32px', borderRadius: 8 }}>ปิด</button>
               </div>
             )}
@@ -312,23 +254,13 @@ export default function LandingPage() {
       )}
 
       {/* NAV */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: scrolled ? 'rgba(245,240,232,0.95)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        padding: '0 48px', height: 64,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: scrolled ? `1px solid ${C.border}` : 'none',
-        transition: 'all .2s',
-      }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: scrolled ? 'rgba(245,240,232,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(12px)' : 'none', padding: '0 48px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: scrolled ? `1px solid ${C.border}` : 'none', transition: 'all .2s' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.green, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Inter',sans-serif", color: C.gold, fontWeight: 900, fontSize: 13 }}>T</span>
             </div>
-            <span style={{ fontFamily: "'Inter',sans-serif", color: C.text, fontWeight: 700, fontSize: 17, letterSpacing: '-0.3px' }}>
-              Tutor<em style={{ fontStyle: 'italic', color: C.green }}>cloud</em>
-            </span>
+            <span style={{ fontFamily: "'Inter',sans-serif", color: C.text, fontWeight: 700, fontSize: 17, letterSpacing: '-0.3px' }}>Tutor<em style={{ fontStyle: 'italic', color: C.green }}>cloud</em></span>
           </div>
           <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
             <a href="#features" className="nav-a">ฟีเจอร์</a>
@@ -346,8 +278,7 @@ export default function LandingPage() {
       {/* HERO */}
       <div style={{ padding: '80px 48px 96px', maxWidth: 1200, margin: '0 auto' }}>
         <div className="hero-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
-          {/* left */}
-          <div className="fade-up">
+          <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: `1px solid ${C.border}`, color: C.textMid, fontSize: 12, padding: '5px 14px', borderRadius: 99, marginBottom: 28 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4A9B6F', display: 'inline-block' }} />
               ทดลองใช้ฟรี 30 วัน · ไม่ต้องใส่บัตรเครดิต
@@ -359,33 +290,13 @@ export default function LandingPage() {
               <span style={{ color: C.dark }}> ในที่เดียว</span>
             </h1>
             <p style={{ fontSize: 16, color: C.textMid, lineHeight: 1.8, marginBottom: 36, maxWidth: 440 }}>
-              จัดการนักเรียน ครู ตารางเรียน และการเงินของสถาบันคุณจากหน้าเดียว<br />
-              ทำงานได้ทั้งบนคอมและมือถือ ไม่ต้องติดตั้งอะไรเพิ่ม
+              จัดการนักเรียน ครู ตารางเรียน และการเงินของสถาบันคุณจากหน้าเดียว<br />ทำงานได้ทั้งบนคอมและมือถือ ไม่ต้องติดตั้งอะไรเพิ่ม
             </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 48 }}>
-              <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>
-                ทดลองใช้ฟรี 30 วัน ↗
-              </button>
-              <Link href="/login" className="btn-outline-dark" style={{ fontSize: 15, padding: '12px 24px' }}>
-                เข้าสู่ระบบ →
-              </Link>
-            </div>
-            {/* stats */}
-            <div style={{ display: 'flex', gap: 32, borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
-              {[
-                { v: '480+', l: 'สถาบัน' },
-                { v: '62K', l: 'นักเรียน' },
-                { v: '4.9/5', l: 'ความพึงพอใจ' },
-              ].map(s => (
-                <div key={s.l}>
-                  <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, letterSpacing: '-0.5px' }}>{s.v}</div>
-                  <div style={{ fontSize: 13, color: C.textMid, marginTop: 2 }}>{s.l}</div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
+              <Link href="/login" className="btn-outline-dark" style={{ fontSize: 15, padding: '12px 24px' }}>เข้าสู่ระบบ →</Link>
             </div>
           </div>
-
-          {/* right — dashboard */}
           <div className="dash-img" style={{ position: 'relative' }}>
             <div style={{ position: 'absolute', inset: -20, background: `radial-gradient(ellipse at 50% 50%, rgba(28,58,42,0.08) 0%, transparent 70%)`, borderRadius: '50%', pointerEvents: 'none' }} />
             <DashboardIllustration />
@@ -401,9 +312,6 @@ export default function LandingPage() {
             ทุกอย่างที่สถาบัน<br />
             <em style={{ fontStyle: 'italic', color: C.gold }}>ต้องการจริง ๆ</em>
           </h2>
-          <p style={{ fontSize: 15, color: C.textMid, marginTop: 12, maxWidth: 480, lineHeight: 1.7 }}>
-            ออกแบบจากประสบการณ์จริงของสถาบันสอนพิเศษกว่า 480 แห่ง — ไม่ยัดเยียดของที่ไม่ใช้ แต่ทำสิ่งที่จำเป็นให้เร็วและง่ายที่สุด
-          </p>
         </div>
         <div className="feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           {features.map((f, i) => (
@@ -448,23 +356,15 @@ export default function LandingPage() {
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
           <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 8 }}>
-            เลือกแพ็กเกจที่<br />
-            <em style={{ fontStyle: 'italic', color: C.gold }}>เหมาะกับสถาบัน</em>
+            เลือกแพ็กเกจที่<br /><em style={{ fontStyle: 'italic', color: C.gold }}>เหมาะกับสถาบัน</em>
           </h2>
           <p style={{ color: C.textMid, fontSize: 15 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</p>
         </div>
         <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 900, margin: '0 auto' }}>
           {plans.map(plan => (
-            <div key={plan.id} style={{
-              background: plan.popular ? C.green : '#fff',
-              border: `1.5px solid ${plan.popular ? C.green : C.border}`,
-              borderRadius: 20, padding: '28px 24px',
-              position: 'relative',
-            }}>
+            <div key={plan.id} style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 24px', position: 'relative' }}>
               {plan.popular && (
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  ★ ยอดนิยม
-                </div>
+                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ ยอดนิยม</div>
               )}
               <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,0.5)' : C.textMid, letterSpacing: '0.1em', marginBottom: 8 }}>{plan.name}</div>
               <div style={{ marginBottom: 6 }}>
@@ -485,8 +385,7 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => openModal(plan.name)}
-                style={{ width: '100%', padding: '12px', borderRadius: 99, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'inherit', background: plan.popular ? C.gold : C.bg, color: plan.popular ? C.dark : C.text, transition: 'opacity .15s' }}>
+              <button onClick={() => openModal(plan.name)} style={{ width: '100%', padding: '12px', borderRadius: 99, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'inherit', background: plan.popular ? C.gold : C.bg, color: plan.popular ? C.dark : C.text }}>
                 ทดลองใช้ฟรี 30 วัน
               </button>
             </div>
@@ -503,12 +402,8 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 10 }}>
             พร้อมเริ่มต้น <em style={{ fontStyle: 'italic', color: C.gold }}>วันนี้</em>
           </h2>
-          <p style={{ color: C.textMid, fontSize: 15, marginBottom: 28, lineHeight: 1.75 }}>
-            ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด มีทีมช่วย onboarding ตั้งแต่วันแรก
-          </p>
-          <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 32px' }}>
-            ทดลองใช้ฟรี 30 วัน ↗
-          </button>
+          <p style={{ color: C.textMid, fontSize: 15, marginBottom: 28, lineHeight: 1.75 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด มีทีมช่วย onboarding ตั้งแต่วันแรก</p>
+          <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 32px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
         </div>
       </div>
 
@@ -520,7 +415,7 @@ export default function LandingPage() {
         </div>
         <div className="contact-row" style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
           <a href="https://www.facebook.com/profile.php?id=61591839025304" target="_blank" rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240, transition: 'box-shadow .2s' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240 }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1877F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 10H10.8v6H8.8v-6H7V8h1.8V6.8c0-1.5.7-2.8 2.3-2.8H13V6h-1.2c-.6 0-.8.3-.8.8V8H13l-.3 2z" fill="white"/></svg>
             </div>
@@ -531,7 +426,7 @@ export default function LandingPage() {
             <span style={{ marginLeft: 'auto', color: C.textMid }}>↗</span>
           </a>
           <a href="tel:0633595978"
-            style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240, transition: 'box-shadow .2s' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240 }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3h3.5l1.5 4-2 1.5a10 10 0 005 5L11.5 11.5l4 1.5V16c0 .8-.7 1.2-1.5 1C4 15 1 8 1 4.5c0-.8.5-1.5 1-1.5z" fill={C.gold}/></svg>
             </div>
@@ -551,9 +446,7 @@ export default function LandingPage() {
             <div style={{ width: 26, height: 26, borderRadius: '50%', background: C.green, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Inter',sans-serif", color: C.gold, fontWeight: 900, fontSize: 10 }}>T</span>
             </div>
-            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: C.textMid }}>
-              Tutor<em style={{ fontStyle: 'italic' }}>cloud</em>
-            </span>
+            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: C.textMid }}>Tutor<em style={{ fontStyle: 'italic' }}>cloud</em></span>
           </div>
           <span style={{ fontSize: 12, color: C.textMid }}>© 2026 Tutorcloud · ระบบจัดการสถาบันสอนพิเศษ</span>
         </div>
