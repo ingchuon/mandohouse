@@ -22,6 +22,13 @@ type GoogleEvent = {
   end?: { dateTime?: string; date?: string }
 }
 
+type GoogleCalendar = {
+  id: string
+  summary?: string
+  selected?: boolean
+  accessRole?: string
+}
+
 /** ขอ access_token ใหม่จาก refresh_token */
 async function getAccessToken(refreshToken: string): Promise<string | null> {
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -41,14 +48,29 @@ async function getAccessToken(refreshToken: string): Promise<string | null> {
   return json.access_token ?? null
 }
 
-/** ดึง events ของ 1 account */
-async function fetchEvents(
+/** ดึงรายการ calendar ทั้งหมดของ account */
+async function fetchCalendarList(accessToken: string): Promise<GoogleCalendar[]> {
+  const res = await fetch(
+    'https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=50',
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    }
+  )
+  if (!res.ok) return []
+  const json = (await res.json()) as { items?: GoogleCalendar[] }
+  return json.items ?? []
+}
+
+/** ดึง events จาก calendar หนึ่งๆ */
+async function fetchEventsFromCalendar(
   accessToken: string,
+  calendarId: string,
   timeMin: string,
   timeMax: string
 ): Promise<GoogleEvent[]> {
   const url = new URL(
-    'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
   )
   url.searchParams.set('timeMin', timeMin)
   url.searchParams.set('timeMax', timeMax)
@@ -64,6 +86,40 @@ async function fetchEvents(
   if (!res.ok) return []
   const json = (await res.json()) as { items?: GoogleEvent[] }
   return json.items ?? []
+}
+
+/** ดึง events ทุก calendar ของ 1 account */
+async function fetchAllEvents(
+  accessToken: string,
+  timeMin: string,
+  timeMax: string
+): Promise<GoogleEvent[]> {
+  const calendars = await fetchCalendarList(accessToken)
+
+  // ดึงเฉพาะ calendar ที่ owner หรือ writer (ไม่เอา Birthdays, Tasks, Holidays)
+  const relevantCalendars = calendars.filter(
+    (cal) =>
+      cal.accessRole === 'owner' || cal.accessRole === 'writer'
+  )
+
+  const allResults = await Promise.all(
+    relevantCalendars.map((cal) =>
+      fetchEventsFromCalendar(accessToken, cal.id, timeMin, timeMax)
+    )
+  )
+
+  // รวม events และ deduplicate ด้วย id
+  const seen = new Set<string>()
+  const merged: GoogleEvent[] = []
+  for (const items of allResults) {
+    for (const item of items) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id)
+        merged.push(item)
+      }
+    }
+  }
+  return merged
 }
 
 export async function GET(req: NextRequest) {
@@ -119,7 +175,7 @@ export async function GET(req: NextRequest) {
         return { account: t.account_tag, email: t.email, ok: false, events: [] }
       }
 
-      const items = await fetchEvents(accessToken, timeMin, timeMax)
+      const items = await fetchAllEvents(accessToken, timeMin, timeMax)
 
       const events = items
         .filter((e) => e.status !== 'cancelled')
