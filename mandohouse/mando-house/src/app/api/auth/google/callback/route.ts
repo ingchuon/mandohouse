@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
   const code    = searchParams.get('code')
   const account = searchParams.get('state') ?? 'main'
   const oauthErr = searchParams.get('error')
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
 
   // ── ตรวจ env ทุกตัว ──
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
   if (!process.env.GOOGLE_CLIENT_SECRET)       missing.push('GOOGLE_CLIENT_SECRET')
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL)   missing.push('NEXT_PUBLIC_SUPABASE_URL')
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY)  missing.push('SUPABASE_SERVICE_ROLE_KEY')
-
   if (missing.length) {
     return NextResponse.json({
       step: 'env_check',
@@ -43,9 +41,7 @@ export async function GET(req: NextRequest) {
       grant_type:    'authorization_code',
     }),
   })
-
   const tokens = await tokenRes.json()
-
   if (!tokenRes.ok) {
     return NextResponse.json({
       step: 'token_exchange',
@@ -71,7 +67,6 @@ export async function GET(req: NextRequest) {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   })
   const userInfo = await userRes.json()
-
   if (!userInfo.email) {
     return NextResponse.json({ step: 'userinfo', ok: false, userInfo }, { status: 500 })
   }
@@ -82,16 +77,15 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } },
   )
-
   const { error: dbError } = await supabase
     .from('google_calendar_tokens')
     .upsert({
       account_tag:   account,
       email:         userInfo.email,
       refresh_token: tokens.refresh_token,
+      scope:         tokens.scope ?? null,
       updated_at:    new Date().toISOString(),
     }, { onConflict: 'account_tag' })
-
   if (dbError) {
     return NextResponse.json({
       step: 'supabase_upsert',
@@ -102,5 +96,12 @@ export async function GET(req: NextRequest) {
     }, { status: 500 })
   }
 
-  return NextResponse.redirect(`${siteUrl}/staff/schedule/connect?success=connected&email=${encodeURIComponent(userInfo.email)}`)
+  // ── ชั่วคราว: โชว์ scope ที่ Google คืนมาจริง ──
+  return NextResponse.json({
+    step: 'done',
+    ok: true,
+    account_tag: account,
+    email: userInfo.email,
+    scope_granted: tokens.scope,
+  })
 }
