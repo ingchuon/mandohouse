@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('response_type',          'code')
   url.searchParams.set('scope',                  scope)
   url.searchParams.set('access_type',            'offline')
-  url.searchParams.set('prompt',                 'consent select_account')
+  url.searchParams.set('prompt', 'consent')
   url.searchParams.set('include_granted_scopes', 'true')
   url.searchParams.set('state',                  account)
 
