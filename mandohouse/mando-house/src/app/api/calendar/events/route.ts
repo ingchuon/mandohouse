@@ -18,6 +18,7 @@ type GoogleEvent = {
   location?: string
   status?: string
   hangoutLink?: string
+  organizer?: { email?: string }
   start?: { dateTime?: string; date?: string }
   end?: { dateTime?: string; date?: string }
 }
@@ -28,7 +29,13 @@ type GoogleCalendar = {
   accessRole?: string
 }
 
-/** ขอ access_token ใหม่จาก refresh_token */
+// map email → account_tag
+const EMAIL_TO_TAG: Record<string, string> = {
+  'ingchuon12@gmail.com': 'main',
+  'aomsmartlink.90@gmail.com': 'aom',
+  'nalinrat19060@gmail.com': 'nalin',
+}
+
 async function getAccessToken(refreshToken: string): Promise<string | null> {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -46,27 +53,22 @@ async function getAccessToken(refreshToken: string): Promise<string | null> {
   return json.access_token ?? null
 }
 
-/** ดึงรายการ calendar ทั้งหมดของ account */
 async function fetchCalendarList(accessToken: string): Promise<GoogleCalendar[]> {
   const res = await fetch(
     'https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=50',
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: 'no-store',
-    }
+    { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' }
   )
   if (!res.ok) return []
   const json = (await res.json()) as { items?: GoogleCalendar[] }
   return json.items ?? []
 }
 
-/** ดึง events จาก calendar หนึ่งๆ */
 async function fetchEventsFromCalendar(
   accessToken: string,
   calendarId: string,
   timeMin: string,
   timeMax: string
-): Promise<GoogleEvent[]> {
+): Promise<(GoogleEvent & { _calendarId: string })[]> {
   const url = new URL(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
   )
@@ -82,18 +84,16 @@ async function fetchEventsFromCalendar(
   })
   if (!res.ok) return []
   const json = (await res.json()) as { items?: GoogleEvent[] }
-  return json.items ?? []
+  return (json.items ?? []).map((e) => ({ ...e, _calendarId: calendarId }))
 }
 
-/** ดึง events ทุก calendar ของ 1 account — deduplicate ด้วย event id จริง */
 async function fetchAllEvents(
   accessToken: string,
   timeMin: string,
   timeMax: string
-): Promise<GoogleEvent[]> {
+): Promise<(GoogleEvent & { _calendarId: string })[]> {
   const calendars = await fetchCalendarList(accessToken)
-
-  const relevantCalendars = calendars.filter(
+  const relevant = calendars.filter(
     (cal) =>
       cal.accessRole === 'owner' ||
       cal.accessRole === 'writer' ||
@@ -101,14 +101,13 @@ async function fetchAllEvents(
   )
 
   const allResults = await Promise.all(
-    relevantCalendars.map((cal) =>
+    relevant.map((cal) =>
       fetchEventsFromCalendar(accessToken, cal.id, timeMin, timeMax)
     )
   )
 
-  // deduplicate ด้วย event id จริงของ Google
   const seen = new Set<string>()
-  const merged: GoogleEvent[] = []
+  const merged: (GoogleEvent & { _calendarId: string })[] = []
   for (const items of allResults) {
     for (const item of items) {
       if (!seen.has(item.id)) {
@@ -118,6 +117,13 @@ async function fetchAllEvents(
     }
   }
   return merged
+}
+
+/** ระบุ account จาก calendarId — ถ้าเป็น calendar ส่วนตัวของใคร ให้ใช้ tag ของคนนั้น */
+function resolveAccount(calendarId: string, fallbackTag: string): string {
+  // calendarId ของ personal calendar คือ email ของเจ้าของ
+  const tag = EMAIL_TO_TAG[calendarId]
+  return tag ?? fallbackTag
 }
 
 export async function GET(req: NextRequest) {
@@ -163,20 +169,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ events: [], accounts: [], timeMin, timeMax })
   }
 
-  // ดึงพร้อมกันทุก account แต่ deduplicate ข้าม account ด้วย event id จริง
   const allRawResults = await Promise.all(
     rows.map(async (t) => {
       const accessToken = await getAccessToken(t.refresh_token)
       if (!accessToken) {
-        return { account: t.account_tag, email: t.email, ok: false, items: [] as GoogleEvent[] }
+        return { account: t.account_tag, email: t.email, ok: false, items: [] as (GoogleEvent & { _calendarId: string })[] }
       }
       const items = await fetchAllEvents(accessToken, timeMin, timeMax)
       return { account: t.account_tag, email: t.email, ok: true, items }
     })
   )
 
-  // รวม events จากทุก account — deduplicate ข้าม account ด้วย Google event id จริง
-  // โดยเก็บเฉพาะ account แรกที่เจอ event นั้น (main มาก่อน)
+  // deduplicate ข้าม account ด้วย Google event id จริง
   const globalSeen = new Set<string>()
   const allEvents: any[] = []
   const accountStats: any[] = []
@@ -188,13 +192,17 @@ export async function GET(req: NextRequest) {
         if (!globalSeen.has(e.id)) {
           globalSeen.add(e.id)
           const title = e.summary ?? '(ไม่มีชื่อ)'
+
+          // ระบุ account จาก calendarId — ทำให้ event ของครูออม/ครูบี ถูก tag ถูกต้อง
+          const resolvedAccount = resolveAccount(e._calendarId, result.account)
+
           allEvents.push({
             id: e.id,
             title,
             start: e.start?.dateTime ?? e.start?.date ?? '',
             end: e.end?.dateTime ?? e.end?.date ?? '',
             allDay: !e.start?.dateTime,
-            account: result.account,
+            account: resolvedAccount,
             email: result.email,
             description: e.description ?? '',
             location: e.location ?? '',
