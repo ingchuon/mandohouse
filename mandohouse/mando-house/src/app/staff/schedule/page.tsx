@@ -28,9 +28,19 @@ const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร
 const DAYS_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
 const ACCOUNT_META: Record<string, { label: string; color: string }> = {
-  main: { label: 'ครูในสถาบัน', color: '#3B9EE0' },
-  aom: { label: 'ครูออม', color: '#F5A623' },
-  nalin: { label: 'ครูบี', color: '#7C6FF7' },
+  main: { label: 'ครูในสถาบัน', color: '#1C3A2A' },
+  aom:  { label: 'ครูออม',      color: '#E8A020' },
+  nalin:{ label: 'ครูบี',       color: '#7C6FF7' },
+}
+
+// สีธีม TutorCloud
+const BRAND = {
+  primary:   '#1C3A2A',   // เขียวเข้ม
+  gold:      '#E8A020',   // ทอง
+  cream:     '#F5F0E8',   // ครีม
+  border:    '#E8E2D8',   // ขอบอ่อน
+  todayBg:   'rgba(28,58,42,0.07)',
+  activeBtn: '#1C3A2A',
 }
 
 function metaOf(tag: string) {
@@ -42,73 +52,58 @@ function startOfDay(date: Date) {
   d.setHours(0, 0, 0, 0)
   return d
 }
-
 function startOfWeek(date: Date) {
   const d = startOfDay(date)
   d.setDate(d.getDate() - d.getDay())
   return d
 }
-
 function startOfMonth(date: Date) {
   const d = startOfDay(date)
   d.setDate(1)
   return d
 }
-
 function addDays(date: Date, n: number) {
   const d = new Date(date)
   d.setDate(d.getDate() + n)
   return d
 }
-
 function addMonths(date: Date, n: number) {
   const d = new Date(date)
   d.setDate(1)
   d.setMonth(d.getMonth() + n)
   return d
 }
-
 function ymd(date: Date) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
-
 function fmtTime(iso: string) {
   const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(
-    d.getMinutes()
-  ).padStart(2, '0')}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-
 function fmtThaiDate(date: Date) {
   return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
 }
-
 function fmtThaiMonth(date: Date) {
   return date.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
 }
-
 function fmtThaiFull(date: Date) {
   return date.toLocaleDateString('th-TH', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
 
 export default function SchedulePage() {
-  const [view, setView] = useState<ViewMode>('week')
-  const [cursor, setCursor] = useState<Date>(() => startOfDay(new Date()))
-  const [events, setEvents] = useState<GCalEvent[]>([])
+  const [view, setView]       = useState<ViewMode>('week')
+  const [cursor, setCursor]   = useState<Date>(() => startOfDay(new Date()))
+  const [events, setEvents]   = useState<GCalEvent[]>([])
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
-  const [hidden, setHidden] = useState<string[]>([])
+  const [hidden, setHidden]   = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [errMsg, setErrMsg] = useState('')
+  const [errMsg, setErrMsg]   = useState('')
 
-  // อ่าน ?view= และ ?date= จาก URL (เช่น คลิกมาจากการ์ดปฏิทินใน Dashboard)
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
     const v = sp.get('view')
@@ -120,7 +115,6 @@ export default function SchedulePage() {
     }
   }, [])
 
-  // ช่วงเวลาที่ต้องดึงตาม view
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (view === 'day') {
       const s = startOfDay(cursor)
@@ -142,9 +136,7 @@ export default function SchedulePage() {
         from: rangeStart.toISOString(),
         to: rangeEnd.toISOString(),
       })
-      const res = await fetch(`/api/calendar/events?${params.toString()}`, {
-        cache: 'no-store',
-      })
+      const res = await fetch(`/api/calendar/events?${params.toString()}`, { cache: 'no-store' })
       const json = await res.json()
       if (!res.ok) {
         setErrMsg(json?.error ?? 'โหลดข้อมูลไม่สำเร็จ')
@@ -161,14 +153,10 @@ export default function SchedulePage() {
     }
   }, [rangeStart, rangeEnd])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  useEffect(() => { load() }, [load])
 
   const toggleAccount = (tag: string) => {
-    setHidden((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    )
+    setHidden((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])
   }
 
   const visibleEvents = useMemo(
@@ -189,7 +177,7 @@ export default function SchedulePage() {
   const todayKey = ymd(new Date())
 
   const step = (dir: number) => {
-    if (view === 'day') setCursor(addDays(cursor, dir))
+    if (view === 'day')   setCursor(addDays(cursor, dir))
     else if (view === 'week') setCursor(addDays(cursor, dir * 7))
     else setCursor(addMonths(cursor, dir))
   }
@@ -210,22 +198,32 @@ export default function SchedulePage() {
     return fmtThaiMonth(cursor)
   }
 
+  // style ปุ่มนำทาง (←, วันนี้, →)
+  const navBtnStyle: React.CSSProperties = {
+    padding: '6px 14px',
+    borderRadius: '8px',
+    background: '#fff',
+    border: `1px solid ${BRAND.border}`,
+    color: BRAND.primary,
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+  }
+
   return (
-    <div className="min-h-screen bg-[#FAF7F2] dark:bg-[#1a2030] p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6" style={{ background: BRAND.cream }}>
       <div className="max-w-6xl mx-auto">
+
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">
+            <h1 className="text-xl md:text-2xl font-bold" style={{ color: BRAND.primary }}>
               ตารางสอน
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {headerLabel()}
               {' · '}
-              <a
-                href="/staff/schedule/connect"
-                className="underline text-[#3B9EE0]"
-              >
+              <a href="/staff/schedule/connect" className="underline" style={{ color: BRAND.gold }}>
                 เชื่อมต่อบัญชี
               </a>
             </p>
@@ -233,50 +231,33 @@ export default function SchedulePage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {/* View switcher */}
-            <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div
+              className="flex rounded-lg overflow-hidden"
+              style={{ border: `1px solid ${BRAND.border}` }}
+            >
               {(['day', 'week', 'month'] as ViewMode[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
-                  className="px-3 py-2 text-sm"
+                  className="px-3 py-2 text-sm font-medium transition-colors"
                   style={
                     view === v
-                      ? { backgroundColor: '#3B9EE0', color: '#ffffff' }
-                      : undefined
+                      ? { background: BRAND.primary, color: '#fff' }
+                      : { background: '#fff', color: BRAND.primary }
                   }
                 >
-                  <span
-                    className={
-                      view === v ? '' : 'text-gray-600 dark:text-gray-300'
-                    }
-                  >
-                    {v === 'day' ? 'วัน' : v === 'week' ? 'สัปดาห์' : 'เดือน'}
-                  </span>
+                  {v === 'day' ? 'วัน' : v === 'week' ? 'สัปดาห์' : 'เดือน'}
                 </button>
               ))}
             </div>
 
-            <button
-              onClick={() => step(-1)}
-              className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
-            >
-              ←
-            </button>
-            <button
-              onClick={goToday}
-              className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
-            >
-              วันนี้
-            </button>
-            <button
-              onClick={() => step(1)}
-              className="px-3 py-2 rounded-lg bg-white dark:bg-[#242d3f] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-sm"
-            >
-              →
-            </button>
+            <button onClick={() => step(-1)} style={navBtnStyle}>←</button>
+            <button onClick={goToday} style={navBtnStyle}>วันนี้</button>
+            <button onClick={() => step(1)} style={navBtnStyle}>→</button>
             <button
               onClick={load}
-              className="px-3 py-2 rounded-lg bg-[#3B9EE0] text-white text-sm"
+              className="px-3 py-2 rounded-lg text-sm font-medium"
+              style={{ background: BRAND.gold, color: '#fff' }}
             >
               รีเฟรช
             </button>
@@ -292,16 +273,16 @@ export default function SchedulePage() {
               <button
                 key={a.account}
                 onClick={() => toggleAccount(a.account)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm bg-white dark:bg-[#242d3f] border-gray-200 dark:border-gray-700"
-                style={{ opacity: off ? 0.4 : 1 }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm"
+                style={{
+                  opacity: off ? 0.4 : 1,
+                  background: '#fff',
+                  border: `1px solid ${BRAND.border}`,
+                  color: BRAND.primary,
+                }}
               >
-                <span
-                  className="w-3 h-3 rounded-full inline-block"
-                  style={{ backgroundColor: m.color }}
-                />
-                <span className="text-gray-700 dark:text-gray-200">
-                  {m.label}
-                </span>
+                <span className="w-3 h-3 rounded-full inline-block" style={{ background: m.color }} />
+                <span>{m.label}</span>
                 <span className="text-gray-400 text-xs">({a.count})</span>
                 {!a.ok && <span className="text-red-500 text-xs">token เสีย</span>}
               </button>
@@ -310,16 +291,14 @@ export default function SchedulePage() {
         </div>
 
         {errMsg && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-sm">
+          <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#FEF2F2', color: '#DC2626' }}>
             {errMsg} —{' '}
-            <a href="/staff/schedule/connect" className="underline">
-              ไปหน้าเชื่อมต่อ Google
-            </a>
+            <a href="/staff/schedule/connect" className="underline">ไปหน้าเชื่อมต่อ Google</a>
           </div>
         )}
 
         {loading && (
-          <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-10 text-sm" style={{ color: BRAND.primary }}>
             กำลังโหลด...
           </div>
         )}
@@ -332,38 +311,36 @@ export default function SchedulePage() {
         {/* ---------- WEEK VIEW ---------- */}
         {!loading && view === 'week' && (
           <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-            {Array.from({ length: 7 }, (_, i) =>
-              addDays(startOfWeek(cursor), i)
-            ).map((day, i) => {
+            {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i)).map((day, i) => {
               const key = ymd(day)
               const list = byDay[key] ?? []
               const isToday = key === todayKey
               return (
                 <div
                   key={key}
-                  className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-3 min-h-[140px]"
-                  style={isToday ? { borderColor: '#3B9EE0' } : undefined}
+                  className="rounded-xl p-3 min-h-[140px]"
+                  style={{
+                    background: '#fff',
+                    border: `1.5px solid ${isToday ? BRAND.primary : BRAND.border}`,
+                    boxShadow: isToday ? `0 0 0 2px ${BRAND.primary}22` : undefined,
+                  }}
                 >
                   <button
                     onClick={() => openDay(day)}
-                    className="w-full text-left mb-2 pb-2 border-b border-gray-100 dark:border-gray-700"
+                    className="w-full text-left mb-2 pb-2"
+                    style={{ borderBottom: `1px solid ${BRAND.border}` }}
                   >
-                    <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    <div className="text-sm font-semibold" style={{ color: isToday ? BRAND.primary : '#374151' }}>
                       {DAYS[i]}
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {fmtThaiDate(day)}
-                    </div>
+                    <div className="text-xs text-gray-400">{fmtThaiDate(day)}</div>
                   </button>
 
                   {list.length === 0 && (
                     <div className="text-xs text-gray-400 py-2">ไม่มีคลาส</div>
                   )}
-
                   <div className="space-y-2">
-                    {list.map((e) => (
-                      <EventChip key={e.id} e={e} />
-                    ))}
+                    {list.map((e) => <EventChip key={e.id} e={e} />)}
                   </div>
                 </div>
               )
@@ -373,12 +350,16 @@ export default function SchedulePage() {
 
         {/* ---------- MONTH VIEW ---------- */}
         {!loading && view === 'month' && (
-          <div className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-2 md:p-3">
+          <div
+            className="rounded-xl p-2 md:p-3"
+            style={{ background: '#fff', border: `1px solid ${BRAND.border}` }}
+          >
             <div className="grid grid-cols-7 mb-1">
               {DAYS_SHORT.map((d) => (
                 <div
                   key={d}
-                  className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
+                  className="text-center text-xs font-semibold py-1"
+                  style={{ color: BRAND.primary }}
                 >
                   {d}
                 </div>
@@ -397,19 +378,19 @@ export default function SchedulePage() {
                   <button
                     key={key}
                     onClick={() => openDay(day)}
-                    className="rounded-lg p-1.5 min-h-[68px] md:min-h-[92px] text-left border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition"
+                    className="rounded-lg p-1.5 min-h-[68px] md:min-h-[92px] text-left transition"
                     style={{
                       opacity: inMonth ? 1 : 0.35,
-                      backgroundColor: isToday
-                        ? 'rgba(59,158,224,0.10)'
-                        : undefined,
-                      borderColor: isToday ? '#3B9EE0' : undefined,
+                      background: isToday ? BRAND.todayBg : 'transparent',
+                      border: `1px solid ${isToday ? BRAND.primary : 'transparent'}`,
                     }}
                   >
-                    <div className="text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    <div
+                      className="text-xs font-medium mb-1"
+                      style={{ color: isToday ? BRAND.primary : '#374151' }}
+                    >
                       {day.getDate()}
                     </div>
-
                     <div className="space-y-0.5">
                       {list.slice(0, 2).map((e) => {
                         const m = metaOf(e.account)
@@ -418,11 +399,9 @@ export default function SchedulePage() {
                             key={e.id}
                             className="text-[9px] md:text-[10px] truncate rounded px-1"
                             style={{
-                              backgroundColor: `${m.color}22`,
+                              background: `${m.color}22`,
                               color: m.color,
-                              textDecoration: e.cancelled
-                                ? 'line-through'
-                                : undefined,
+                              textDecoration: e.cancelled ? 'line-through' : undefined,
                             }}
                           >
                             {e.allDay ? '' : `${fmtTime(e.start)} `}
@@ -431,9 +410,7 @@ export default function SchedulePage() {
                         )
                       })}
                       {list.length > 2 && (
-                        <div className="text-[9px] text-gray-400 px-1">
-                          +{list.length - 2} คลาส
-                        </div>
+                        <div className="text-[9px] text-gray-400 px-1">+{list.length - 2} คลาส</div>
                       )}
                     </div>
                   </button>
@@ -443,14 +420,9 @@ export default function SchedulePage() {
           </div>
         )}
 
-        {!loading &&
-          visibleEvents.length === 0 &&
-          !errMsg &&
-          view !== 'month' && (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              ไม่มี event ในช่วงนี้
-            </div>
-          )}
+        {!loading && visibleEvents.length === 0 && !errMsg && view !== 'month' && (
+          <div className="text-center py-8 text-sm text-gray-400">ไม่มี event ในช่วงนี้</div>
+        )}
       </div>
     </div>
   )
@@ -464,29 +436,28 @@ function EventChip({ e }: { e: GCalEvent }) {
     <div
       className="rounded-lg p-2 text-xs"
       style={{
-        backgroundColor: `${m.color}1A`,
+        background: `${m.color}18`,
         borderLeft: `3px solid ${m.color}`,
         opacity: e.cancelled ? 0.5 : 1,
       }}
     >
       <div
-        className="font-medium text-gray-800 dark:text-gray-100"
+        className="font-medium text-gray-800"
         style={e.cancelled ? { textDecoration: 'line-through' } : undefined}
       >
         {e.title}
       </div>
-      <div className="text-gray-500 dark:text-gray-400 mt-0.5">
+      <div className="text-gray-500 mt-0.5">
         {e.allDay ? 'ทั้งวัน' : `${fmtTime(e.start)} - ${fmtTime(e.end)}`}
       </div>
-      <div className="text-[10px] mt-0.5" style={{ color: m.color }}>
-        {m.label}
-      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: m.color }}>{m.label}</div>
       {e.meetLink && (
-        <a
+        
           href={e.meetLink}
           target="_blank"
           rel="noreferrer"
-          className="text-[10px] underline text-blue-600 dark:text-blue-400"
+          className="text-[10px] underline"
+          style={{ color: BRAND.gold }}
         >
           เข้า Google Meet
         </a>
@@ -499,18 +470,20 @@ function DayView({ date, events }: { date: Date; events: GCalEvent[] }) {
   const sorted = [...events].sort((a, b) => a.start.localeCompare(b.start))
 
   return (
-    <div className="rounded-xl bg-white dark:bg-[#242d3f] border border-gray-200 dark:border-gray-700 p-4">
-      <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100">
-          {fmtThaiFull(date)}
-        </h2>
+    <div
+      className="rounded-xl p-4"
+      style={{ background: '#fff', border: `1px solid ${BRAND.border}` }}
+    >
+      <div
+        className="flex items-baseline justify-between mb-3 pb-3"
+        style={{ borderBottom: `1px solid ${BRAND.border}` }}
+      >
+        <h2 className="font-semibold" style={{ color: BRAND.primary }}>{fmtThaiFull(date)}</h2>
         <span className="text-sm text-gray-400">{sorted.length} คลาส</span>
       </div>
 
       {sorted.length === 0 && (
-        <div className="text-center py-10 text-gray-400 text-sm">
-          วันนี้ไม่มีคลาส
-        </div>
+        <div className="text-center py-10 text-sm text-gray-400">วันนี้ไม่มีคลาส</div>
       )}
 
       <div className="space-y-2">
@@ -521,43 +494,35 @@ function DayView({ date, events }: { date: Date; events: GCalEvent[] }) {
               key={e.id}
               className="flex items-start gap-3 p-3 rounded-lg"
               style={{
-                backgroundColor: `${m.color}12`,
+                background: `${m.color}10`,
                 borderLeft: `4px solid ${m.color}`,
                 opacity: e.cancelled ? 0.5 : 1,
               }}
             >
-              <div className="w-24 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-200">
+              <div className="w-24 shrink-0 text-sm font-medium" style={{ color: BRAND.primary }}>
                 {e.allDay ? 'ทั้งวัน' : fmtTime(e.start)}
                 {!e.allDay && (
-                  <div className="text-xs text-gray-400 font-normal">
-                    ถึง {fmtTime(e.end)}
-                  </div>
+                  <div className="text-xs text-gray-400 font-normal">ถึง {fmtTime(e.end)}</div>
                 )}
               </div>
-
               <div className="flex-1 min-w-0">
                 <div
-                  className="font-medium text-gray-800 dark:text-gray-100"
-                  style={
-                    e.cancelled ? { textDecoration: 'line-through' } : undefined
-                  }
+                  className="font-medium text-gray-800"
+                  style={e.cancelled ? { textDecoration: 'line-through' } : undefined}
                 >
                   {e.title}
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: m.color }}>
-                  {m.label}
-                </div>
+                <div className="text-xs mt-0.5" style={{ color: m.color }}>{m.label}</div>
                 {e.location && (
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    📍 {e.location}
-                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">📍 {e.location}</div>
                 )}
                 {e.meetLink && (
-                  <a
+                  
                     href={e.meetLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs underline text-blue-600 dark:text-blue-400"
+                    className="text-xs underline"
+                    style={{ color: BRAND.gold }}
                   >
                     เข้า Google Meet
                   </a>
