@@ -18,7 +18,6 @@ type GoogleEvent = {
   location?: string
   status?: string
   hangoutLink?: string
-  organizer?: { email?: string }
   start?: { dateTime?: string; date?: string }
   end?: { dateTime?: string; date?: string }
 }
@@ -29,14 +28,17 @@ type GoogleCalendar = {
   accessRole?: string
 }
 
-// map email → account_tag
 const EMAIL_TO_TAG: Record<string, string> = {
   'ingchuon12@gmail.com': 'main',
   'aomsmartlink.90@gmail.com': 'aom',
   'nalinrat19060@gmail.com': 'nalin',
 }
 
-async function getAccessToken(refreshToken: string): Promise<string | null> {
+type TokenResult =
+  | { ok: true; accessToken: string }
+  | { ok: false; error: string; errorDescription: string }
+
+async function getAccessToken(refreshToken: string): Promise<TokenResult> {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -48,9 +50,15 @@ async function getAccessToken(refreshToken: string): Promise<string | null> {
     }),
     cache: 'no-store',
   })
-  if (!res.ok) return null
-  const json = (await res.json()) as { access_token?: string }
-  return json.access_token ?? null
+  const json = await res.json()
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: json.error ?? 'unknown_error',
+      errorDescription: json.error_description ?? '',
+    }
+  }
+  return { ok: true, accessToken: json.access_token }
 }
 
 async function fetchCalendarList(accessToken: string): Promise<GoogleCalendar[]> {
@@ -119,11 +127,29 @@ async function fetchAllEvents(
   return merged
 }
 
-/** ระบุ account จาก calendarId — ถ้าเป็น calendar ส่วนตัวของใคร ให้ใช้ tag ของคนนั้น */
 function resolveAccount(calendarId: string, fallbackTag: string): string {
-  // calendarId ของ personal calendar คือ email ของเจ้าของ
-  const tag = EMAIL_TO_TAG[calendarId]
-  return tag ?? fallbackTag
+  return EMAIL_TO_TAG[calendarId] ?? fallbackTag
+}
+
+/** ส่ง LINE notify เมื่อ token เสีย */
+async function notifyTokenExpired(email: string, errorDesc: string) {
+  const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN
+  const lineGroupId = process.env.LINE_GROUP_ID
+  if (!lineToken || !lineGroupId) return
+
+  const msg = `⚠️ Google Calendar token หมดอายุ\nAccount: ${email}\nสาเหตุ: ${errorDesc}\n\nกรุณาไปที่ /staff/schedule/connect เพื่อเชื่อมต่อใหม่`
+
+  await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${lineToken}`,
+    },
+    body: JSON.stringify({
+      to: lineGroupId,
+      messages: [{ type: 'text', text: msg }],
+    }),
+  }).catch(() => {}) // ไม่ให้ error LINE ทำให้ API พัง
 }
 
 export async function GET(req: NextRequest) {
@@ -171,16 +197,26 @@ export async function GET(req: NextRequest) {
 
   const allRawResults = await Promise.all(
     rows.map(async (t) => {
-      const accessToken = await getAccessToken(t.refresh_token)
-      if (!accessToken) {
-        return { account: t.account_tag, email: t.email, ok: false, items: [] as (GoogleEvent & { _calendarId: string })[] }
+      const tokenResult = await getAccessToken(t.refresh_token)
+
+      if (!tokenResult.ok) {
+        // แจ้ง LINE เมื่อ token เสีย (async ไม่รอ)
+        notifyTokenExpired(t.email, tokenResult.errorDescription)
+
+        return {
+          account: t.account_tag,
+          email: t.email,
+          ok: false,
+          tokenError: tokenResult.error,
+          items: [] as (GoogleEvent & { _calendarId: string })[],
+        }
       }
-      const items = await fetchAllEvents(accessToken, timeMin, timeMax)
-      return { account: t.account_tag, email: t.email, ok: true, items }
+
+      const items = await fetchAllEvents(tokenResult.accessToken, timeMin, timeMax)
+      return { account: t.account_tag, email: t.email, ok: true, tokenError: null, items }
     })
   )
 
-  // deduplicate ข้าม account ด้วย Google event id จริง
   const globalSeen = new Set<string>()
   const allEvents: any[] = []
   const accountStats: any[] = []
@@ -192,8 +228,6 @@ export async function GET(req: NextRequest) {
         if (!globalSeen.has(e.id)) {
           globalSeen.add(e.id)
           const title = e.summary ?? '(ไม่มีชื่อ)'
-
-          // ระบุ account จาก calendarId — ทำให้ event ของครูออม/ครูบี ถูก tag ถูกต้อง
           const resolvedAccount = resolveAccount(e._calendarId, result.account)
 
           allEvents.push({
@@ -217,6 +251,7 @@ export async function GET(req: NextRequest) {
       account: result.account,
       email: result.email,
       ok: result.ok,
+      tokenError: result.tokenError,
       count,
     })
   }
