@@ -1,6 +1,7 @@
 // src/app/api/calendar/events/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -131,7 +132,6 @@ function resolveAccount(calendarId: string, fallbackTag: string): string {
   return EMAIL_TO_TAG[calendarId] ?? fallbackTag
 }
 
-/** ส่ง LINE notify เมื่อ token เสีย */
 async function notifyTokenExpired(email: string, errorDesc: string) {
   const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN
   const lineGroupId = process.env.LINE_GROUP_ID
@@ -149,7 +149,7 @@ async function notifyTokenExpired(email: string, errorDesc: string) {
       to: lineGroupId,
       messages: [{ type: 'text', text: msg }],
     }),
-  }).catch(() => {}) // ไม่ให้ error LINE ทำให้ API พัง
+  }).catch(() => {})
 }
 
 export async function GET(req: NextRequest) {
@@ -160,6 +160,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       { error: 'missing_supabase_env', events: [] },
       { status: 500 }
+    )
+  }
+
+  // ✅ ดึง school_id จาก session ของ user ที่ login อยู่
+  const userSupabase = createClient()
+  const { data: { user } } = await userSupabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json(
+      { error: 'unauthorized', events: [] },
+      { status: 401 }
+    )
+  }
+
+  const { data: profile } = await userSupabase
+    .from('profiles')
+    .select('school_id')
+    .eq('id', user.id)
+    .single()
+
+  const schoolId = profile?.school_id ?? null
+  if (!schoolId) {
+    return NextResponse.json(
+      { error: 'no_school_id', events: [] },
+      { status: 403 }
     )
   }
 
@@ -175,13 +200,15 @@ export async function GET(req: NextRequest) {
     ? new Date(toParam).toISOString()
     : new Date(now.getTime() + 30 * 86400000).toISOString()
 
-  const supabase = createClient(supabaseUrl, serviceKey, {
+  // ✅ ใช้ service_role เฉพาะตอน query tokens แต่ filter ด้วย school_id เสมอ
+  const supabase = createServerClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
   })
 
   const { data: tokens, error } = await supabase
     .from('google_calendar_tokens')
     .select('account_tag, email, refresh_token')
+    .eq('school_id', schoolId) // ✅ กรองเฉพาะ token ของสถาบันนี้เท่านั้น
 
   if (error) {
     return NextResponse.json(
@@ -200,9 +227,7 @@ export async function GET(req: NextRequest) {
       const tokenResult = await getAccessToken(t.refresh_token)
 
       if (!tokenResult.ok) {
-        // แจ้ง LINE เมื่อ token เสีย (async ไม่รอ)
         notifyTokenExpired(t.email, tokenResult.errorDescription)
-
         return {
           account: t.account_tag,
           email: t.email,
