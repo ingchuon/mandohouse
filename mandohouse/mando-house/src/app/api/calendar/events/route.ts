@@ -85,7 +85,7 @@ async function fetchEventsFromCalendar(
   return json.items ?? []
 }
 
-/** ดึง events ทุก calendar ของ 1 account */
+/** ดึง events ทุก calendar ของ 1 account — deduplicate ด้วย event id จริง */
 async function fetchAllEvents(
   accessToken: string,
   timeMin: string,
@@ -93,7 +93,6 @@ async function fetchAllEvents(
 ): Promise<GoogleEvent[]> {
   const calendars = await fetchCalendarList(accessToken)
 
-  // รวม owner, writer, reader ทั้งหมด
   const relevantCalendars = calendars.filter(
     (cal) =>
       cal.accessRole === 'owner' ||
@@ -107,7 +106,7 @@ async function fetchAllEvents(
     )
   )
 
-  // รวม events และ deduplicate ด้วย id
+  // deduplicate ด้วย event id จริงของ Google
   const seen = new Set<string>()
   const merged: GoogleEvent[] = []
   for (const items of allResults) {
@@ -132,7 +131,6 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // ---- ช่วงเวลา ----
   const { searchParams } = new URL(req.url)
   const fromParam = searchParams.get('from')
   const toParam = searchParams.get('to')
@@ -145,7 +143,6 @@ export async function GET(req: NextRequest) {
     ? new Date(toParam).toISOString()
     : new Date(now.getTime() + 30 * 86400000).toISOString()
 
-  // ---- อ่าน token ทั้ง 3 account ----
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false },
   })
@@ -166,52 +163,61 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ events: [], accounts: [], timeMin, timeMax })
   }
 
-  // ---- ดึงพร้อมกันทุก account ----
-  const results = await Promise.all(
+  // ดึงพร้อมกันทุก account แต่ deduplicate ข้าม account ด้วย event id จริง
+  const allRawResults = await Promise.all(
     rows.map(async (t) => {
       const accessToken = await getAccessToken(t.refresh_token)
       if (!accessToken) {
-        return { account: t.account_tag, email: t.email, ok: false, events: [] }
+        return { account: t.account_tag, email: t.email, ok: false, items: [] as GoogleEvent[] }
       }
-
       const items = await fetchAllEvents(accessToken, timeMin, timeMax)
+      return { account: t.account_tag, email: t.email, ok: true, items }
+    })
+  )
 
-      const events = items
-        .filter((e) => e.status !== 'cancelled')
-        .map((e) => {
+  // รวม events จากทุก account — deduplicate ข้าม account ด้วย Google event id จริง
+  // โดยเก็บเฉพาะ account แรกที่เจอ event นั้น (main มาก่อน)
+  const globalSeen = new Set<string>()
+  const allEvents: any[] = []
+  const accountStats: any[] = []
+
+  for (const result of allRawResults) {
+    let count = 0
+    if (result.ok) {
+      for (const e of result.items) {
+        if (!globalSeen.has(e.id)) {
+          globalSeen.add(e.id)
           const title = e.summary ?? '(ไม่มีชื่อ)'
-          return {
-            id: `${t.account_tag}-${e.id}`,
+          allEvents.push({
+            id: e.id,
             title,
             start: e.start?.dateTime ?? e.start?.date ?? '',
             end: e.end?.dateTime ?? e.end?.date ?? '',
             allDay: !e.start?.dateTime,
-            account: t.account_tag,
-            email: t.email,
+            account: result.account,
+            email: result.email,
             description: e.description ?? '',
             location: e.location ?? '',
             meetLink: e.hangoutLink ?? '',
             cancelled: title.includes('❌'),
-          }
-        })
-        .filter((e) => e.start !== '')
-
-      return { account: t.account_tag, email: t.email, ok: true, events }
+          })
+          count++
+        }
+      }
+    }
+    accountStats.push({
+      account: result.account,
+      email: result.email,
+      ok: result.ok,
+      count,
     })
-  )
+  }
 
-  const allEvents = results
-    .flatMap((r) => r.events)
-    .sort((a, b) => a.start.localeCompare(b.start))
+  allEvents.sort((a, b) => a.start.localeCompare(b.start))
 
   return NextResponse.json({
     events: allEvents,
-    accounts: results.map((r) => ({
-      account: r.account,
-      email: r.email,
-      ok: r.ok,
-      count: r.events.length,
-    })),
+    accounts: accountStats,
     timeMin,
     timeMax,
   })
