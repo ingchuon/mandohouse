@@ -30,34 +30,8 @@ const features = [
 
 const plans = [
   {
-    id: 'starter', name: 'STARTER', price: 490, popular: false,
-    desc: 'สำหรับสถาบันที่เพิ่งเริ่มต้น',
-    features: [
-      { text: 'นักเรียนสูงสุด 50 คน', ok: true },
-      { text: 'ครูสูงสุด 5 คน', ok: true },
-      { text: 'เช็กอิน / ออกใบเสร็จ', ok: true },
-      { text: 'Dashboard', ok: true },
-      { text: 'Export Excel', ok: false },
-      { text: 'รายงานรายเดือน', ok: false },
-      { text: 'Priority support', ok: false },
-    ],
-  },
-  {
-    id: 'growth', name: 'GROWTH', price: 790, popular: true,
-    desc: 'สำหรับสถาบันที่กำลังขยาย',
-    features: [
-      { text: 'นักเรียนสูงสุด 200 คน', ok: true },
-      { text: 'ครูสูงสุด 20 คน', ok: true },
-      { text: 'เช็กอิน / ออกใบเสร็จ', ok: true },
-      { text: 'Dashboard', ok: true },
-      { text: 'Export Excel', ok: true },
-      { text: 'รายงานรายเดือน', ok: true },
-      { text: 'Priority support', ok: false },
-    ],
-  },
-  {
-    id: 'pro', name: 'PRO', price: 1990, popular: false,
-    desc: 'สำหรับสถาบันขนาดใหญ่',
+    id: 'pro', name: 'TUTORCLOUD', price: 790, popular: true,
+    desc: 'ฟีเจอร์ครบทุกอย่าง ไม่จำกัดนักเรียนและครู',
     features: [
       { text: 'นักเรียนไม่จำกัด', ok: true },
       { text: 'ครูไม่จำกัด', ok: true },
@@ -65,6 +39,7 @@ const plans = [
       { text: 'Dashboard', ok: true },
       { text: 'Export Excel', ok: true },
       { text: 'รายงานรายเดือน', ok: true },
+      { text: 'ตารางสอน', ok: true },
       { text: 'Priority support', ok: true },
     ],
   },
@@ -433,7 +408,7 @@ export default function LandingPage() {
           </h2>
           <p style={{ color: C.textMid, fontSize: 15 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</p>
         </div>
-        <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 900, margin: '0 auto' }}>
+        <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 420, margin: '0 auto' }}>
           {plans.map(plan => (
             <div key={plan.id} style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 24px', position: 'relative' }}>
               {plan.popular && (
