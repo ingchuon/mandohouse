@@ -316,7 +316,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Link href="/login" className="nav-a nav-login">Login</Link>
-          <button onClick={() => openModal('Growth')} className="btn-dark">Try Free ↗</button>
+          <button onClick={() => openModal('Growth')} className="btn-dark nav-login">Try Free ↗</button>
         </div>
       </nav>
 
