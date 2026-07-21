@@ -1,11 +1,11 @@
 {
-  "name": "Mando House",
-  "short_name": "Mando House",
-  "description": "ระบบบริหารจัดการสถาบันสอนภาษาจีน Mando House",
+  "name": "TutorCloud",
+  "short_name": "TutorCloud",
+  "description": "ระบบบริหารจัดการสถาบันสอนพิเศษ TutorCloud",
   "start_url": "/staff",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#0F6E56",
+  "background_color": "#F5F0E8",
+  "theme_color": "#1C3A2A",
   "orientation": "portrait",
   "icons": [
     {
