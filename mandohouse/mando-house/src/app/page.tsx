@@ -226,10 +226,15 @@ export default function LandingPage() {
           .nav-links{display:none}
           .step-grid{grid-template-columns:1fr!important}
           .contact-row{flex-direction:column!important}
+          .nav-trial-btn{display:none!important}
+          .section-pad{padding-left:16px!important;padding-right:16px!important}
+          .hero-pad{padding:48px 16px 64px!important}
+          .footer-pad{padding:16px!important}
         }
         @media(max-width:480px){
           .feat-grid{grid-template-columns:1fr!important}
-          .hero-h1{font-size:30px!important}
+          .hero-h1{font-size:28px!important}
+          .plan-grid{grid-template-columns:1fr!important}
         }
       `}</style>
 
@@ -288,7 +293,7 @@ export default function LandingPage() {
         position: 'sticky', top: 0, zIndex: 100,
         background: scrolled ? 'rgba(245,240,232,.96)' : 'transparent',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        padding: '0 48px', height: 64,
+        padding: '0 16px', height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: scrolled ? `1px solid ${C.border}` : 'none',
         transition: 'all .2s',
@@ -311,12 +316,12 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Link href="/login" className="nav-a">เข้าสู่ระบบ</Link>
-          <button onClick={() => openModal('Growth')} className="btn-dark">ทดลองใช้ฟรี ↗</button>
+          <button onClick={() => openModal('Growth')} className="btn-dark nav-trial-btn">ทดลองใช้ฟรี ↗</button>
         </div>
       </nav>
 
       {/* HERO — cream bg + shimmer TUTORCLOUD */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: C.bg, padding: '80px 48px 96px' }}>
+      <div className="hero-pad" style={{ position: 'relative', overflow: 'hidden', background: C.bg, padding: '80px 48px 96px' }}>
         {/* shimmer text */}
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
@@ -372,7 +377,7 @@ export default function LandingPage() {
       </div>
 
       {/* FEATURES */}
-      <div id="features" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="features" className="section-pad" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ฟีเจอร์</div>
           <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-.5px', lineHeight: 1.2 }}>
@@ -392,7 +397,7 @@ export default function LandingPage() {
       </div>
 
       {/* HOW IT WORKS */}
-      <div id="how" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="how" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ background: C.green, borderRadius: 24, padding: '64px 56px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.gold, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>เริ่มต้น</div>
           <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 48, letterSpacing: '-.5px' }}>
@@ -419,7 +424,7 @@ export default function LandingPage() {
       </div>
 
       {/* PRICING */}
-      <div id="pricing" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="pricing" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
           <h2 style={{ fontSize: 40, fontWeight: 700, marginBottom: 8 }}>
@@ -462,7 +467,7 @@ export default function LandingPage() {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 24, padding: '56px 40px', textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l2.4 7.4H21l-6.2 4.5 2.4 7.4L11 17l-6.2 4.3 2.4-7.4L1 9.4h7.6z" fill={C.gold}/></svg>
@@ -476,7 +481,7 @@ export default function LandingPage() {
       </div>
 
       {/* CONTACT */}
-      <div id="contact" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="contact" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ติดต่อเรา</div>
           <h2 style={{ fontSize: 30, fontWeight: 700 }}>มีคำถาม? ทีมงานพร้อมช่วยเสมอ</h2>
@@ -508,7 +513,7 @@ export default function LandingPage() {
       </div>
 
       {/* FOOTER */}
-      <div style={{ borderTop: `1px solid ${C.border}`, padding: '24px 48px' }}>
+      <div className="footer-pad" style={{ borderTop: `1px solid ${C.border}`, padding: '24px 48px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 26, height: 26, borderRadius: '50%', background: C.green, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
