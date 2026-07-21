@@ -12,11 +12,14 @@ const C = {
   textMid: '#6B6B6B',
 }
 
+const STORAGE = 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/tutorcloud-assets/guide'
+
 const chapters = [
   {
     id: 'dashboard',
     icon: '📊',
     title: 'Dashboard',
+    image: `${STORAGE}/dashboard.png`,
     sections: [
       {
         title: 'ภาพรวม Dashboard',
@@ -42,6 +45,7 @@ const chapters = [
     id: 'students',
     icon: '👨‍🎓',
     title: 'ข้อมูลนักเรียน',
+    image: `${STORAGE}/students.png`,
     sections: [
       {
         title: 'การดูข้อมูลนักเรียน',
@@ -75,6 +79,7 @@ const chapters = [
     id: 'checkin',
     icon: '✅',
     title: 'เช็คอิน / เช็คเอาท์',
+    image: `${STORAGE}/checkin.png`,
     sections: [
       {
         title: 'การเช็คอินนักเรียน',
@@ -107,6 +112,7 @@ const chapters = [
     id: 'hours',
     icon: '⏱️',
     title: 'ชั่วโมงสอน',
+    image: `${STORAGE}/hours.png`,
     sections: [
       {
         title: 'รายงานชั่วโมงสอน',
@@ -123,6 +129,7 @@ const chapters = [
     id: 'teachers',
     icon: '👩‍🏫',
     title: 'ครูผู้สอน',
+    image: `${STORAGE}/teachers.png`,
     sections: [
       {
         title: 'จัดการครูผู้สอน',
@@ -147,6 +154,7 @@ const chapters = [
     id: 'schedule',
     icon: '📅',
     title: 'ตารางสอน',
+    image: `${STORAGE}/schedule.png`,
     sections: [
       {
         title: 'ตารางสอนจาก Google Calendar',
@@ -170,6 +178,7 @@ const chapters = [
     id: 'courses',
     icon: '📚',
     title: 'คอร์สและราคา',
+    image: `${STORAGE}/courses.png`,
     sections: [
       {
         title: 'จัดการคอร์ส',
@@ -194,6 +203,7 @@ const chapters = [
     id: 'receipts',
     icon: '💰',
     title: 'รายรับ (ใบเสร็จ)',
+    image: `${STORAGE}/receipts.png`,
     sections: [
       {
         title: 'ออกใบเสร็จ',
@@ -223,6 +233,7 @@ const chapters = [
     id: 'expenses',
     icon: '💸',
     title: 'รายจ่าย',
+    image: `${STORAGE}/expenses.png`,
     sections: [
       {
         title: 'บันทึกรายจ่าย',
@@ -241,6 +252,7 @@ const chapters = [
     id: 'finance',
     icon: '📈',
     title: 'Finance',
+    image: `${STORAGE}/finance.png`,
     sections: [
       {
         title: 'ภาพรวมการเงิน',
@@ -263,6 +275,7 @@ const chapters = [
     id: 'download',
     icon: '📥',
     title: 'Download file',
+    image: `${STORAGE}/download.png`,
     sections: [
       {
         title: 'Export ข้อมูล',
@@ -279,7 +292,7 @@ const chapters = [
         content: `โหลด Template เปล่าเพื่อกรอกข้อมูลแล้ว Import เข้าระบบ:
 
 • **Template รายรับ** — Date, Name, Subject, Amount, ค่าหนังสือ, Teacher, Payment, Remark
-• **Template รายจ่าย** — Date, List, price, teacher, Remark  
+• **Template รายจ่าย** — Date, List, price, teacher, Remark
 • **Template นักเรียน** — full_name, nickname, parent_name, parent_phone, enrolled_at
 
 ⚠️ โหลด Template ก่อนเสมอ เพื่อให้ format ถูกต้อง`,
@@ -300,6 +313,7 @@ const chapters = [
     id: 'team',
     icon: '👥',
     title: 'จัดการทีม',
+    image: `${STORAGE}/team.png`,
     sections: [
       {
         title: 'เพิ่มสมาชิกทีม',
@@ -316,7 +330,7 @@ const chapters = [
         content: `จำนวนสมาชิกที่เพิ่มได้ขึ้นอยู่กับ subscription:
 
 • **Starter** — สูงสุด 5 คน
-• **Growth** — สูงสุด 20 คน  
+• **Growth** — สูงสุด 20 คน
 • **Pro** — ไม่จำกัด`,
       },
     ],
@@ -326,6 +340,7 @@ const chapters = [
 export default function GuidePage() {
   const [activeChapter, setActiveChapter] = useState('dashboard')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const currentChapter = chapters.find((c) => c.id === activeChapter)!
@@ -341,11 +356,7 @@ export default function GuidePage() {
         return (
           <div key={i} className="flex gap-2 mb-1">
             <span style={{ color: C.gold }}>•</span>
-            <span>
-              {parts.map((p, j) =>
-                j % 2 === 1 ? <strong key={j}>{p}</strong> : p
-              )}
-            </span>
+            <span>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</span>
           </div>
         )
       }
@@ -353,9 +364,7 @@ export default function GuidePage() {
         const parts = line.split(/\*\*(.*?)\*\*/g)
         return (
           <div key={i} className="mb-1 pl-1">
-            {parts.map((p, j) =>
-              j % 2 === 1 ? <strong key={j}>{p}</strong> : p
-            )}
+            {parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}
           </div>
         )
       }
@@ -371,9 +380,7 @@ export default function GuidePage() {
       const parts = line.split(/\*\*(.*?)\*\*/g)
       return (
         <div key={i} className="mb-1">
-          {parts.map((p, j) =>
-            j % 2 === 1 ? <strong key={j}>{p}</strong> : p
-          )}
+          {parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}
         </div>
       )
     })
@@ -382,8 +389,16 @@ export default function GuidePage() {
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Sarabun, sans-serif', color: C.text }}>
 
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, cursor: 'zoom-out' }}>
+          <img src={lightbox} alt="preview" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }} />
+        </div>
+      )}
+
       {/* Header */}
-      <div style={{ background: C.dark, borderBottom: `1px solid #2a4a38` }}>
+      <div style={{ background: C.dark, borderBottom: '1px solid #2a4a38' }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/" style={{ color: C.gold, fontWeight: 700, fontSize: 20, letterSpacing: 1 }}>
@@ -401,15 +416,13 @@ export default function GuidePage() {
 
       <div className="max-w-7xl mx-auto flex" style={{ minHeight: 'calc(100vh - 60px)' }}>
 
-        {/* Sidebar */}
+        {/* Sidebar desktop */}
         <div className="hidden md:block" style={{
           width: 260, flexShrink: 0, borderRight: `1px solid ${C.border}`,
           background: 'white', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto'
         }}>
           <div style={{ padding: '20px 16px 8px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>
-              คู่มือการใช้งาน
-            </div>
+            <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>คู่มือการใช้งาน</div>
             <div style={{ fontSize: 13, color: C.textMid }}>TutorCloud — Admin</div>
           </div>
           <nav style={{ padding: '8px 0' }}>
@@ -440,10 +453,8 @@ export default function GuidePage() {
         </div>
 
         {sidebarOpen && (
-          <div className="md:hidden fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
-            onClick={() => setSidebarOpen(false)}>
-            <div style={{ width: 260, height: '100%', background: 'white', overflowY: 'auto' }}
-              onClick={(e) => e.stopPropagation()}>
+          <div className="md:hidden fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOpen(false)}>
+            <div style={{ width: 260, height: '100%', background: 'white', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ padding: '20px 16px 8px', borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 13, color: C.textMid }}>คู่มือการใช้งาน</div>
               </div>
@@ -472,18 +483,29 @@ export default function GuidePage() {
         <div style={{ flex: 1, padding: '40px 48px', maxWidth: 800 }}>
 
           {/* Chapter header */}
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 36, marginBottom: 8 }}>{currentChapter.icon}</div>
-            <h1 style={{ fontSize: 28, fontWeight: 700, color: C.dark, margin: 0 }}>
-              {currentChapter.title}
-            </h1>
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: C.dark, margin: 0 }}>{currentChapter.title}</h1>
             <div style={{ width: 48, height: 3, background: C.gold, borderRadius: 2, marginTop: 8 }} />
           </div>
+
+          {/* Chapter image */}
+          {currentChapter.image && (
+            <div style={{ marginBottom: 28, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, cursor: 'zoom-in', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+              onClick={() => setLightbox(currentChapter.image)}>
+              <img src={currentChapter.image} alt={currentChapter.title}
+                style={{ width: '100%', display: 'block' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              <div style={{ padding: '8px 12px', background: '#f8f6f2', fontSize: 12, color: C.textMid, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🔍</span> คลิกเพื่อขยายภาพ
+              </div>
+            </div>
+          )}
 
           {/* Sections */}
           {currentChapter.sections.map((section, si) => {
             const key = `${activeChapter}-${si}`
-            const isOpen = openSections[key] !== false // default open
+            const isOpen = openSections[key] !== false
             return (
               <div key={si} style={{
                 background: 'white', borderRadius: 12, marginBottom: 16,
@@ -496,22 +518,12 @@ export default function GuidePage() {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     background: 'transparent', border: 'none', cursor: 'pointer',
                   }}>
-                  <span style={{ fontWeight: 600, fontSize: 16, color: C.dark }}>
-                    {section.title}
-                  </span>
-                  <span style={{ color: C.textMid, fontSize: 18, transition: 'transform 0.2s',
-                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                    ▾
-                  </span>
+                  <span style={{ fontWeight: 600, fontSize: 16, color: C.dark }}>{section.title}</span>
+                  <span style={{ color: C.textMid, fontSize: 18, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
                 </button>
                 {isOpen && (
-                  <div style={{
-                    padding: '0 20px 20px', fontSize: 15, lineHeight: 1.8,
-                    color: C.text, borderTop: `1px solid ${C.border}`
-                  }}>
-                    <div style={{ paddingTop: 16 }}>
-                      {renderContent(section.content)}
-                    </div>
+                  <div style={{ padding: '0 20px 20px', fontSize: 15, lineHeight: 1.8, color: C.text, borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ paddingTop: 16 }}>{renderContent(section.content)}</div>
                   </div>
                 )}
               </div>
