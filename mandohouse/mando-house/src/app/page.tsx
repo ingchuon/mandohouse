@@ -305,7 +305,7 @@ export default function LandingPage() {
           <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
             <a href="#features" className="nav-a">ฟีเจอร์</a>
             <a href="#pricing" className="nav-a">ราคา</a>
-            <a href="#how" className="nav-a">วิธีใช้</a>
+            <a href="/guide" className="nav-a">วิธีใช้</a>
             <a href="#contact" className="nav-a">ติดต่อ</a>
           </div>
         </div>
