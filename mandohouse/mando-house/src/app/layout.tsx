@@ -13,13 +13,13 @@ const notoSansThai = Noto_Sans_Thai({
 })
 
 export const metadata: Metadata = {
-  title: `${SCHOOL_CONFIG.name} — ระบบหลังบ้าน`,
-  description: SCHOOL_CONFIG.description,
+  title: 'TutorCloud — ระบบหลังบ้านสถาบันสอนพิเศษ',
+  description: 'ระบบจัดการสถาบันสอนพิเศษครบวงจร นักเรียน ครู ตารางสอน และการเงิน',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: SCHOOL_CONFIG.name,
+    title: 'TutorCloud',
   },
 }
 
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content={SCHOOL_CONFIG.name} />
+        <meta name="apple-mobile-web-app-title" content="TutorCloud" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${notoSansThai.variable} font-sans bg-surface dark:bg-[#1a2030] text-gray-900 dark:text-gray-100 antialiased`}>
