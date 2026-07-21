@@ -308,15 +308,15 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
-            <a href="#features" className="nav-a">ฟีเจอร์</a>
-            <a href="#pricing" className="nav-a">ราคา</a>
-            <a href="/guide" className="nav-a">วิธีใช้</a>
-            <a href="#contact" className="nav-a">ติดต่อ</a>
+            <a href="#features" className="nav-a">Features</a>
+            <a href="#pricing" className="nav-a">Pricing</a>
+            <a href="/guide" className="nav-a">Guide</a>
+            <a href="#contact" className="nav-a">Contact</a>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link href="/login" className="nav-a">เข้าสู่ระบบ</Link>
-          <button onClick={() => openModal('Growth')} className="btn-dark nav-trial-btn">ทดลองใช้ฟรี ↗</button>
+          <Link href="/login" className="nav-a">Login</Link>
+          <button onClick={() => openModal('Growth')} className="btn-dark nav-trial-btn">Try Free ↗</button>
         </div>
       </nav>
 
