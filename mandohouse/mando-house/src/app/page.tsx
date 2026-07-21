@@ -223,10 +223,10 @@ export default function LandingPage() {
         @media(max-width:768px){
           .feat-grid{grid-template-columns:1fr 1fr!important}
           .plan-grid{grid-template-columns:1fr!important}
-          .nav-links{display:none}
+          .nav-links{display:none!important}
+          .nav-login{display:none!important}
           .step-grid{grid-template-columns:1fr!important}
           .contact-row{flex-direction:column!important}
-          .nav-trial-btn{display:none!important}
           .section-pad{padding-left:16px!important;padding-right:16px!important}
           .hero-pad{padding:48px 16px 64px!important}
           .footer-pad{padding:16px!important}
@@ -315,8 +315,8 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link href="/login" className="nav-a">Login</Link>
-          <button onClick={() => openModal('Growth')} className="btn-dark nav-trial-btn">Try Free ↗</button>
+          <Link href="/login" className="nav-a nav-login">Login</Link>
+          <button onClick={() => openModal('Growth')} className="btn-dark">Try Free ↗</button>
         </div>
       </nav>
 
