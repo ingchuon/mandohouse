@@ -10,7 +10,6 @@ interface Teacher {
   id: string
   full_name: string
   subject: string | null
-  pin: string | null
 }
 
 interface Course {
@@ -57,6 +56,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   const [unlocked, setUnlocked] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState(false)
+  const [pin, setPin] = useState<string | null>(null)  // PIN ที่ยืนยันแล้ว (เก็บในเครื่องนี้เท่านั้น)
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [logs, setLogs] = useState<LessonLog[]>([])
@@ -85,32 +85,30 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
 
   /* โหลดรายชื่อครูทั้งหมด (ไม่รวมชื่อรวม เช่น Aom&Bee) */
   useEffect(() => {
-    supabase
-      .from('teachers')
-      .select('id, full_name, subject, pin')
-      .eq('is_active', true)
-      .order('full_name')
-      .then(({ data }) => {
-        const list = ((data as Teacher[]) ?? []).filter(t => !t.full_name.includes('&'))
-        setAllTeachers(list)
-        setLoadingTeachers(false)
+    supabase.rpc('teach_list_teachers').then(async ({ data }) => {
+      const list = ((data as Teacher[]) ?? [])
+      setAllTeachers(list)
+      setLoadingTeachers(false)
 
-        // ถ้ามี initialTeacherId (จากลิงก์เก่า) หรือเคยเลือกไว้แล้ว
-        const savedId = initialTeacherId || (() => {
-          try { return localStorage.getItem(SELECTED_TEACHER_KEY) } catch { return null }
-        })()
+      // ถ้ามี initialTeacherId (จากลิงก์เก่า) หรือเคยเลือกไว้แล้ว
+      const savedId = initialTeacherId || (() => {
+        try { return localStorage.getItem(SELECTED_TEACHER_KEY) } catch { return null }
+      })()
 
-        if (savedId) {
-          const found = (data as Teacher[] ?? []).find(t => t.id === savedId)
-          if (found) {
-            setTeacher(found)
-            try {
-              const savedPin = localStorage.getItem(PIN_KEY_PREFIX + found.id)
-              if (savedPin && savedPin === found.pin) setUnlocked(true)
-            } catch {}
+      if (savedId) {
+        const found = list.find(t => t.id === savedId)
+        if (found) {
+          setTeacher(found)
+          // ยืนยัน PIN ที่เคยจำไว้กับ server (ไม่เทียบฝั่ง client อีก)
+          let savedPin: string | null = null
+          try { savedPin = localStorage.getItem(PIN_KEY_PREFIX + found.id) } catch {}
+          if (savedPin) {
+            const { data: ok } = await supabase.rpc('teach_verify_pin', { p_teacher_id: found.id, p_pin: savedPin })
+            if (ok === true) { setPin(savedPin); setUnlocked(true) }
           }
         }
-      })
+      }
+    })
   }, [initialTeacherId])
 
   /* โหลดข้อมูลหลังปลดล็อก */
@@ -120,52 +118,44 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   }, [unlocked, teacher])
 
   async function loadAll() {
+    if (!teacher || !pin) return
     setLoadingData(true)
-    const [{ data: eData }, { data: lData }] = await Promise.all([
-      supabase
-        .from('enrollments')
-        .select(`
-          id, student_id, lessons_used, lessons_total, status,
-          courses ( id, name, name_en ),
-          students:student_id ( id, full_name, nickname )
-        `)
-        .in('status', ['active', 'completed'])
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('lesson_logs')
-        .select(`
-          id, enrollment_id, lesson_date, lesson_number, topic, homework, duration_minutes,
-          enrollments (
-            courses ( id, name, name_en ),
-            students:student_id ( full_name, nickname )
-          )
-        `)
-        .eq('teacher_name', teacher!.full_name)
-        .gte('lesson_date', monthStart)
-        .lte('lesson_date', monthEnd)
-        .order('lesson_date', { ascending: false }),
-    ])
-    setEnrollments((eData as unknown as Enrollment[]) ?? [])
-    setLogs((lData as unknown as LessonLog[]) ?? [])
+    const { data, error } = await supabase.rpc('teach_get_data', {
+      p_teacher_id: teacher.id,
+      p_pin: pin,
+      p_month_start: monthStart,
+      p_month_end: monthEnd,
+    })
+    if (error) {
+      toast.error('โหลดข้อมูลไม่สำเร็จ')
+      setLoadingData(false)
+      return
+    }
+    const res = (data as { enrollments?: Enrollment[]; logs?: LessonLog[] }) ?? {}
+    setEnrollments(res.enrollments ?? [])
+    setLogs(res.logs ?? [])
     setLoadingData(false)
   }
 
-  function selectTeacher(t: Teacher) {
+  async function selectTeacher(t: Teacher) {
     setTeacher(t)
     setPinInput('')
     setPinError(false)
     try { localStorage.setItem(SELECTED_TEACHER_KEY, t.id) } catch {}
-    // ถ้าเคยปลดล็อกไว้แล้วในเครื่องนี้
-    try {
-      const savedPin = localStorage.getItem(PIN_KEY_PREFIX + t.id)
-      if (savedPin && savedPin === t.pin) { setUnlocked(true); return }
-    } catch {}
+    // ถ้าเคยปลดล็อกไว้แล้วในเครื่องนี้ — ยืนยันกับ server
+    let savedPin: string | null = null
+    try { savedPin = localStorage.getItem(PIN_KEY_PREFIX + t.id) } catch {}
+    if (savedPin) {
+      const { data: ok } = await supabase.rpc('teach_verify_pin', { p_teacher_id: t.id, p_pin: savedPin })
+      if (ok === true) { setPin(savedPin); setUnlocked(true); return }
+    }
     setUnlocked(false)
   }
 
   function backToTeacherList() {
     setTeacher(null)
     setUnlocked(false)
+    setPin(null)
     setPinInput('')
     setPinError(false)
     try { localStorage.removeItem(SELECTED_TEACHER_KEY) } catch {}
@@ -177,8 +167,11 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
     setPinInput(next)
     setPinError(false)
     if (next.length === 4) {
-      setTimeout(() => {
-        if (teacher && next === teacher.pin) {
+      setTimeout(async () => {
+        if (!teacher) return
+        const { data: ok } = await supabase.rpc('teach_verify_pin', { p_teacher_id: teacher.id, p_pin: next })
+        if (ok === true) {
+          setPin(next)
           setUnlocked(true)
           try { localStorage.setItem(PIN_KEY_PREFIX + teacher.id, next) } catch {}
         } else {
@@ -191,10 +184,6 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
 
   async function handleChangePin() {
     if (!teacher) return
-    if (pinForm.current !== teacher.pin) {
-      toast.error('PIN ปัจจุบันไม่ถูกต้อง')
-      return
-    }
     if (!/^\d{4}$/.test(pinForm.next)) {
       toast.error('PIN ใหม่ต้องเป็นตัวเลข 4 หลัก')
       return
@@ -204,20 +193,19 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       return
     }
     setChangingPin(true)
-    const { error } = await supabase
-      .from('teachers')
-      .update({ pin: pinForm.next })
-      .eq('id', teacher.id)
+    const { error } = await supabase.rpc('teach_change_pin', {
+      p_teacher_id: teacher.id,
+      p_current_pin: pinForm.current,
+      p_new_pin: pinForm.next,
+    })
 
     if (error) {
-      toast.error('เปลี่ยน PIN ไม่สำเร็จ: ' + error.message)
+      toast.error(error.message.includes('invalid_pin') ? 'PIN ปัจจุบันไม่ถูกต้อง' : 'เปลี่ยน PIN ไม่สำเร็จ')
       setChangingPin(false)
       return
     }
 
-    const updated = { ...teacher, pin: pinForm.next }
-    setTeacher(updated)
-    setAllTeachers(prev => prev.map(t => t.id === updated.id ? updated : t))
+    setPin(pinForm.next)
     try { localStorage.setItem(PIN_KEY_PREFIX + teacher.id, pinForm.next) } catch {}
 
     toast.success('เปลี่ยน PIN สำเร็จ ✅')
@@ -229,135 +217,67 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   async function handleSave() {
     if (!form.enrollment_id) { toast.error('กรุณาเลือกนักเรียน'); return }
     const enroll = enrollments.find(e => e.id === form.enrollment_id)
-    if (!enroll || !teacher) return
+    if (!enroll || !teacher || !pin) return
 
     setSaving(true)
+    const tid = teacher.id
+    const pinVal = pin
 
-    // ตรวจสอบว่ามีบันทึกของวันนี้ + enrollment นี้อยู่แล้วหรือไม่
-    const { data: existing } = await supabase
-      .from('lesson_logs')
-      .select('id, teacher_name, duration_minutes, topic, subject_name')
-      .eq('enrollment_id', form.enrollment_id)
-      .eq('lesson_date', form.lesson_date)
-
-    // คอร์สพิเศษ (Special 2/3 Subject) = หักครั้งเรียนแค่ 1 ครั้ง/วัน ไม่ว่ากี่ครูจะกรอก
-    const courseName = enroll.courses?.name ?? ''
-    const isSpecialCourse = /special/i.test(courseName)
-
-    let skipLessonCount = false
-
-    if (existing && existing.length > 0) {
-      const studentName = enroll.students?.nickname || enroll.students?.full_name || 'นักเรียนคนนี้'
-      const who = existing[0].teacher_name ? `ครู${existing[0].teacher_name}` : 'staff'
-      const prevSubject = existing[0].subject_name ? ` (วิชา${existing[0].subject_name})` : ''
-
-      if (isSpecialCourse) {
-        const confirmed = confirm(
-          `วันนี้มีบันทึกของ ${studentName} (${courseName}) อยู่แล้ว\n` +
-          `บันทึกโดย: ${who}${prevSubject}${existing[0].duration_minutes ? ` (${existing[0].duration_minutes} นาที)` : ''}\n\n` +
-          `ต้องการบันทึกชั่วโมงสอนของวิชาตัวเองเพิ่มหรือไม่?\n` +
-          `(กด ตกลง = บันทึกเพิ่ม โดยไม่หักครั้งเรียนซ้ำ / ยกเลิก = ไม่บันทึก)`
-        )
-        if (!confirmed) { setSaving(false); return }
-        skipLessonCount = true
-      } else {
-        // คอร์สปกติ: staff เช็กอินไปแล้ว ครูแค่เพิ่มหัวข้อ/การบ้านลงในบันทึกเดิม (ไม่สร้างใหม่)
-        const confirmed = confirm(
-          `วันนี้ ${who} เช็กอินไว้แล้ว (${courseName})\n\n` +
-          `ต้องการเพิ่มหัวข้อที่สอน/การบ้านลงในบันทึกนั้นหรือไม่?\n` +
-          `(กด ตกลง = อัปเดตบันทึกเดิม / ยกเลิก = ไม่ทำอะไร)`
-        )
-        if (!confirmed) { setSaving(false); return }
-
-        // UPDATE บันทึกเดิมแทน insert ใหม่
-        await supabase.from('lesson_logs').update({
-          teacher_name: teacher.full_name,
-          duration_minutes: form.duration_minutes,
-          subject_name: form.subject_name || null,
-          topic: form.topic || null,
-          homework: form.homework || null,
-        }).eq('id', existing[0].id)
-
-        toast.success('เพิ่มหัวข้อสอน/การบ้านในบันทึกวันนี้แล้ว ✅')
-        setForm({ enrollment_id: '', lesson_date: todayStr, duration_minutes: 60, subject_name: '', topic: '', homework: '' })
-        setStudentSearch('')
-        setSaving(false)
-        loadAll()
-        return
-      }
-    }
-
-    // ตรวจสอบว่ามีการเช็กอินของวันนี้ + enrollment นี้อยู่แล้วหรือไม่ (กันขึ้นซ้ำในรายชื่อ "วันนี้มาเรียน")
-    const { data: existingCheckin } = await supabase
-      .from('checkins')
-      .select('id')
-      .eq('enrollment_id', form.enrollment_id)
-      .gte('check_in_at', form.lesson_date + 'T00:00:00')
-      .lt('check_in_at', form.lesson_date + 'T23:59:59')
-      .limit(1)
-
-    const { data: last } = await supabase
-      .from('lesson_logs')
-      .select('lesson_number')
-      .eq('enrollment_id', form.enrollment_id)
-      .order('lesson_number', { ascending: false })
-      .limit(1)
-      .single()
-
-    const nextLesson = (last?.lesson_number ?? 0) + 1
-
-    const { error } = await supabase.from('lesson_logs').insert({
-      enrollment_id: form.enrollment_id,
-      student_id: enroll.student_id,
-      teacher_name: teacher.full_name,
-      lesson_date: form.lesson_date,
-      lesson_number: nextLesson,
-      duration_minutes: form.duration_minutes,
-      subject_name: form.subject_name || null,
-      topic: form.topic || null,
-      homework: form.homework || null,
-    })
-
-    if (error) {
-      toast.error('บันทึกไม่สำเร็จ: ' + error.message)
-      setSaving(false)
-      return
-    }
-
-    if (!skipLessonCount) {
-      await supabase
-        .from('enrollments')
-        .update({ lessons_used: enroll.lessons_used + 1 })
-        .eq('id', form.enrollment_id)
-    }
-
-    // เพิ่มลงตาราง checkins ด้วย ถ้ายังไม่มีของวันนั้น
-    if (!existingCheckin || existingCheckin.length === 0) {
-      // ใช้เวลาเที่ยง (12:00) ของวัน lesson_date ตามเวลาไทย UTC+7
-      const checkInTime = `${form.lesson_date}T12:00:00+07:00`
-      await supabase.from('checkins').insert({
-        student_id: enroll.student_id,
-        enrollment_id: form.enrollment_id,
-        check_in_at: checkInTime,
+    async function callSave(mode: string) {
+      return supabase.rpc('teach_save_lesson', {
+        p_teacher_id: tid,
+        p_pin: pinVal,
+        p_enrollment_id: form.enrollment_id,
+        p_lesson_date: form.lesson_date,
+        p_duration: form.duration_minutes,
+        p_subject: form.subject_name || '',
+        p_topic: form.topic || '',
+        p_homework: form.homework || '',
+        p_mode: mode,
       })
     }
 
-    toast.success(skipLessonCount
-      ? 'บันทึกชั่วโมงสอนวิชาเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)'
-      : 'บันทึกชั่วโมงสอนสำเร็จ ✅ หักครั้งเรียน 1 ครั้ง')
-    setForm({
-      enrollment_id: '',
-      lesson_date: todayStr,
-      duration_minutes: 60,
-      subject_name: '',
-      topic: '',
-      homework: '',
-    })
+    const { data, error } = await callSave('auto')
+    if (error) { toast.error('บันทึกไม่สำเร็จ'); setSaving(false); return }
+
+    let status = (data as { status?: string })?.status
+    const studentName = enroll.students?.nickname || enroll.students?.full_name || 'นักเรียนคนนี้'
+    const courseName = enroll.courses?.name ?? ''
+
+    if (status === 'need_confirm_special') {
+      const who = (data as { who?: string })?.who
+      const confirmed = confirm(
+        `วันนี้มีบันทึกของ ${studentName} (${courseName}) อยู่แล้ว\n` +
+        `บันทึกโดย: ${who === 'staff' ? 'staff' : 'ครู' + who}\n\n` +
+        `ต้องการบันทึกชั่วโมงสอนของวิชาตัวเองเพิ่มหรือไม่?\n` +
+        `(กด ตกลง = บันทึกเพิ่ม โดยไม่หักครั้งเรียนซ้ำ / ยกเลิก = ไม่บันทึก)`
+      )
+      if (!confirmed) { setSaving(false); return }
+      const r = await callSave('add_special')
+      if (r.error) { toast.error('บันทึกไม่สำเร็จ'); setSaving(false); return }
+      status = 'saved_special'
+    } else if (status === 'need_confirm_normal') {
+      const who = (data as { who?: string })?.who
+      const confirmed = confirm(
+        `วันนี้ ${who === 'staff' ? 'staff' : 'ครู' + who} เช็กอินไว้แล้ว (${courseName})\n\n` +
+        `ต้องการเพิ่มหัวข้อที่สอน/การบ้านลงในบันทึกนั้นหรือไม่?\n` +
+        `(กด ตกลง = อัปเดตบันทึกเดิม / ยกเลิก = ไม่ทำอะไร)`
+      )
+      if (!confirmed) { setSaving(false); return }
+      const r = await callSave('update_existing')
+      if (r.error) { toast.error('บันทึกไม่สำเร็จ'); setSaving(false); return }
+      status = 'updated'
+    }
+
+    if (status === 'updated') toast.success('เพิ่มหัวข้อสอน/การบ้านในบันทึกวันนี้แล้ว ✅')
+    else if (status === 'saved_special') toast.success('บันทึกชั่วโมงสอนวิชาเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)')
+    else toast.success('บันทึกชั่วโมงสอนสำเร็จ ✅ หักครั้งเรียน 1 ครั้ง')
+
+    setForm({ enrollment_id: '', lesson_date: todayStr, duration_minutes: 60, subject_name: '', topic: '', homework: '' })
     setStudentSearch('')
     setSaving(false)
     loadAll()
   }
-
   const totalMinutes = logs.reduce((s, l) => s + (l.duration_minutes ?? 0), 0)
   const totalHours = (totalMinutes / 60).toFixed(1)
   const totalSessions = logs.length
