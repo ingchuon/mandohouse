@@ -97,7 +97,6 @@ const chapters = [
     id: 'team', icon: '👥', title: 'จัดการทีม', image: `${STORAGE}/team.png`,
     sections: [
       { title: 'เพิ่มสมาชิกทีม', content: `หน้าจัดการทีมใช้เพิ่มผู้ใช้งานในระบบ:\n\n1. กด **+ เพิ่มเจ้าหน้าที่**\n2. กรอกอีเมลและกำหนดสิทธิ์\n3. สมาชิกจะได้รับอีเมลเชิญ\n\nสมาชิกทุกคนมีสิทธิ์เท่ากัน — เช็คอิน, บันทึกนักเรียน, เขียนรีวิว, ออกใบเสร็จ, แจ้งเดือน ได้ทุกอย่าง` },
-      { title: 'จำนวนสมาชิกตาม Plan', content: `จำนวนสมาชิกที่เพิ่มได้ขึ้นอยู่กับ subscription:\n\n• **Starter** — สูงสุด 5 คน\n• **Growth** — สูงสุด 20 คน\n• **Pro** — ไม่จำกัด` },
     ],
   },
 ]
@@ -151,7 +150,10 @@ export default function GuidePage() {
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Sarabun, sans-serif', color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: '"IBM Plex Sans Thai", "Inter", sans-serif', color: C.text }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+      `}</style>
 
       {/* Lightbox */}
       {lightbox && (
