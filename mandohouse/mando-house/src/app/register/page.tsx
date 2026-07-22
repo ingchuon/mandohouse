@@ -3,12 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-
-const PLANS = [
-  { id: '3m',  name: '3 เดือน', months: 3,  total: 2190, perMonth: 730, save: 180,  desc: 'เริ่มต้นใช้งานระยะสั้น' },
-  { id: '6m',  name: '6 เดือน', months: 6,  total: 3990, perMonth: 665, save: 750,  desc: 'คุ้มค่าที่สุด', popular: true },
-  { id: '12m', name: '1 ปี',    months: 12, total: 6990, perMonth: 583, save: 2490, desc: 'ประหยัดสูงสุด' },
-]
+import { PLANS } from '@/lib/plans'
 
 const C = {
   brown: '#A15C38',
