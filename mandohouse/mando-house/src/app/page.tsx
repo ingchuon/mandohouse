@@ -229,7 +229,7 @@ export default function LandingPage() {
               <>
                 <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>ทดลองใช้ฟรี 30 วัน</h2>
                 <p style={{ fontSize: 13, color: C.textMid, marginBottom: 22, lineHeight: 1.6 }}>
-                  แพ็กเกจ <strong style={{ color: C.green }}>{selectedPlan}</strong> — ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง
+                  {selectedPlan ? <>แพ็กเกจ <strong style={{ color: C.green }}>{selectedPlan}</strong> — </> : null}ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง
                 </p>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {[
@@ -299,7 +299,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Link href="/login" className="nav-a nav-login">Login</Link>
-          <button onClick={() => openModal('Growth')} className="btn-dark nav-login">Try Free ↗</button>
+          <button onClick={() => openModal('')} className="btn-dark nav-login">Try Free ↗</button>
         </div>
       </nav>
 
@@ -347,7 +347,7 @@ export default function LandingPage() {
               จัดการนักเรียน ครู ตารางเรียน และการเงิน<br />ใช้งานได้ทันที บนมือถือและคอมพิวเตอร์
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
+              <button onClick={() => openModal('')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
               <Link href="/login" className="btn-outline-dark" style={{ fontSize: 15, padding: '12px 24px' }}>เข้าสู่ระบบ →</Link>
             </div>
           </div>
@@ -465,7 +465,7 @@ export default function LandingPage() {
             พร้อมเริ่มต้น <em style={{ fontStyle: 'italic', color: C.gold }}>วันนี้</em>
           </h2>
           <p style={{ color: C.textMid, fontSize: 15, marginBottom: 28, lineHeight: 1.75 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด มีทีมช่วย onboarding ตั้งแต่วันแรก</p>
-          <button onClick={() => openModal('Growth')} className="btn-dark" style={{ fontSize: 15, padding: '13px 32px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
+          <button onClick={() => openModal('')} className="btn-dark" style={{ fontSize: 15, padding: '13px 32px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
         </div>
       </div>
 
