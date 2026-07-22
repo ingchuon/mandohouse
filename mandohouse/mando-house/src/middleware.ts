@@ -23,23 +23,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // สำคัญ: getUser() รีเฟรช token ให้ SSR ด้วย — ห้ามลบ
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('school_id')
-      .eq('id', user.id)
-      .single()
-
-    const schoolId = profile?.school_id ?? 'mando'
-
-    supabaseResponse.headers.set('x-school-id', schoolId)
-    supabaseResponse.cookies.set('school_id', schoolId, {
-      httpOnly: false,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    })
+  // ป้องกันหน้า /staff: ยังไม่ login → เด้งไป /login
+  if (!user && request.nextUrl.pathname.startsWith('/staff')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
