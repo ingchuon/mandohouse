@@ -45,6 +45,7 @@ const navItems = [
     group: 'ทีมงาน',
     items: [
       { href: '/staff/team', label: 'จัดการทีม' },
+      { href: '/staff/school-settings', label: 'Setting' },
       { href: '/staff/subscriptions', label: 'Subscription' },
       { href: '/staff/help', label: 'คู่มือการใช้งาน' },
     ],
