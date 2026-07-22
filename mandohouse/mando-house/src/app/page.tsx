@@ -149,6 +149,7 @@ export default function LandingPage() {
   const [submitted, setSubmitted] = useState(false)
   const [sending, setSending] = useState(false)
   const emailjsLoaded = useRef(false)
+  const dashRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
@@ -162,6 +163,20 @@ export default function LandingPage() {
     script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
     script.onload = () => { ;(window as any).emailjs.init(EMAILJS_KEY); emailjsLoaded.current = true }
     document.head.appendChild(script)
+  }, [])
+
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll('.reveal'))
+    if (typeof IntersectionObserver === 'undefined') {
+      els.forEach(el => el.classList.add('in')); return
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) }
+      })
+    }, { threshold: 0.15 })
+    els.forEach(el => io.observe(el))
+    return () => io.disconnect()
   }, [])
 
   function openModal(plan: string) {
@@ -198,6 +213,15 @@ export default function LandingPage() {
         input[type=text],input[type=tel]{width:100%;padding:10px 14px;border:1.5px solid ${C.border};border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:${C.text}}
         input:focus{border-color:${C.green}}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        html{scroll-behavior:smooth}
+        #features,#pricing,#how,#contact{scroll-margin-top:80px}
+        .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+        .reveal.in{opacity:1;transform:none}
+        .plan-card{transition:transform .2s ease,box-shadow .2s ease}
+        .plan-card:hover{transform:translateY(-6px);box-shadow:0 14px 34px rgba(28,58,42,.16)}
+        .pop-badge{animation:badgepulse 1.8s ease-in-out infinite}
+        @keyframes badgepulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.08)}}
+        @media(prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important}.pop-badge{animation:none}html{scroll-behavior:auto}}
         @media(max-width:900px){
           .hero-grid{grid-template-columns:1fr!important}
           .dash-img{display:none}
@@ -353,14 +377,24 @@ export default function LandingPage() {
           </div>
 
           {/* right — dashboard */}
-          <div className="dash-img">
-            <DashboardIllustration />
+          <div className="dash-img" style={{ perspective: 900 }}
+            onMouseMove={(e) => {
+              const el = dashRef.current; if (!el) return
+              const r = e.currentTarget.getBoundingClientRect()
+              const x = (e.clientX - r.left) / r.width - 0.5
+              const y = (e.clientY - r.top) / r.height - 0.5
+              el.style.transform = `rotateY(${x * 10}deg) rotateX(${-y * 10}deg)`
+            }}
+            onMouseLeave={() => { if (dashRef.current) dashRef.current.style.transform = 'rotateY(0deg) rotateX(0deg)' }}>
+            <div ref={dashRef} style={{ transition: 'transform .15s ease-out', transformStyle: 'preserve-3d' }}>
+              <DashboardIllustration />
+            </div>
           </div>
         </div>
       </div>
 
       {/* FEATURES */}
-      <div id="features" className="section-pad" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="features" className="section-pad reveal" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>ฟีเจอร์</div>
           <h2 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-.5px', lineHeight: 1.2 }}>
@@ -380,7 +414,7 @@ export default function LandingPage() {
       </div>
 
       {/* HOW IT WORKS */}
-      <div id="how" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="how" className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ background: C.green, borderRadius: 24, padding: '64px 56px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.gold, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>เริ่มต้น</div>
           <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 48, letterSpacing: '-.5px' }}>
@@ -407,7 +441,7 @@ export default function LandingPage() {
       </div>
 
       {/* PRICING */}
-      <div id="pricing" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="pricing" className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ราคา</div>
           <h2 style={{ fontSize: 40, fontWeight: 700, marginBottom: 8 }}>
@@ -421,9 +455,9 @@ export default function LandingPage() {
         </div>
         <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 900, margin: '0 auto' }}>
           {plans.map(plan => (
-            <div key={plan.id} style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 22px', position: 'relative' }}>
+            <div key={plan.id} className="plan-card" style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 22px', position: 'relative' }}>
               {plan.popular && (
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ คุ้มที่สุด</div>
+                <div className="pop-badge" style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ คุ้มที่สุด</div>
               )}
               <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,.7)' : C.dark, marginBottom: 12 }}>{plan.name}</div>
               <div style={{ marginBottom: 4 }}>
@@ -456,7 +490,7 @@ export default function LandingPage() {
       </div>
 
       {/* CTA */}
-      <div className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 24, padding: '56px 40px', textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l2.4 7.4H21l-6.2 4.5 2.4 7.4L11 17l-6.2 4.3 2.4-7.4L1 9.4h7.6z" fill={C.gold}/></svg>
@@ -470,7 +504,7 @@ export default function LandingPage() {
       </div>
 
       {/* CONTACT */}
-      <div id="contact" className="section-pad" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+      <div id="contact" className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ติดต่อเรา</div>
           <h2 style={{ fontSize: 30, fontWeight: 700 }}>มีคำถาม? ทีมงานพร้อมช่วยเสมอ</h2>
