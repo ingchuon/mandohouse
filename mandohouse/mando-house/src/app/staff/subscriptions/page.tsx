@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
+import { planName, planPerMonth } from '@/lib/plans'
 
 const C = {
   brown: '#A15C38',
@@ -9,12 +10,6 @@ const C = {
   brownMid: '#e8d5cc',
   dark: '#262220',
   cream: '#F7F1F0',
-}
-
-const PLAN_PRICE: Record<string, number> = {
-  starter: 490,
-  growth: 790,
-  pro: 1990,
 }
 
 type School = {
@@ -103,7 +98,7 @@ export default function SubscriptionsPage() {
 
   const pending = schools.filter(s => s.status === 'pending').length
   const active = schools.filter(s => s.status === 'active').length
-  const revenue = schools.filter(s => s.status === 'active').reduce((a, s) => a + (PLAN_PRICE[s.plan] ?? 0), 0)
+  const revenue = schools.filter(s => s.status === 'active').reduce((a, s) => a + planPerMonth(s.plan), 0)
 
   return (
     <div className="p-4 md:p-6">
@@ -179,8 +174,8 @@ export default function SubscriptionsPage() {
                     <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{school.id}</div>
                   </td>
                   <td className="p-3">
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.brown, textTransform: 'capitalize' }}>{school.plan}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>฿{(PLAN_PRICE[school.plan] ?? 0).toLocaleString()}/เดือน</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.brown, textTransform: 'capitalize' }}>{planName(school.plan)}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>฿{planPerMonth(school.plan).toLocaleString()}/เดือน</div>
                   </td>
                   <td className="p-3">{statusBadge(school.status)}</td>
                   <td className="p-3 text-sm text-gray-500">
