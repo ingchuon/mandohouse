@@ -5,9 +5,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 const PLANS = [
-  { id: 'starter', name: 'Starter', price: 490, desc: 'นักเรียนสูงสุด 50 คน' },
-  { id: 'growth', name: 'Growth', price: 790, desc: 'นักเรียนสูงสุด 200 คน', popular: true },
-  { id: 'pro', name: 'Pro', price: 1990, desc: 'ไม่จำกัดนักเรียน' },
+  { id: 'pro', name: 'TutorCloud', price: 790, desc: 'ฟีเจอร์ครบทุกอย่าง ไม่จำกัดนักเรียนและครู', popular: true },
 ]
 
 const C = {
@@ -26,7 +24,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<Step>('info')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', schoolName: '' })
-  const [selectedPlan, setSelectedPlan] = useState('growth')
+  const [selectedPlan, setSelectedPlan] = useState('pro')
   const [slipFile, setSlipFile] = useState<File | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
 
@@ -68,11 +66,14 @@ export default function RegisterPage() {
       if (uploadError) throw new Error('อัปโหลดสลิปไม่สำเร็จ')
 
       const schoolId = form.schoolName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now()
+      const trialExpires = new Date()
+      trialExpires.setDate(trialExpires.getDate() + 30)
       const { error: schoolError } = await supabase.from('schools').insert({
         id: schoolId,
         name: form.schoolName,
         plan: selectedPlan,
-        status: 'pending',
+        status: 'active',
+        expires_at: trialExpires.toISOString().split('T')[0],
         slip_path: slipPath,
         created_at: new Date().toISOString(),
       })
