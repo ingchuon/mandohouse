@@ -30,19 +30,27 @@ const features = [
 
 const plans = [
   {
-    id: 'pro', name: 'TUTORCLOUD', price: 790, popular: true,
-    desc: 'ฟีเจอร์ครบทุกอย่าง ไม่จำกัดนักเรียนและครู',
-    features: [
-      { text: 'นักเรียนไม่จำกัด', ok: true },
-      { text: 'ครูไม่จำกัด', ok: true },
-      { text: 'เช็กอิน / ออกใบเสร็จ', ok: true },
-      { text: 'Dashboard', ok: true },
-      { text: 'Export Excel', ok: true },
-      { text: 'รายงานรายเดือน', ok: true },
-      { text: 'ตารางสอน', ok: true },
-      { text: 'Priority support', ok: true },
-    ],
+    id: '3m', name: '3 เดือน', months: 3, total: 2190, perMonth: 730, save: 180, popular: false,
+    desc: 'เริ่มต้นใช้งานระยะสั้น',
   },
+  {
+    id: '6m', name: '6 เดือน', months: 6, total: 3990, perMonth: 665, save: 750, popular: true,
+    desc: 'คุ้มค่าที่สุดสำหรับสถาบันทั่วไป',
+  },
+  {
+    id: '12m', name: '1 ปี', months: 12, total: 6990, perMonth: 583, save: 2490, popular: false,
+    desc: 'ประหยัดสูงสุด เหมือนได้ฟรี 3 เดือน',
+  },
+]
+
+const allFeatures = [
+  'นักเรียนไม่จำกัด',
+  'ครูไม่จำกัด',
+  'เช็กอิน / ออกใบเสร็จ',
+  'Dashboard & รายงาน',
+  'Export Excel',
+  'ตารางสอน + Google Calendar',
+  'Priority support',
 ]
 
 function DashboardIllustration() {
@@ -408,28 +416,34 @@ export default function LandingPage() {
           </h2>
           <p style={{ color: C.textMid, fontSize: 15 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องใส่บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</p>
         </div>
-        <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 420, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 20, fontSize: 14, color: C.textMid }}>
+          ราคาปกติ <span style={{ textDecoration: 'line-through' }}>฿790/เดือน</span> — ยิ่งซื้อนาน ยิ่งถูกลง
+        </div>
+        <div className="plan-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 900, margin: '0 auto' }}>
           {plans.map(plan => (
-            <div key={plan.id} style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 24px', position: 'relative' }}>
+            <div key={plan.id} style={{ background: plan.popular ? C.green : '#fff', border: `1.5px solid ${plan.popular ? C.green : C.border}`, borderRadius: 20, padding: '28px 22px', position: 'relative' }}>
               {plan.popular && (
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ ยอดนิยม</div>
+                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.dark, fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap' }}>★ คุ้มที่สุด</div>
               )}
-              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 11, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,.5)' : C.textMid, letterSpacing: '.1em', marginBottom: 8 }}>{plan.name}</div>
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 40, fontWeight: 800, color: plan.popular ? '#fff' : C.dark, letterSpacing: '-1.5px' }}>฿{plan.price.toLocaleString()}</span>
-                <span style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.5)' : C.textMid, marginLeft: 4 }}>/เดือน</span>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 700, color: plan.popular ? 'rgba(255,255,255,.7)' : C.dark, marginBottom: 12 }}>{plan.name}</div>
+              <div style={{ marginBottom: 4 }}>
+                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 38, fontWeight: 800, color: plan.popular ? '#fff' : C.dark, letterSpacing: '-1.5px' }}>฿{plan.perMonth}</span>
+                <span style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.6)' : C.textMid, marginLeft: 4 }}>/เดือน</span>
               </div>
-              <p style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.55)' : C.textMid, marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${plan.popular ? 'rgba(255,255,255,.1)' : C.border}` }}>{plan.desc}</p>
-              <div style={{ marginBottom: 24 }}>
-                {plan.features.map(f => (
-                  <div key={f.text} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, opacity: f.ok ? 1 : .35 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: f.ok ? (plan.popular ? 'rgba(232,160,32,.2)' : '#E8F5EE') : 'transparent', border: f.ok ? 'none' : `1px solid ${plan.popular ? 'rgba(255,255,255,.2)' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {f.ok
-                        ? <svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 4.5l2 2 4-4" stroke={plan.popular ? C.gold : '#4A9B6F'} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        : <svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 2l4 4M6 2l-4 4" stroke={plan.popular ? 'rgba(255,255,255,.3)' : C.border} strokeWidth="1.5" strokeLinecap="round"/></svg>
-                      }
+              <div style={{ fontSize: 13, color: plan.popular ? 'rgba(255,255,255,.65)' : C.textMid, marginBottom: 6 }}>
+                จ่าย ฿{plan.total.toLocaleString()} ครั้งเดียว
+              </div>
+              <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: plan.popular ? C.gold : '#0F6E56', background: plan.popular ? 'rgba(232,160,32,.15)' : '#E8F5EE', padding: '3px 10px', borderRadius: 99, marginBottom: 18 }}>
+                ประหยัด ฿{plan.save.toLocaleString()}
+              </div>
+              <p style={{ fontSize: 12.5, color: plan.popular ? 'rgba(255,255,255,.55)' : C.textMid, marginBottom: 18, paddingBottom: 18, borderBottom: `1px solid ${plan.popular ? 'rgba(255,255,255,.1)' : C.border}`, minHeight: 34 }}>{plan.desc}</p>
+              <div style={{ marginBottom: 22 }}>
+                {allFeatures.map(f => (
+                  <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: plan.popular ? 'rgba(232,160,32,.2)' : '#E8F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="8" height="8" viewBox="0 0 9 9"><path d="M1.5 4.5l2 2 4-4" stroke={plan.popular ? C.gold : '#4A9B6F'} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
-                    <span style={{ fontSize: 13.5, color: plan.popular ? (f.ok ? '#fff' : 'rgba(255,255,255,.35)') : (f.ok ? C.dark : C.textMid), textDecoration: f.ok ? 'none' : 'line-through' }}>{f.text}</span>
+                    <span style={{ fontSize: 12.5, color: plan.popular ? '#fff' : C.dark }}>{f}</span>
                   </div>
                 ))}
               </div>
