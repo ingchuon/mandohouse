@@ -5,7 +5,9 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 const PLANS = [
-  { id: 'pro', name: 'TutorCloud', price: 790, desc: 'ฟีเจอร์ครบทุกอย่าง ไม่จำกัดนักเรียนและครู', popular: true },
+  { id: '3m',  name: '3 เดือน', months: 3,  total: 2190, perMonth: 730, save: 180,  desc: 'เริ่มต้นใช้งานระยะสั้น' },
+  { id: '6m',  name: '6 เดือน', months: 6,  total: 3990, perMonth: 665, save: 750,  desc: 'คุ้มค่าที่สุด', popular: true },
+  { id: '12m', name: '1 ปี',    months: 12, total: 6990, perMonth: 583, save: 2490, desc: 'ประหยัดสูงสุด' },
 ]
 
 const C = {
@@ -24,7 +26,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<Step>('info')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', schoolName: '' })
-  const [selectedPlan, setSelectedPlan] = useState('pro')
+  const [selectedPlan, setSelectedPlan] = useState('6m')
   const [slipFile, setSlipFile] = useState<File | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
 
@@ -179,15 +181,15 @@ export default function RegisterPage() {
                   <div key={p.id} onClick={() => setSelectedPlan(p.id)}
                     style={{ border: `2px solid ${selectedPlan === p.id ? C.brown : C.brownMid}`, borderRadius: 10, padding: '14px 16px', cursor: 'pointer', background: selectedPlan === p.id ? C.brownLight : '#fff', transition: 'all .15s', position: 'relative' }}>
                     {(p as any).popular && (
-                      <span style={{ position: 'absolute', top: -10, right: 12, background: C.brown, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99 }}>ยอดนิยม</span>
+                      <span style={{ position: 'absolute', top: -10, right: 12, background: C.brown, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 99 }}>คุ้มที่สุด</span>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>{p.name}</div>
-                        <div style={{ fontSize: 12, color: '#9a8a86', marginTop: 2 }}>{p.desc}</div>
+                        <div style={{ fontSize: 12, color: '#9a8a86', marginTop: 2 }}>จ่าย ฿{p.total.toLocaleString()} ครั้งเดียว · ประหยัด ฿{p.save.toLocaleString()}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: 20, fontWeight: 800, color: C.brown }}>฿{p.price.toLocaleString()}</span>
+                        <span style={{ fontSize: 20, fontWeight: 800, color: C.brown }}>฿{p.perMonth}</span>
                         <span style={{ fontSize: 11, color: '#b8a8a4' }}>/เดือน</span>
                       </div>
                     </div>
@@ -206,7 +208,7 @@ export default function RegisterPage() {
             <form onSubmit={handlePayment}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 }}>ชำระเงิน</h2>
               <p style={{ fontSize: 13, color: '#9a8a86', marginBottom: 20 }}>
-                แพ็กเกจ <strong style={{ color: C.brown }}>{plan.name}</strong> — ฿{plan.price.toLocaleString()}/เดือน
+                แพ็กเกจ <strong style={{ color: C.brown }}>{plan.name}</strong> — ฿{plan.total.toLocaleString()} (฿{plan.perMonth}/เดือน)
               </p>
 
               {/* QR */}
@@ -218,7 +220,7 @@ export default function RegisterPage() {
                   style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 8, display: 'block', margin: '0 auto 12px', background: '#fff', padding: 8 }}
                 />
                 <div style={{ fontSize: 14, color: C.dark, fontWeight: 600 }}>น.ส. อิงชุอร อ่ำสวยเอก</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.brown, marginTop: 6 }}>฿{plan.price.toLocaleString()}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.brown, marginTop: 6 }}>฿{plan.total.toLocaleString()}</div>
                 <div style={{ fontSize: 12, color: '#9a8a86', marginTop: 4 }}>รับเงินได้จากทุกธนาคาร</div>
               </div>
 
