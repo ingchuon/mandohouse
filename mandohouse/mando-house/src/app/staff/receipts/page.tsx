@@ -72,8 +72,26 @@ export default function ReceiptsPage() {
     amount: 0, student_id: '',
   })
   const [preview, setPreview] = useState<any>(null)
+  const [school, setSchool] = useState<any>(null)
 
   async function loadData() {
+    // ดึง school_id ของ user ปัจจุบัน
+    const { data: { user } } = await supabase.auth.getUser()
+    let schoolData = null
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles').select('school_id').eq('id', user.id).single()
+      if (profile?.school_id) {
+        const { data: sc } = await supabase
+          .from('schools')
+          .select('name, name_th, logo_url, receipt_subtitle, receipt_address, receipt_tel, receipt_receiver')
+          .eq('id', profile.school_id)
+          .single()
+        schoolData = sc
+      }
+    }
+    setSchool(schoolData)
+
     const [{ data: r }, { data: e }, { data: s }] = await Promise.all([
       supabase.from('receipts')
         .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name, price, total_lessons))')
@@ -173,14 +191,14 @@ export default function ReceiptsPage() {
     const win = window.open('', '_blank')
     if (!win) return
 
-    // ----- ข้อมูลสถาบัน (แก้ได้ตรงนี้) -----
+    // ----- ข้อมูลสถาบัน — ดึงจาก schools ตาม tenant (fallback เป็น Mando House) -----
     const BIZ = {
-      brand: 'Mando House',
-      subtitle: 'สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ',
-      address: 'ที่อยู่ : 178/25 ถ.พระยาสัจจา ต.เสม็ด อ.เมือง จ.ชลบุรี 20000',
-      tel: 'โทร : 085-0930111 , 097-1727677',
-      receiver: 'นลินรัตน์ คงเนาวรัตน์',
-      logo: 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png',
+      brand:    school?.name_th || school?.name || 'Mando House',
+      subtitle: school?.receipt_subtitle || 'สถาบันสอนพิเศษ',
+      address:  school?.receipt_address || '',
+      tel:      school?.receipt_tel || '',
+      receiver: school?.receipt_receiver || '',
+      logo:     school?.logo_url || 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png',
     }
 
     // ----- เตรียมรายการ (รองรับ items ทั้งแบบเก่า {amount,description} และใหม่ {quantity,total}) -----
@@ -285,7 +303,7 @@ export default function ReceiptsPage() {
             ${BIZ.tel}
           </div>
         </div>
-        <img class="logo" src="${BIZ.logo}" alt="Mando House" />
+        <img class="logo" src="${BIZ.logo}" alt="${BIZ.brand}" />
       </div>
 
       <div class="cust">
