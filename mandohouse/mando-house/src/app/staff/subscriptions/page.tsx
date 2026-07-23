@@ -29,12 +29,23 @@ export default function SubscriptionsPage() {
   const [slipUrl, setSlipUrl] = useState<string | null>(null)
   const [approving, setApproving] = useState<string | null>(null)
   const [renewFor, setRenewFor] = useState<School | null>(null)
+  const [contacts, setContacts] = useState<Record<string, { phone: string | null; line_id: string | null }>>({})
   const [filter, setFilter] = useState<'active' | 'expired' | 'all'>('active')
 
   async function load() {
     setLoading(true)
     const { data } = await supabase.from('schools').select('*').order('created_at', { ascending: false })
-    setSchools((data ?? []).filter(s => s.id !== 'mando'))
+    const list = (data ?? []).filter(s => s.id !== 'mando')
+    setSchools(list)
+
+    // ช่องทางติดต่อของแต่ละสถาบัน (ใช้ตามเก็บเงินตอนหมดอายุ)
+    const { data: profs } = await supabase
+      .from('profiles').select('school_id, phone, line_id').eq('role', 'admin')
+    const map: Record<string, { phone: string | null; line_id: string | null }> = {}
+    for (const pr of profs ?? []) {
+      if (pr.school_id && !map[pr.school_id]) map[pr.school_id] = { phone: pr.phone, line_id: pr.line_id }
+    }
+    setContacts(map)
     setLoading(false)
   }
 
@@ -205,6 +216,7 @@ export default function SubscriptionsPage() {
               <tr>
                 <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">สถาบัน</th>
                 <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">แพ็กเกจ</th>
+                <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">ติดต่อ</th>
                 <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">สถานะ</th>
                 <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">วันสมัคร</th>
                 <th className="text-left p-3 text-sm font-semibold text-gray-500 border-b">หมดอายุ</th>
@@ -221,6 +233,16 @@ export default function SubscriptionsPage() {
                   <td className="p-3">
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.brown, textTransform: 'capitalize' }}>{planName(school.plan)}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>฿{planPerMonth(school.plan).toLocaleString()}/เดือน</div>
+                  </td>
+                  <td className="p-3 text-sm">
+                    {contacts[school.id]?.phone ? (
+                      <a href={`tel:${contacts[school.id]!.phone}`} style={{ color: C.brown, fontWeight: 600 }}>
+                        {contacts[school.id]!.phone}
+                      </a>
+                    ) : <span className="text-gray-300">—</span>}
+                    {contacts[school.id]?.line_id && (
+                      <div className="text-xs text-gray-400">LINE: {contacts[school.id]!.line_id}</div>
+                    )}
                   </td>
                   <td className="p-3">{statusBadge(effStatus(school))}</td>
                   <td className="p-3 text-sm text-gray-500">
