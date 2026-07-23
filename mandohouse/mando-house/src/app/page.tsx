@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { LINE_ID, LINE_URL, TRIAL_DAYS } from '@/lib/plans'
 import { useState, useEffect, useRef } from 'react'
 
 const EMAILJS_SERVICE = 'service_h7wjciz'
@@ -191,7 +192,7 @@ export default function LandingPage() {
         name: form.name, school: form.school, phone: form.phone, plan: selectedPlan || 'ทดลองใช้ฟรี 30 วัน',
       })
       setSubmitted(true)
-    } catch { alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978') }
+    } catch { alert('เกิดข้อผิดพลาด กรุณาลองใหม่ หรือทัก LINE ' + LINE_ID) }
     finally { setSending(false) }
   }
 
@@ -286,7 +287,7 @@ export default function LandingPage() {
                 <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>ส่งข้อมูลสำเร็จ</h2>
                 <p style={{ fontSize: 14, color: C.textMid, marginBottom: 22, lineHeight: 1.75 }}>
                   ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง<br />
-                  <span style={{ color: C.green, fontWeight: 500 }}>063-359-5978</span>
+                  <span style={{ color: C.green, fontWeight: 500 }}>LINE {LINE_ID}</span>
                 </p>
                 <button onClick={() => setShowModal(false)} className="btn-dark" style={{ padding: '11px 32px', borderRadius: 8 }}>ปิด</button>
               </div>
@@ -323,7 +324,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Link href="/login" className="nav-a nav-login">Login</Link>
-          <button onClick={() => openModal('')} className="btn-dark nav-login">Try Free ↗</button>
+          <Link href="/register" className="btn-dark nav-login" style={{ textDecoration: 'none' }}>Try Free ↗</Link>
         </div>
       </nav>
 
@@ -371,7 +372,7 @@ export default function LandingPage() {
               จัดการนักเรียน ครู ตารางเรียน และการเงิน<br />ใช้งานได้ทันที บนมือถือและคอมพิวเตอร์
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button onClick={() => openModal('')} className="btn-dark" style={{ fontSize: 15, padding: '13px 28px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
+              <Link href="/register" className="btn-dark" style={{ fontSize: 15, padding: '13px 28px', textDecoration: 'none' }}>เริ่มใช้ฟรี {TRIAL_DAYS} วัน ↗</Link>
               <Link href="/login" className="btn-outline-dark" style={{ fontSize: 15, padding: '12px 24px' }}>เข้าสู่ระบบ →</Link>
             </div>
           </div>
@@ -481,9 +482,9 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => openModal(plan.name)} style={{ width: '100%', padding: '12px', borderRadius: 99, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'inherit', background: plan.popular ? C.gold : C.bg, color: plan.popular ? C.dark : C.text }}>
-                ทดลองใช้ฟรี 30 วัน
-              </button>
+              <Link href="/register" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%', padding: '12px', borderRadius: 99, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'inherit', background: plan.popular ? C.gold : C.bg, color: plan.popular ? C.dark : C.text }}>
+                เริ่มใช้ฟรี {TRIAL_DAYS} วัน
+              </Link>
             </div>
           ))}
         </div>
@@ -499,7 +500,7 @@ export default function LandingPage() {
             พร้อมเริ่มต้น <em style={{ fontStyle: 'italic', color: C.gold }}>วันนี้</em>
           </h2>
           <p style={{ color: C.textMid, fontSize: 15, marginBottom: 28, lineHeight: 1.75 }}>ทดลองใช้ฟรี 30 วัน ไม่ต้องผูกมัด มีทีมช่วย onboarding ตั้งแต่วันแรก</p>
-          <button onClick={() => openModal('')} className="btn-dark" style={{ fontSize: 15, padding: '13px 32px' }}>ทดลองใช้ฟรี 30 วัน ↗</button>
+          <Link href="/register" className="btn-dark" style={{ fontSize: 15, padding: '13px 32px', textDecoration: 'none' }}>เริ่มใช้ฟรี {TRIAL_DAYS} วัน ↗</Link>
         </div>
       </div>
 
@@ -521,14 +522,14 @@ export default function LandingPage() {
             </div>
             <span style={{ marginLeft: 'auto', color: C.textMid }}>↗</span>
           </a>
-          <a href="tel:0633595978"
+          <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
             style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240 }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3h3.5l1.5 4-2 1.5a10 10 0 005 5L11.5 11.5l4 1.5V16c0 .8-.7 1.2-1.5 1C4 15 1 8 1 4.5c0-.8.5-1.5 1-1.5z" fill={C.gold}/></svg>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: C.textMid, marginBottom: 2 }}>โทรศัพท์</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>063-359-5978</div>
+              <div style={{ fontSize: 11, color: C.textMid, marginBottom: 2 }}>LINE</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{LINE_ID}</div>
             </div>
             <span style={{ marginLeft: 'auto', color: C.textMid }}>↗</span>
           </a>
