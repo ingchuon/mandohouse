@@ -16,10 +16,16 @@ export default function TeamPage() {
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [stats, setStats] = useState<Record<string, any>>({})
+  const [inviteCode, setInviteCode] = useState<string | null>(null)
+  const [regenerating, setRegenerating] = useState(false)
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUserId(user?.id ?? null)
+
+    // รหัสเชิญของสถาบันนี้ (ใช้ให้ครูสมัครเข้าร่วมทีมเอง)
+    const { data: schoolRow } = await supabase.from('schools').select('invite_code').single()
+    setInviteCode(schoolRow?.invite_code ?? null)
 
     const [{ data: profiles }, { data: enrollments }, { data: reviews }, { data: checkins }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'staff').order('created_at'),
@@ -73,13 +79,28 @@ export default function TeamPage() {
     loadData()
   }
 
-  const sqlSnippet = `INSERT INTO profiles (id, role, full_name, phone)
-VALUES (
-  'USER_ID_จาก_Auth',
-  'staff',
-  '${form.full_name || 'ชื่อ-นามสกุล'}',
-  '${form.phone || '0812345678'}'
-);`
+
+  const inviteLink = inviteCode && typeof window !== 'undefined'
+    ? `${window.location.origin}/join?code=${inviteCode}` : ''
+
+  async function copyInvite() {
+    if (!inviteLink) return
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      toast.success('คัดลอกลิงก์เชิญแล้ว — ส่งให้ทีมงานได้เลย')
+    } catch {
+      toast.error('คัดลอกไม่สำเร็จ กรุณาคัดลอกด้วยตัวเอง')
+    }
+  }
+
+  async function regenerate() {
+    if (!confirm('ออกรหัสเชิญใหม่? ลิงก์เดิมจะใช้ไม่ได้อีก')) return
+    setRegenerating(true)
+    const { data, error } = await supabase.rpc('regenerate_invite_code')
+    if (error) toast.error('ออกรหัสใหม่ไม่สำเร็จ')
+    else { setInviteCode(data as string); toast.success('ออกรหัสเชิญใหม่แล้ว') }
+    setRegenerating(false)
+  }
 
   return (
     <div className="p-4 md:p-6">
@@ -172,55 +193,70 @@ VALUES (
               <button onClick={() => setShowForm(false)} className="text-gray-400 text-lg">X</button>
             </div>
             <div className="p-5 space-y-4">
-              {!editingId && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
-                  <div className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">วิธีเพิ่มเจ้าหน้าที่</div>
-                  <ol className="text-xs text-blue-700 dark:text-blue-400 space-y-1 list-decimal list-inside">
-                    <li>Supabase - Authentication - Users - Add User</li>
-                    <li>ใส่อีเมลและรหัสผ่าน แล้วคัดลอก User ID</li>
-                    <li>รัน SQL ด้านล่างใน SQL Editor</li>
-                  </ol>
-                </div>
-              )}
-              <div>
-                <label className="label">ชื่อ-นามสกุล *</label>
-                <input className="input" required value={form.full_name}
-                  onChange={e => setForm({ ...form, full_name: e.target.value })} placeholder="ครูสมชาย ใจดี" />
-              </div>
-              <div>
-                <label className="label">เบอร์โทร</label>
-                <input className="input" type="tel" value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="081-234-5678" />
-              </div>
-              <div>
-                <label className="label">LINE ID</label>
-                <input className="input" value={form.line_id}
-                  onChange={e => setForm({ ...form, line_id: e.target.value })} placeholder="@somchai" />
-              </div>
-              {!editingId && (
-                <div>
-                  <label className="label">SQL สำหรับรันใน Supabase</label>
-                  <pre className="bg-gray-50 dark:bg-[#1a2030] border border-gray-100 dark:border-[#2a3245] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap select-all leading-relaxed">{sqlSnippet}</pre>
-                </div>
-              )}
-              <div className="flex gap-2 pt-1">
-                {editingId ? (
-                  <button
-                    onClick={handleSave as any}
-                    disabled={saving}
-                    className="btn-brand flex-1 justify-center"
-                  >
-                    {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              {!editingId ? (
+                <>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+                    <div className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">วิธีเพิ่มทีมงาน</div>
+                    <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+                      ส่งลิงก์เชิญด้านล่างให้ครูหรือเจ้าหน้าที่ เขาจะตั้งอีเมลและรหัสผ่านเองได้
+                      แล้วเข้าใช้งานได้ทันทีหลังยืนยันอีเมล
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">รหัสเชิญของสถาบัน</label>
+                    <div className="text-2xl font-bold tracking-widest text-center py-3 rounded-lg bg-gray-50 dark:bg-[#1a2030] border border-gray-100 dark:border-[#2a3245] select-all">
+                      {inviteCode ?? '...'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="label">ลิงก์เชิญ</label>
+                    <div className="text-xs break-all bg-gray-50 dark:bg-[#1a2030] border border-gray-100 dark:border-[#2a3245] rounded-lg p-3 select-all text-gray-600 dark:text-gray-300">
+                      {inviteLink || '...'}
+                    </div>
+                  </div>
+
+                  <button type="button" onClick={copyInvite} className="btn-brand w-full justify-center">
+                    คัดลอกลิงก์เชิญ
                   </button>
-                ) : (
-                  <button type="button" onClick={() => setShowForm(false)} className="btn-brand flex-1 justify-center">
-                    รับทราบ ปิด
+
+                  <button type="button" onClick={regenerate} disabled={regenerating}
+                    className="text-xs text-gray-400 hover:text-red-500 w-full text-center">
+                    {regenerating ? 'กำลังออกรหัสใหม่...' : 'ออกรหัสใหม่ (ลิงก์เดิมจะใช้ไม่ได้)'}
                   </button>
-                )}
-                <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 justify-center">
-                  ยกเลิก
-                </button>
-              </div>
+
+                  <button type="button" onClick={() => setShowForm(false)} className="btn-outline w-full justify-center">
+                    ปิด
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="label">ชื่อ-นามสกุล *</label>
+                    <input className="input" required value={form.full_name}
+                      onChange={e => setForm({ ...form, full_name: e.target.value })} placeholder="ครูสมชาย ใจดี" />
+                  </div>
+                  <div>
+                    <label className="label">เบอร์โทร</label>
+                    <input className="input" type="tel" value={form.phone}
+                      onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="081-234-5678" />
+                  </div>
+                  <div>
+                    <label className="label">LINE ID</label>
+                    <input className="input" value={form.line_id}
+                      onChange={e => setForm({ ...form, line_id: e.target.value })} placeholder="@somchai" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={handleSave as any} disabled={saving} className="btn-brand flex-1 justify-center">
+                      {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                    </button>
+                    <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 justify-center">
+                      ยกเลิก
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
