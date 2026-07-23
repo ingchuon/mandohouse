@@ -26,7 +26,13 @@ export default function LoginPage() {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+      const msg = (error.message || '').toLowerCase()
+      // แยกกรณี "ยังไม่ยืนยันอีเมล" ออกจาก "รหัสผ่านผิด" เพื่อไม่ให้ลูกค้าสับสน
+      if (msg.includes('not confirmed') || msg.includes('email not confirmed')) {
+        toast.error('กรุณากดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ (ตรวจใน Junk/Spam ด้วย)', { duration: 6000 })
+      } else {
+        toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+      }
       setLoading(false)
       return
     }
