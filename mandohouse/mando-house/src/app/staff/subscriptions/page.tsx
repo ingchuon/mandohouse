@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { planName, planPerMonth, planMonths } from '@/lib/plans'
+import { PLANS, planName, planPerMonth, planMonths, isTrial } from '@/lib/plans'
 
 const C = {
   brown: '#A15C38',
@@ -28,50 +28,47 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true)
   const [slipUrl, setSlipUrl] = useState<string | null>(null)
   const [approving, setApproving] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'pending' | 'active' | 'all'>('pending')
+  const [renewFor, setRenewFor] = useState<School | null>(null)
+  const [filter, setFilter] = useState<'active' | 'expired' | 'all'>('active')
 
   async function load() {
     setLoading(true)
-    let q = supabase.from('schools').select('*').order('created_at', { ascending: false })
-    if (filter !== 'all') q = q.eq('status', filter)
-    const { data } = await q
+    const { data } = await supabase.from('schools').select('*').order('created_at', { ascending: false })
     setSchools((data ?? []).filter(s => s.id !== 'mando'))
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [filter])
+  useEffect(() => { load() }, [])
 
   async function viewSlip(slipPath: string) {
     const { data } = await supabase.storage.from('payment-slips').createSignedUrl(slipPath, 60)
     if (data?.signedUrl) setSlipUrl(data.signedUrl)
   }
 
-  async function approve(school: School) {
+  // เปิดใช้งาน/ต่ออายุ ตามแพ็กเกจที่ลูกค้าชำระเงินจริง
+  async function activateWithPlan(school: School, planId: string) {
     setApproving(school.id)
-    // วันหมดอายุตามแพ็กเกจที่ลูกค้าจ่ายจริง (3/6/12 เดือน)
-    const expires = new Date()
-    expires.setMonth(expires.getMonth() + planMonths(school.plan))
+    // ถ้ายังไม่หมดอายุ ให้ต่อจากวันหมดอายุเดิม (ไม่เสียวันที่จ่ายไปแล้ว)
+    const today = new Date()
+    const current = school.expires_at ? new Date(school.expires_at) : today
+    const base = current > today ? current : today
+    const expires = new Date(base)
+    expires.setMonth(expires.getMonth() + planMonths(planId))
 
     const { error } = await supabase.from('schools').update({
       status: 'active',
+      plan: planId,
       expires_at: expires.toISOString().split('T')[0],
     }).eq('id', school.id)
 
     if (error) {
-      toast.error('อนุมัติไม่สำเร็จ: ' + error.message)
+      toast.error('ไม่สำเร็จ: ' + error.message)
     } else {
-      toast.success(`อนุมัติ ${school.name} แล้ว`)
+      toast.success(`เปิดใช้งาน ${school.name} — ${planName(planId)} ถึง ${expires.toISOString().split('T')[0]}`)
+      setRenewFor(null)
       load()
     }
     setApproving(null)
-  }
-
-  async function reject(school: School) {
-    if (!confirm(`ปฏิเสธ "${school.name}" ใช่ไหม?`)) return
-    const { error } = await supabase.from('schools').update({ status: 'rejected' }).eq('id', school.id)
-    if (error) { toast.error('เกิดข้อผิดพลาด'); return }
-    toast.success('ปฏิเสธแล้ว')
-    load()
   }
 
   async function suspend(school: School) {
@@ -97,12 +94,59 @@ export default function SubscriptionsPage() {
     )
   }
 
-  const pending = schools.filter(s => s.status === 'pending').length
-  const active = schools.filter(s => s.status === 'active').length
-  const revenue = schools.filter(s => s.status === 'active').reduce((a, s) => a + planPerMonth(s.plan), 0)
+  // สถานะจริง — active ที่เลยวันหมดอายุแล้ว ถือว่าหมดอายุ
+  const todayStr = new Date().toISOString().slice(0, 10)
+  function effStatus(sc: School): string {
+    if (sc.status === 'active' && sc.expires_at && sc.expires_at < todayStr) return 'expired'
+    return sc.status
+  }
+
+  const visible = schools.filter(sc => filter === 'all' || effStatus(sc) === filter)
+  const trialing = schools.filter(sc => effStatus(sc) === 'active' && isTrial(sc.plan)).length
+  const active = schools.filter(sc => effStatus(sc) === 'active').length
+  const expiredCount = schools.filter(sc => effStatus(sc) === 'expired').length
+  // รายได้ต่อเดือน นับเฉพาะลูกค้าที่จ่ายเงินแล้ว (ไม่นับช่วงทดลองใช้)
+  const revenue = schools
+    .filter(sc => effStatus(sc) === 'active' && !isTrial(sc.plan))
+    .reduce((a, sc) => a + planPerMonth(sc.plan), 0)
 
   return (
     <div className="p-4 md:p-6">
+
+      {/* Modal: เลือกแพ็กเกจที่ลูกค้าชำระเงินมา */}
+      {renewFor && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={() => setRenewFor(null)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 420 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 4 }}>
+              เปิดใช้งาน / ต่ออายุ
+            </div>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{renewFor.name}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 16 }}>
+              ปัจจุบัน: {planName(renewFor.plan)}
+              {renewFor.expires_at ? ` · หมดอายุ ${renewFor.expires_at}` : ''}
+            </div>
+            <div style={{ fontSize: 13, color: C.dark, marginBottom: 10 }}>
+              เลือกแพ็กเกจที่ลูกค้าชำระเงินมา:
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {PLANS.map(pl => (
+                <button key={pl.id} disabled={approving === renewFor.id}
+                  onClick={() => activateWithPlan(renewFor, pl.id)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 8, border: `1.5px solid ${C.brownMid}`, background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{pl.name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.brown }}>฿{pl.total.toLocaleString()}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setRenewFor(null)}
+              style={{ width: '100%', marginTop: 14, padding: 10, borderRadius: 8, border: 'none', background: '#f3f4f6', color: '#555', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Slip Modal */}
       {slipUrl && (
@@ -128,7 +172,7 @@ export default function SubscriptionsPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'รอตรวจสอบ', value: pending, color: '#92400E', bg: '#FEF3C7' },
+          { label: 'ทดลองใช้', value: trialing, color: '#92400E', bg: '#FEF3C7' },
           { label: 'ใช้งานอยู่', value: active, color: '#065F46', bg: '#D1FAE5' },
           { label: 'รายได้/เดือน', value: `฿${revenue.toLocaleString()}`, color: C.brown, bg: C.brownLight },
         ].map(s => (
@@ -141,10 +185,10 @@ export default function SubscriptionsPage() {
 
       {/* Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {(['pending', 'active', 'all'] as const).map(f => (
+        {(['active', 'expired', 'all'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: `1.5px solid ${filter === f ? C.brown : C.brownMid}`, background: filter === f ? C.brown : '#fff', color: filter === f ? '#fff' : C.dark, fontFamily: 'inherit', transition: 'all .15s' }}>
-            {f === 'pending' ? 'รอตรวจสอบ' : f === 'active' ? 'ใช้งานอยู่' : 'ทั้งหมด'}
+            {f === 'active' ? `ใช้งานอยู่ (${active})` : f === 'expired' ? `หมดอายุ (${expiredCount})` : 'ทั้งหมด'}
           </button>
         ))}
       </div>
@@ -153,7 +197,7 @@ export default function SubscriptionsPage() {
       <div className="card overflow-x-auto">
         {loading ? (
           <p className="text-center text-gray-400 py-12">กำลังโหลด...</p>
-        ) : schools.length === 0 ? (
+        ) : visible.length === 0 ? (
           <p className="text-center text-gray-400 py-12">ไม่มีข้อมูล</p>
         ) : (
           <table className="w-full">
@@ -168,7 +212,7 @@ export default function SubscriptionsPage() {
               </tr>
             </thead>
             <tbody>
-              {schools.map(school => (
+              {visible.map(school => (
                 <tr key={school.id} className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#1e2533] transition-colors">
                   <td className="p-3">
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{school.name}</div>
@@ -178,7 +222,7 @@ export default function SubscriptionsPage() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.brown, textTransform: 'capitalize' }}>{planName(school.plan)}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>฿{planPerMonth(school.plan).toLocaleString()}/เดือน</div>
                   </td>
-                  <td className="p-3">{statusBadge(school.status)}</td>
+                  <td className="p-3">{statusBadge(effStatus(school))}</td>
                   <td className="p-3 text-sm text-gray-500">
                     {new Date(school.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
                   </td>
@@ -195,28 +239,14 @@ export default function SubscriptionsPage() {
                           ดูสลิป
                         </button>
                       )}
-                      {school.status === 'pending' && (
-                        <>
-                          <button onClick={() => approve(school)} disabled={approving === school.id}
-                            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.brown, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: approving === school.id ? 0.6 : 1 }}>
-                            {approving === school.id ? '...' : 'อนุมัติ'}
-                          </button>
-                          <button onClick={() => reject(school)}
-                            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: '1px solid #FCA5A5', background: '#fff', color: '#991B1B', cursor: 'pointer', fontFamily: 'inherit' }}>
-                            ปฏิเสธ
-                          </button>
-                        </>
-                      )}
-                      {school.status === 'active' && (
+                      <button onClick={() => setRenewFor(school)} disabled={approving === school.id}
+                        style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.brown, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: approving === school.id ? 0.6 : 1 }}>
+                        {approving === school.id ? '...' : effStatus(school) === 'active' ? 'ต่ออายุ' : 'เปิดใช้งาน'}
+                      </button>
+                      {effStatus(school) === 'active' && (
                         <button onClick={() => suspend(school)}
                           style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: '1px solid #FCA5A5', background: '#fff', color: '#991B1B', cursor: 'pointer', fontFamily: 'inherit' }}>
                           ระงับ
-                        </button>
-                      )}
-                      {school.status === 'expired' && (
-                        <button onClick={() => approve(school)}
-                          style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.brownMid}`, background: '#fff', cursor: 'pointer', fontFamily: 'inherit', color: C.dark }}>
-                          เปิดใหม่
                         </button>
                       )}
                     </div>
