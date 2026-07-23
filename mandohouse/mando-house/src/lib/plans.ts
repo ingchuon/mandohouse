@@ -34,3 +34,9 @@ export function planTotal(id: string): number {
 export function planPerMonth(id: string): number {
   return PLAN_BY_ID[id]?.perMonth ?? 0
 }
+
+// จำนวนเดือนของแพ็กเกจ — ใช้คำนวณวันหมดอายุตอนอนุมัติ
+// ถ้าไม่รู้จักแพ็กเกจ คืน 1 เดือน (ปลอดภัยไว้ก่อน ต่ออายุเพิ่มได้)
+export function planMonths(id: string): number {
+  return PLAN_BY_ID[id]?.months ?? 1
+}
