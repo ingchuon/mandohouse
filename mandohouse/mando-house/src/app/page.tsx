@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { LINE_ID, LINE_URL, TRIAL_DAYS } from '@/lib/plans'
+import { LINE_ID, LINE_URL, LINE_QR, TRIAL_DAYS } from '@/lib/plans'
 import { useState, useEffect, useRef } from 'react'
 
 const EMAILJS_SERVICE = 'service_h7wjciz'
@@ -533,6 +533,12 @@ export default function LandingPage() {
             </div>
             <span style={{ marginLeft: 'auto', color: C.textMid }}>↗</span>
           </a>
+        </div>
+
+        <div style={{ marginTop: 26, textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 10 }}>สแกนเพื่อเพิ่มเพื่อน LINE</div>
+          <img src={LINE_QR} alt={`LINE ${LINE_ID}`} width={150} height={150}
+            style={{ width: 150, height: 150, borderRadius: 12, border: `1px solid ${C.border}`, padding: 6, background: '#fff' }} />
         </div>
       </div>
 
