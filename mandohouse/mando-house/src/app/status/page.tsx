@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { PLANS, LINE_ID, LINE_URL, isTrial } from '@/lib/plans'
+import { PLANS, LINE_ID, LINE_URL, LINE_QR, isTrial } from '@/lib/plans'
 
 const C = {
   cream: '#F5F0E8',
@@ -115,6 +115,14 @@ export default async function StatusPage() {
                 style={{ display: 'block', background: '#06C755', color: '#fff', textDecoration: 'none', padding: '13px', borderRadius: 8, fontSize: 15, fontWeight: 600, maxWidth: 320, margin: '0 auto 14px' }}>
                 เพิ่มเพื่อน LINE {LINE_ID}
               </a>
+              <div style={{ marginTop: 6, marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: C.textMid, marginBottom: 10 }}>
+                  หรือสแกน QR เพื่อเพิ่มเพื่อน
+                </div>
+                <img src={LINE_QR} alt={`LINE ${LINE_ID}`} width={160} height={160}
+                  style={{ width: 160, height: 160, borderRadius: 10, border: `1px solid ${C.border}`, padding: 6, background: '#fff' }} />
+              </div>
+
               <Link href="/login" style={{ fontSize: 13, color: C.textMid, textDecoration: 'none' }}>
                 ← กลับหน้าเข้าสู่ระบบ
               </Link>
