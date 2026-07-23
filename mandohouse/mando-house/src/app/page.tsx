@@ -422,8 +422,9 @@ export default function LandingPage() {
           />
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: 12, color: C.textMid, marginTop: 12 }}>
-          ภาพจากการใช้งานจริง · ชื่อนักเรียนและตัวเลขถูกเบลอเพื่อความเป็นส่วนตัว
+        <p style={{ textAlign: 'center', fontSize: 13, color: C.textMid, marginTop: 14, lineHeight: 1.7 }}>
+          ภาพจากการใช้งานจริงของ <strong style={{ color: C.green }}>Mando House</strong> สถาบันสอนพิเศษที่ใช้ TutorCloud ทุกวัน<br />
+          <span style={{ fontSize: 12 }}>ชื่อนักเรียนและตัวเลขถูกเบลอเพื่อความเป็นส่วนตัว · โลโก้และชื่อในระบบเปลี่ยนเป็นของสถาบันคุณได้</span>
         </p>
       </div>
 
