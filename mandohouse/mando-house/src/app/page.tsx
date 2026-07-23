@@ -188,7 +188,7 @@ export default function LandingPage() {
     e.preventDefault(); setSending(true)
     try {
       await (window as any).emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        name: form.name, school: form.school, phone: form.phone, plan: selectedPlan,
+        name: form.name, school: form.school, phone: form.phone, plan: selectedPlan || 'ทดลองใช้ฟรี 30 วัน',
       })
       setSubmitted(true)
     } catch { alert('เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ 063-359-5978') }
