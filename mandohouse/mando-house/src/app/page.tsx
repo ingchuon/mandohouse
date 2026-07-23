@@ -215,13 +215,18 @@ export default function LandingPage() {
         input:focus{border-color:${C.green}}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         html{scroll-behavior:smooth}
-        #features,#pricing,#how,#contact{scroll-margin-top:80px}
+        #features,#pricing,#how,#contact,#faq{scroll-margin-top:80px}
         .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
         .reveal.in{opacity:1;transform:none}
         .plan-card{transition:transform .2s ease,box-shadow .2s ease}
         .plan-card:hover{transform:translateY(-6px);box-shadow:0 14px 34px rgba(28,58,42,.16)}
         .pop-badge{animation:badgepulse 1.8s ease-in-out infinite}
         @keyframes badgepulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.08)}}
+        details summary::-webkit-details-marker{display:none}
+        details[open] summary span:last-child{transform:rotate(45deg)}
+        details summary span:last-child{transition:transform .2s}
+        @media(max-width:900px){.feat-grid{grid-template-columns:repeat(2,1fr)!important}}
+        @media(max-width:600px){.feat-grid{grid-template-columns:1fr!important}}
         @media(prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important}.pop-badge{animation:none}html{scroll-behavior:auto}}
         @media(max-width:900px){
           .hero-grid{grid-template-columns:1fr!important}
@@ -318,6 +323,7 @@ export default function LandingPage() {
           <div className="nav-links" style={{ display: 'flex', gap: 28 }}>
             <a href="#features" className="nav-a">Features</a>
             <a href="#pricing" className="nav-a">Pricing</a>
+            <a href="#faq" className="nav-a">FAQ</a>
             <a href="/guide" className="nav-a">Guide</a>
             <a href="#contact" className="nav-a">Contact</a>
           </div>
@@ -488,6 +494,85 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+
+        {/* ทุกแพ็กเกจได้ครบเหมือนกัน — ต่างแค่ระยะเวลา */}
+        <div style={{ maxWidth: 900, margin: '28px auto 0', background: '#fff', border: `1px solid ${C.border}`, borderRadius: 20, padding: '28px 30px' }}>
+          <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+            ทุกแพ็กเกจใช้ได้ครบทุกฟีเจอร์
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 13, color: C.textMid, marginBottom: 20 }}>
+            ต่างกันแค่ระยะเวลา ยิ่งซื้อนานยิ่งถูกลง ไม่มีฟีเจอร์ล็อกไว้ขายเพิ่ม
+          </div>
+          <div className="feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 22px' }}>
+            {[
+              'จัดการข้อมูลนักเรียนและผู้ปกครอง',
+              'เช็กอิน–เช็กเอาท์ นับครั้งเรียนอัตโนมัติ',
+              'สรุปการเรียนคัดลอกส่งผู้ปกครองทาง LINE',
+              'บันทึกชั่วโมงสอน แยกตามครูและวิชา',
+              'หน้าบันทึกชั่วโมงสอนสำหรับครู (ใส่ PIN)',
+              'ตารางสอนเชื่อม Google Calendar',
+              'ออกใบเสร็จรับเงิน พิมพ์ได้ทันที',
+              'บันทึกรายรับ–รายจ่าย และสรุปกำไร',
+              'Dashboard ภาพรวมการเงินรายเดือน',
+              'นำเข้า–ส่งออกข้อมูลด้วย Excel',
+              'เพิ่มทีมงานเองด้วยลิงก์เชิญ',
+              'ใช้ได้ทั้งมือถือและคอมพิวเตอร์',
+            ].map(f => (
+              <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13.5, color: C.text, lineHeight: 1.55 }}>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 3 }}>
+                  <circle cx="8" cy="8" r="8" fill={C.goldLight} />
+                  <path d="M4.5 8.2l2.3 2.3 4.7-4.7" stroke={C.green} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div id="faq" className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 820, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>คำถามที่พบบ่อย</div>
+          <h2 style={{ fontSize: 32, fontWeight: 700 }}>สงสัยอะไร <em style={{ fontStyle: 'italic', color: C.gold }}>ถามได้เลย</em></h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            {
+              q: 'ถ้าไม่ต่ออายุ ข้อมูลจะหายไหม?',
+              a: 'ไม่หายครับ ข้อมูลนักเรียน ประวัติการเรียน และการเงินทั้งหมดยังอยู่ครบ ระบบเพียงระงับการเข้าใช้งานชั่วคราว เมื่อต่ออายุแล้วใช้งานต่อได้เหมือนเดิมทันที',
+            },
+            {
+              q: 'ทดลองใช้ฟรีต้องใส่บัตรเครดิตไหม?',
+              a: 'ไม่ต้องเลยครับ สมัครแล้วใช้ได้ทันที 30 วัน ไม่มีการตัดเงินอัตโนมัติ เมื่อครบกำหนดค่อยเลือกว่าจะซื้อแพ็กเกจหรือไม่',
+            },
+            {
+              q: 'เพิ่มทีมงานหรือครูได้กี่คน?',
+              a: 'ส่งลิงก์เชิญให้ทีมงานสมัครเองได้เลย ทุกคนในทีมมีสิทธิ์ใช้งานเท่ากัน ส่วนครูผู้สอนที่ต้องการบันทึกชั่วโมงสอนอย่างเดียว ใช้หน้าเฉพาะที่ล็อกด้วย PIN 4 หลัก ไม่ต้องสร้างบัญชีแยก',
+            },
+            {
+              q: 'ใช้บนมือถือได้ไหม?',
+              a: 'ได้ครับ ระบบออกแบบให้ใช้งานบนมือถือได้เต็มรูปแบบ เปิดผ่านเบราว์เซอร์ได้เลย ไม่ต้องติดตั้งแอป และเพิ่มไอคอนไว้หน้าจอโฮมเพื่อเปิดเหมือนแอปได้',
+            },
+            {
+              q: 'มีข้อมูลนักเรียนใน Excel อยู่แล้ว ย้ายมาได้ไหม?',
+              a: 'ได้ครับ มีฟังก์ชันนำเข้าจากไฟล์ Excel สำหรับรายชื่อนักเรียน และส่งออกข้อมูลกลับเป็น Excel ได้ตลอดเวลา ข้อมูลเป็นของคุณเสมอ',
+            },
+            {
+              q: 'ชำระเงินอย่างไร?',
+              a: `ทัก LINE ${LINE_ID} แจ้งแพ็กเกจที่ต้องการ ทีมงานจะส่งช่องทางชำระเงินให้ และเปิดใช้งานต่อให้ทันทีหลังยืนยันการชำระเงิน`,
+            },
+          ].map((item, i) => (
+            <details key={i} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 20px' }}>
+              <summary style={{ cursor: 'pointer', fontSize: 15, fontWeight: 600, color: C.text, listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span>{item.q}</span>
+                <span style={{ color: C.gold, fontSize: 20, lineHeight: 1, flexShrink: 0 }}>+</span>
+              </summary>
+              <p style={{ marginTop: 12, fontSize: 14, color: C.textMid, lineHeight: 1.85 }}>{item.a}</p>
+            </details>
+          ))}
+        </div>
       </div>
 
       {/* CTA */}
@@ -524,8 +609,10 @@ export default function LandingPage() {
           </a>
           <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
             style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 24px', color: C.text, minWidth: 240 }}>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: C.goldLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 3h3.5l1.5 4-2 1.5a10 10 0 005 5L11.5 11.5l4 1.5V16c0 .8-.7 1.2-1.5 1C4 15 1 8 1 4.5c0-.8.5-1.5 1-1.5z" fill={C.gold}/></svg>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#06C755', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3C6.9 3 2.8 6.3 2.8 10.4c0 3.7 3.3 6.8 7.7 7.4.3.1.7.2.8.5.1.3.1.6 0 .9l-.1.8c0 .2-.2.9.8.5 1-.4 5.5-3.2 7.5-5.5 1.4-1.5 2-3 2-4.6C21.2 6.3 17.1 3 12 3z" fill="#fff"/>
+              </svg>
             </div>
             <div>
               <div style={{ fontSize: 11, color: C.textMid, marginBottom: 2 }}>LINE</div>
@@ -535,10 +622,14 @@ export default function LandingPage() {
           </a>
         </div>
 
-        <div style={{ marginTop: 26, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 10 }}>สแกนเพื่อเพิ่มเพื่อน LINE</div>
-          <img src={LINE_QR} alt={`LINE ${LINE_ID}`} width={150} height={150}
-            style={{ width: 150, height: 150, borderRadius: 12, border: `1px solid ${C.border}`, padding: 6, background: '#fff' }} />
+        <div style={{ marginTop: 22, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 20, padding: '22px 26px', textAlign: 'center', maxWidth: 260 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>สแกนเพื่อเพิ่มเพื่อน</div>
+            <div style={{ fontSize: 12, color: C.textMid, marginBottom: 14 }}>รับคำปรึกษาฟรี ไม่มีค่าใช้จ่าย</div>
+            <img src={LINE_QR} alt={`LINE ${LINE_ID}`} width={168} height={168}
+              style={{ display: 'block', margin: '0 auto', width: 168, height: 168, borderRadius: 12 }} />
+            <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: '#06C755', letterSpacing: '.02em' }}>{LINE_ID}</div>
+          </div>
         </div>
       </div>
 
