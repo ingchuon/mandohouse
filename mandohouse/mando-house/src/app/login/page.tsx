@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [needConfirm, setNeedConfirm] = useState(false)
+  const [resending, setResending] = useState(false)
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -29,6 +31,7 @@ export default function LoginPage() {
       const msg = (error.message || '').toLowerCase()
       // แยกกรณี "ยังไม่ยืนยันอีเมล" ออกจาก "รหัสผ่านผิด" เพื่อไม่ให้ลูกค้าสับสน
       if (msg.includes('not confirmed') || msg.includes('email not confirmed')) {
+        setNeedConfirm(true)
         toast.error('กรุณากดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ (ตรวจใน Junk/Spam ด้วย)', { duration: 6000 })
       } else {
         toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
@@ -48,6 +51,15 @@ export default function LoginPage() {
 
     // ทุกสถาบัน → ไปที่ /staff เหมือนกัน RLS จัดการข้อมูลให้
     window.location.assign('/staff')
+  }
+
+  async function handleResend() {
+    if (!email) { toast.error('กรุณากรอกอีเมลก่อน'); return }
+    setResending(true)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) toast.error('ส่งอีเมลไม่สำเร็จ — ลองใหม่อีกครั้งในอีกสักครู่')
+    else toast.success('ส่งอีเมลยืนยันใหม่แล้ว กรุณาตรวจกล่องจดหมาย (รวม Junk/Spam)', { duration: 6000 })
+    setResending(false)
   }
 
   return (
@@ -140,6 +152,14 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p style={{ textAlign: 'center', fontSize: 12, color: '#b8a8a4', marginTop: 20 }}>
+          {needConfirm && (
+            <span style={{ display: 'block', marginBottom: 10 }}>
+              <button type="button" onClick={handleResend} disabled={resending}
+                style={{ background: 'none', border: 'none', color: C.green, fontWeight: 600, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', padding: 0 }}>
+                {resending ? 'กำลังส่ง...' : 'ส่งอีเมลยืนยันอีกครั้ง'}
+              </button>
+            </span>
+          )}
           มีปัญหาเข้าสู่ระบบ?{' '}
           <a href={LINE_URL} target="_blank" rel="noopener noreferrer" style={{ color: C.green, fontWeight: 500 }}>LINE {LINE_ID}</a>
         </p>
