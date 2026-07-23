@@ -87,17 +87,14 @@ export default function SchoolSettingsPage() {
     if (!schoolId) return
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('schools')
-        .update({
-          name_th: data.name_th || data.name,
-          logo_url: data.logo_url,
-          receipt_subtitle: data.receipt_subtitle,
-          receipt_address: data.receipt_address,
-          receipt_tel: data.receipt_tel,
-          receipt_receiver: data.receipt_receiver,
-        })
-        .eq('id', schoolId)
+      const { error } = await supabase.rpc('update_own_school', {
+        p_name_th: data.name_th || data.name,
+        p_logo_url: data.logo_url,
+        p_receipt_subtitle: data.receipt_subtitle,
+        p_receipt_address: data.receipt_address,
+        p_receipt_tel: data.receipt_tel,
+        p_receipt_receiver: data.receipt_receiver,
+      })
       if (error) throw error
       toast.success('บันทึกข้อมูลสถาบันแล้ว')
     } catch (err: any) {
