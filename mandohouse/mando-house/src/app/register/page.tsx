@@ -69,7 +69,7 @@ export default function RegisterPage() {
         id: schoolId,
         name: form.schoolName,
         plan: selectedPlan,
-        status: 'active',
+        status: 'pending',
         expires_at: trialExpires.toISOString().split('T')[0],
         slip_path: slipPath,
         created_at: new Date().toISOString(),
