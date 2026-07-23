@@ -1,6 +1,7 @@
 'use client'
 // src/app/staff/help/page.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 const sections = [
   {
@@ -94,14 +95,23 @@ const sections = [
     id: 'team', title: 'จัดการทีม', color: '#7C3AED', darkBg: 'rgba(124,58,237,0.15)', desc: 'จัดการสมาชิกทีมงาน',
     features: [
       { title: 'ดูข้อมูลทีมงาน', icon: '👥', steps: ['แสดงรายชื่อทุกคนพร้อมสถิติ — นักเรียน, Active, รีวิว, เช็กอิน 30 วัน','สถิติอัปเดตอัตโนมัติจากข้อมูลจริงในระบบ'] },
-      { title: 'เพิ่มเจ้าหน้าที่ใหม่', icon: '➕', steps: ['กดปุ่ม "+ เพิ่มเจ้าหน้าที่" มุมขวาบน','เพิ่ม user ใน Supabase Authentication → คัดลอก User ID → รัน SQL ที่ระบบสร้างให้','ทุกคนในทีมมีสิทธิ์เท่ากัน — เช็กอิน บันทึกบทเรียน ออกใบเสร็จ ได้ทุกอย่าง'] },
+      { title: 'เพิ่มเจ้าหน้าที่ใหม่', icon: '➕', steps: ['กดปุ่ม "+ เพิ่มเจ้าหน้าที่" มุมขวาบน','กด "คัดลอกลิงก์เชิญ" แล้วส่งให้ครูหรือเจ้าหน้าที่ทาง LINE','เขาเปิดลิงก์ กรอกชื่อ อีเมล และตั้งรหัสผ่านเอง','ยืนยันอีเมลแล้วเข้าใช้งานได้ทันที ชื่อจะขึ้นในรายชื่อทีมอัตโนมัติ','ทุกคนในทีมมีสิทธิ์เท่ากัน — เช็กอิน บันทึกบทเรียน ออกใบเสร็จ ได้ทุกอย่าง'] },
+      { title: 'ออกรหัสเชิญใหม่', icon: '🔑', steps: ['ใช้เมื่อลิงก์เชิญหลุดไปถึงคนนอก','กด "ออกรหัสใหม่" ในหน้าต่างเพิ่มเจ้าหน้าที่','ลิงก์เดิมจะใช้สมัครไม่ได้อีกทันที คนที่สมัครไปแล้วไม่กระทบ'] },
       { title: 'แก้ไขข้อมูล', icon: '✎', steps: ['กดปุ่ม "แก้ไข" ในการ์ดสมาชิก','แก้ไขชื่อ เบอร์โทร LINE ID แล้วกด "บันทึก"'] },
+    ],
+  },
+  {
+    id: 'account', title: 'แพ็กเกจและการต่ออายุ', color: '#0F6E56', darkBg: 'rgba(15,110,86,0.15)', desc: 'ข้อมูลการใช้งานและการชำระเงิน',
+    features: [
+      { title: 'ช่วงทดลองใช้ฟรี', icon: '🎁', steps: ['สมัครใหม่ใช้ฟรี 30 วัน ครบทุกฟีเจอร์','ไม่ต้องชำระเงินล่วงหน้า ไม่ต้องผูกบัตรเครดิต','ระบบจะแจ้งเมื่อใกล้หมดอายุ'] },
+      { title: 'ต่ออายุการใช้งาน', icon: '💳', steps: ['เมื่อหมดอายุ ระบบจะแสดงหน้าเลือกแพ็กเกจ','เลือกแพ็กเกจที่ต้องการ แล้วทัก LINE ทีมงานเพื่อรับช่องทางชำระเงิน','ทีมงานเปิดใช้งานต่อให้ทันทีหลังยืนยันการชำระเงิน','ข้อมูลนักเรียน ตารางสอน และการเงินยังอยู่ครบ ไม่หายไปไหน'] },
+      { title: 'ตั้งค่าสถาบัน', icon: '🏫', steps: ['เปลี่ยนชื่อสถาบันและโลโก้ที่เมนู "Setting"','ข้อมูลนี้จะแสดงในแถบเมนู Dashboard และบนใบเสร็จรับเงิน'] },
     ],
   },
 ]
 
 const tips: Record<string, string> = {
-  dashboard: 'กด Refresh หน้าถ้าข้อมูลไม่อัปเดต Dashboard ดึงข้อมูล real-time จาก Supabase',
+  dashboard: 'กด Refresh หน้าถ้าข้อมูลไม่อัปเดต Dashboard ดึงข้อมูลล่าสุดแบบ real-time',
   students: 'ถ้าต้องการ import นักเรียนหลายคนพร้อมกัน ใช้ปุ่ม "Import Excel" จะเร็วกว่าเพิ่มทีละคนมาก',
   checkin: 'กดปุ่ม "สรุป" ในแถวรายชื่อเพื่อดูและคัดลอกสรุปส่งผู้ปกครองได้เลย โดยไม่ต้องรอ popup หลังเช็กอิน',
   teaching: 'บันทึกหัวข้อและการบ้านทุกครั้ง จะช่วยให้ Export Excel มีข้อมูลครบถ้วนสำหรับสรุปรายเดือน',
@@ -111,13 +121,22 @@ const tips: Record<string, string> = {
   receipts: 'ถ้าซื้อคอร์สผ่านหน้านักเรียน ระบบสร้างใบเสร็จอัตโนมัติ ไม่ต้องออกใบเสร็จซ้ำ',
   expenses: 'ใช้ฟีเจอร์ "รายจ่ายประจำทุกเดือน" สำหรับค่าเช่า ค่าเงินเดือน ที่จ่ายซ้ำทุกเดือน',
   finance: 'ตั้งค่ายอดยกมาทุกต้นเดือน เพื่อให้ยอดเงินคงเหลือใน Dashboard แม่นยำ',
-  team: 'ทุกคนในทีมมีสิทธิ์เท่ากันหมด ไม่มีระดับ admin/staff แยกกัน',
+  team: 'เพิ่มคนใหม่ด้วยการส่งลิงก์เชิญ ไม่ต้องตั้งรหัสผ่านให้เขา — ทุกคนในทีมมีสิทธิ์เท่ากันหมด',
+  account: 'ทัก LINE ทีมงานก่อนหมดอายุ เพื่อให้ใช้งานต่อเนื่องไม่สะดุด',
 }
 
 export default function HelpPage() {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [openFeature, setOpenFeature] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [schoolName, setSchoolName] = useState('')
+
+  // ชื่อสถาบันของผู้ใช้ — แต่ละสถาบันเห็นชื่อตัวเอง
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('schools').select('name, name_th').single()
+      .then(({ data }) => setSchoolName((data as any)?.name_th || (data as any)?.name || ''))
+  }, [])
 
   const current = sections.find(s => s.id === activeSection)!
 
@@ -135,7 +154,7 @@ export default function HelpPage() {
       <div className="bg-white dark:bg-[#242d3f] border-b border-gray-100 dark:border-[#2a3245]">
         <div className="px-4 py-4">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">คู่มือการใช้งาน</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mando House — ระบบหลังบ้านสำหรับเจ้าหน้าที่</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{schoolName ? `${schoolName} — ` : ''}ระบบหลังบ้านสำหรับเจ้าหน้าที่</p>
         </div>
 
         {/* Mobile section selector */}
