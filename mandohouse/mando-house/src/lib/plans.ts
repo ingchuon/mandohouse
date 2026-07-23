@@ -23,8 +23,19 @@ export const PLAN_BY_ID: Record<string, Plan> = Object.fromEntries(
   PLANS.map((p) => [p.id, p])
 )
 
+// ค่ากลางของระบบ — แก้ที่นี่ที่เดียว
+export const TRIAL_DAYS = 30
+export const TRIAL_PLAN_ID = 'trial'
+export const LINE_ID = '@tutorcloud'
+export const LINE_URL = 'https://line.me/R/ti/p/@tutorcloud'
+
 export function planName(id: string): string {
+  if (id === TRIAL_PLAN_ID) return `ทดลองใช้ฟรี ${TRIAL_DAYS} วัน`
   return PLAN_BY_ID[id]?.name ?? id
+}
+
+export function isTrial(id: string): boolean {
+  return id === TRIAL_PLAN_ID
 }
 
 export function planTotal(id: string): number {
