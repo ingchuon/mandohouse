@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { LINE_ID, LINE_URL, TRIAL_DAYS } from '@/lib/plans'
 import toast from 'react-hot-toast'
 
 const C = {
@@ -125,7 +126,7 @@ export default function LoginPage() {
             <p style={{ fontSize: 13, color: C.textMid }}>
               ยังไม่มีบัญชี?{' '}
               <Link href="/register" style={{ color: C.green, fontWeight: 600 }}>
-                สมัครทดลองใช้ฟรี 30 วัน
+                เริ่มใช้ฟรี {TRIAL_DAYS} วัน
               </Link>
             </p>
           </div>
@@ -134,7 +135,7 @@ export default function LoginPage() {
         {/* Footer */}
         <p style={{ textAlign: 'center', fontSize: 12, color: '#b8a8a4', marginTop: 20 }}>
           มีปัญหาเข้าสู่ระบบ?{' '}
-          <a href="tel:0633595978" style={{ color: C.green, fontWeight: 500 }}>063-359-5978</a>
+          <a href={LINE_URL} target="_blank" rel="noopener noreferrer" style={{ color: C.green, fontWeight: 500 }}>LINE {LINE_ID}</a>
         </p>
         <p style={{ textAlign: 'center', fontSize: 12, color: '#c8b8b4', marginTop: 6 }}>
           <Link href="/" style={{ color: '#c8b8b4' }}>กลับหน้าหลัก</Link>
