@@ -17,12 +17,13 @@ export default function RegisterPage() {
   const supabase = createClient()
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', schoolName: '' })
+  const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', schoolName: '', phone: '', lineId: '' })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (form.password !== form.confirmPassword) { toast.error('รหัสผ่านไม่ตรงกัน'); return }
     if (form.password.length < 8) { toast.error('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'); return }
+    if (!/^0\d{8,9}$/.test(form.phone.replace(/[-\s]/g, ''))) { toast.error('กรุณากรอกเบอร์โทรให้ถูกต้อง'); return }
 
     setLoading(true)
     try {
@@ -35,7 +36,14 @@ export default function RegisterPage() {
       const { error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { school_id: schoolId, school_name: form.schoolName } },
+        options: {
+          data: {
+            school_id: schoolId,
+            school_name: form.schoolName,
+            phone: form.phone.replace(/[-\s]/g, ''),
+            line_id: form.lineId,
+          },
+        },
       })
       if (error) throw new Error(error.message)
 
@@ -92,6 +100,20 @@ export default function RegisterPage() {
                 <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: 'block', marginBottom: 6 }}>อีเมล</label>
                 <input className="tc-input" type="email" required placeholder="admin@yourschool.com"
                   value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: 'block', marginBottom: 6 }}>เบอร์โทรศัพท์</label>
+                <input className="tc-input" type="tel" required placeholder="0XX-XXX-XXXX"
+                  value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: 'block', marginBottom: 6 }}>
+                  LINE ID <span style={{ fontWeight: 400, color: '#b8a8a4' }}>(ไม่บังคับ)</span>
+                </label>
+                <input className="tc-input" placeholder="สำหรับติดต่อกลับ"
+                  value={form.lineId} onChange={e => setForm({ ...form, lineId: e.target.value })} />
               </div>
 
               <div>
