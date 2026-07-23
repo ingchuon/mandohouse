@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { planName, planPerMonth } from '@/lib/plans'
+import { planName, planPerMonth, planMonths } from '@/lib/plans'
 
 const C = {
   brown: '#A15C38',
@@ -48,8 +48,9 @@ export default function SubscriptionsPage() {
 
   async function approve(school: School) {
     setApproving(school.id)
+    // วันหมดอายุตามแพ็กเกจที่ลูกค้าจ่ายจริง (3/6/12 เดือน)
     const expires = new Date()
-    expires.setMonth(expires.getMonth() + 1)
+    expires.setMonth(expires.getMonth() + planMonths(school.plan))
 
     const { error } = await supabase.from('schools').update({
       status: 'active',
