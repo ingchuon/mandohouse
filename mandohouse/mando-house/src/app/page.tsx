@@ -400,6 +400,33 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* ภาพจริงจากระบบ */}
+      <div className="section-pad reveal" style={{ padding: '0 48px 80px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>ภาพจริงจากระบบ</div>
+          <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>
+            หน้าจอที่คุณจะได้ใช้ <em style={{ fontStyle: 'italic', color: C.gold }}>ทุกวัน</em>
+          </h2>
+          <p style={{ color: C.textMid, fontSize: 15 }}>
+            รายรับ รายจ่าย กำไร ตารางเรียน และนักเรียนใกล้หมดคอร์ส — เห็นครบในหน้าเดียว
+          </p>
+        </div>
+
+        <div style={{ borderRadius: 18, overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: '0 18px 50px rgba(28,58,42,.13)', background: '#fff' }}>
+          <img
+            src="/dashboard-preview.png"
+            alt="ตัวอย่างหน้า Dashboard ของ TutorCloud แสดงรายรับ รายจ่าย กำไร และรายชื่อนักเรียนใกล้หมดคอร์ส"
+            width={1918}
+            height={915}
+            style={{ display: 'block', width: '100%', height: 'auto' }}
+          />
+        </div>
+
+        <p style={{ textAlign: 'center', fontSize: 12, color: C.textMid, marginTop: 12 }}>
+          ภาพจากการใช้งานจริง · ชื่อนักเรียนและตัวเลขถูกเบลอเพื่อความเป็นส่วนตัว
+        </p>
+      </div>
+
       {/* FEATURES */}
       <div id="features" className="section-pad reveal" style={{ padding: '80px 48px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
