@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Student, Enrollment } from '@/types'
 import toast from 'react-hot-toast'
+import { useSchool } from '@/lib/school-context'
 
 interface Teacher {
   id: string
@@ -58,6 +59,7 @@ function StudentLookup({ students, onSelect }: {
 }
 
 export default function CheckinPage() {
+  const schoolName = useSchool().name
   const supabase = createClient()
   const [students, setStudents] = useState<Student[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -580,7 +582,7 @@ export default function CheckinPage() {
                   return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
                 }).join('\n')
                 const msg = [
-                  `สรุปการเรียน Mando House`,
+                  `สรุปการเรียน ${schoolName}`,
                   `น้อง${checkinSummary.studentName}`,
                   `${checkinSummary.courseName}`,
                   ``,
@@ -593,7 +595,7 @@ export default function CheckinPage() {
                     ? `เรียนครบทุกครั้งแล้ว กรุณาติดต่อสมัครคอร์สใหม่เพื่อเรียนต่อได้เลยนะคะ`
                     : remaining <= 2
                     ? `เหลือครั้งเรียนน้อยมาก แนะนำต่อคอร์สเพิ่มนะคะ`
-                    : `ขอบคุณที่ไว้วางใจ Mando House นะคะ`,
+                    : `ขอบคุณที่ไว้วางใจ ${schoolName} นะคะ`,
                 ].join('\n')
                 await navigator.clipboard.writeText(msg)
                 alert('คัดลอกข้อความแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
@@ -682,7 +684,7 @@ export default function CheckinPage() {
                         `  เรียนไปแล้ว ${course.lessonsUsed}/${course.lessonsTotal} ครั้ง (เหลือ ${remaining} ครั้ง)`, note,
                       ].filter(Boolean).join('\n')
                     }).join('\n\n')
-                    const msg = [`สรุปการเรียน Mando House`, `น้อง${studentSummary.name}`, ``, blocks, ``, `ขอบคุณที่ไว้วางใจ Mando House นะคะ`].join('\n')
+                    const msg = [`สรุปการเรียน ${schoolName}`, `น้อง${studentSummary.name}`, ``, blocks, ``, `ขอบคุณที่ไว้วางใจ ${schoolName} นะคะ`].join('\n')
                     await navigator.clipboard.writeText(msg)
                     alert('คัดลอกข้อความแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
                   }}
