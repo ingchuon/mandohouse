@@ -11,6 +11,14 @@ export default async function ParentPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (profile?.role !== 'parent') redirect('/staff')
 
+  // ชื่อ/โลโก้สถาบันของผู้ปกครองรายนี้
+  const { data: schoolRow } = await supabase
+    .from('schools').select('name, name_th, logo_url').eq('id', profile.school_id ?? '').single()
+  const school = {
+    name: schoolRow?.name_th || schoolRow?.name || 'สถาบันสอนพิเศษ',
+    logo_url: schoolRow?.logo_url as string | null,
+  }
+
   const { data: children } = await supabase
     .from('students')
     .select(`
@@ -39,9 +47,9 @@ export default async function ParentPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img src="/logo.png" alt="Mando House" className="w-full h-full object-cover" />
+              <img src={school.logo_url || "/logo.png"} alt={school.name} className="w-full h-full object-cover" />
             </div>
-            <span className="font-semibold text-gray-900">Mando House</span>
+            <span className="font-semibold text-gray-900">{school.name}</span>
           </div>
           <p className="text-sm text-gray-500">สวัสดีครับคุณ{profile?.full_name}</p>
         </div>
