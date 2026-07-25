@@ -191,9 +191,9 @@ export default function ReceiptsPage() {
     const win = window.open('', '_blank')
     if (!win) return
 
-    // ----- ข้อมูลสถาบัน — ดึงจาก schools ตาม tenant (fallback เป็น Mando House) -----
+    // ----- ข้อมูลสถาบัน — ดึงจากตาราง schools ตามสถาบันของผู้ใช้ -----
     const BIZ = {
-      brand:    school?.name_th || school?.name || 'Mando House',
+      brand:    school?.name_th || school?.name || 'สถาบันของคุณ',
       subtitle: school?.receipt_subtitle || 'สถาบันสอนพิเศษ',
       address:  school?.receipt_address || '',
       tel:      school?.receipt_tel || '',
@@ -499,10 +499,10 @@ export default function ReceiptsPage() {
                   {preview ? (
                     <div className="border border-gray-100 dark:border-[#3a4560] rounded-xl p-5 font-mono text-sm">
                       <div className="text-center mb-2">
-                        <div className="text-base font-bold">Mando House</div>
+                        <div className="text-base font-bold">{school?.name_th || school?.name || 'สถาบันของคุณ'}</div>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400 dark:text-gray-300 leading-relaxed">
-                          สถาบันสอนพิเศษภาษาจีน คณิตศาสตร์ ภาษาอังกฤษ<br/>
-                          085-0930111 ， 097-1727677
+                          {school?.receipt_subtitle || 'สถาบันสอนพิเศษ'}<br/>
+                          {school?.receipt_tel || ''}
                         </div>
                         <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">ใบเสร็จรับเงิน</div>
                       </div>
