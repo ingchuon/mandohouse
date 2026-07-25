@@ -56,7 +56,8 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
   const [unlocked, setUnlocked] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState(false)
-  const [pin, setPin] = useState<string | null>(null)  // PIN ที่ยืนยันแล้ว (เก็บในเครื่องนี้เท่านั้น)
+  const [pin, setPin] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState('')  // PIN ที่ยืนยันแล้ว (เก็บในเครื่องนี้เท่านั้น)
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [logs, setLogs] = useState<LessonLog[]>([])
@@ -131,9 +132,10 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
       setLoadingData(false)
       return
     }
-    const res = (data as { enrollments?: Enrollment[]; logs?: LessonLog[] }) ?? {}
+    const res = (data as { enrollments?: Enrollment[]; logs?: LessonLog[]; school_name?: string }) ?? {}
     setEnrollments(res.enrollments ?? [])
     setLogs(res.logs ?? [])
+    if (res.school_name) setSchoolName(res.school_name)
     setLoadingData(false)
   }
 
@@ -675,7 +677,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         )}
       </div>
 
-      <p className="text-center text-xs text-gray-300 mt-6">Mando House — ระบบบันทึกชั่วโมงสอน</p>
+      <p className="text-center text-xs text-gray-300 mt-6">{schoolName ? `${schoolName} — ` : ''}ระบบบันทึกชั่วโมงสอน</p>
 
       {/* Modal: เปลี่ยน PIN */}
       {showChangePin && (
