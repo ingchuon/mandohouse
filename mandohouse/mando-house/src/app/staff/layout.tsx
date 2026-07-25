@@ -1,4 +1,5 @@
 import StaffSidebar from '@/components/layout/StaffSidebar'
+import { SchoolProvider } from '@/lib/school-context'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -24,11 +25,13 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen">
-      <StaffSidebar />
-      <main className="flex-1 overflow-auto bg-surface dark:bg-[#1a2030] pt-14 md:pt-0">
-        {children}
-      </main>
-    </div>
+    <SchoolProvider>
+      <div className="flex min-h-screen">
+        <StaffSidebar />
+        <main className="flex-1 overflow-auto bg-surface dark:bg-[#1a2030] pt-14 md:pt-0">
+          {children}
+        </main>
+      </div>
+    </SchoolProvider>
   )
 }
