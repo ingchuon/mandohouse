@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { simulateLineNotify, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { useSchool } from '@/lib/school-context'
 
 export default function AlertsPage() {
+  const school = useSchool()
   const supabase = createClient()
   const [expiring, setExpiring] = useState<any[]>([])
   const [sentAlerts, setSentAlerts] = useState<any[]>([])
@@ -46,7 +48,7 @@ export default function AlertsPage() {
     const remaining = enrollment.lessons_total - enrollment.lessons_used
     const name = student?.nickname || student?.full_name
 
-    const message = `🏫 Mando House\n\nสวัสดีครับคุณ${student?.parent_name || 'ผู้ปกครอง'}\n\n⚠️ น้อง${name} เหลือ ${remaining} ครั้ง\nจาก ${enrollment.course?.name}\n\nกรุณาต่อคอร์สก่อนหมด 📚\nสอบถาม: 081-000-1234`
+    const message = `🏫 ${school.name}\n\nสวัสดีครับคุณ${student?.parent_name || 'ผู้ปกครอง'}\n\n⚠️ น้อง${name} เหลือ ${remaining} ครั้ง\nจาก ${enrollment.course?.name}\n\nกรุณาต่อคอร์สก่อนหมด 📚\nสอบถาม: 081-000-1234`
 
     // Simulate LINE notify
     await simulateLineNotify(message)
@@ -152,11 +154,11 @@ export default function AlertsPage() {
                 <div className="w-7 h-7 rounded-full bg-[#06C755] flex items-center justify-center">
                   <span className="text-white text-xs font-bold">M</span>
                 </div>
-                <span className="text-xs text-black/50 font-medium">Mando House</span>
+                <span className="text-xs text-black/50 font-medium">{school.name}</span>
               </div>
               <div className="bg-white rounded-xl rounded-tl-sm p-3.5 max-w-[280px] shadow-sm">
                 <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
-                  {`🏫 Mando House\n\nสวัสดีครับคุณแม่สมหญิง\n\n⚠️ น้องมิน เหลือ 2 ครั้ง\nจาก 1-on-1 Pro\n\nกรุณาต่อคอร์สก่อนหมด 📚\nสอบถาม: 081-000-1234`}
+                  {`🏫 ${school.name}\n\nสวัสดีครับคุณแม่สมหญิง\n\n⚠️ น้องมิน เหลือ 2 ครั้ง\nจาก 1-on-1 Pro\n\nกรุณาต่อคอร์สก่อนหมด 📚\nสอบถาม: 081-000-1234`}
                 </p>
               </div>
             </div>
