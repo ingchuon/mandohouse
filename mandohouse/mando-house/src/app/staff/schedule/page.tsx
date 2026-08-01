@@ -308,7 +308,7 @@ export default function SchedulePage() {
                 >
                   <button
                     onClick={() => openDay(day)}
-                    style={{ width: '100%', textAlign: 'left', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid ' + C.border, background: 'none', border: 'none', borderBottom: '1px solid ' + C.border, cursor: 'pointer', padding: '0 0 8px 0' }}
+                    style={{ width: '100%', textAlign: 'left', paddingBottom: '8px', borderBottom: '1px solid ' + C.border, background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 8px 0' }}
                   >
                     <div style={{ fontSize: '13px', fontWeight: 600, color: isToday ? C.green : C.text }}>
                       {DAYS[i]}
