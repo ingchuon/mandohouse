@@ -184,7 +184,9 @@ export default function CoursesPage() {
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm md:text-base">{c.name}</h3>
               {c.description && <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{c.description}</p>}
-              <div className="text-xl md:text-2xl font-semibold text-brand-600 mb-0.5">{formatThaiMoney(c.price)}</div>
+              <div className="text-xl md:text-2xl font-semibold mb-0.5" style={{ color: '#4ADE80' }}>
+                {formatThaiMoney(c.price)}
+              </div>
               <div className="text-xs text-gray-400 mb-3">/ {c.total_lessons} ครั้ง</div>
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-50 dark:border-[#2a3245] pt-3 flex-wrap">
                 <span>👥 สูงสุด {c.max_students} คน</span>
@@ -230,7 +232,7 @@ export default function CoursesPage() {
                     }
                     <div className="flex-1">
                       <div className="font-medium text-sm text-gray-900 dark:text-white mb-1">{book.name}</div>
-                      <div className="text-brand-600 font-semibold text-sm">{formatThaiMoney(book.price)}</div>
+                      <div className="font-semibold text-sm" style={{ color: '#4ADE80' }}>{formatThaiMoney(book.price)}</div>
                       <div className={`text-xs mt-1 ${book.stock <= 3 ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
                         สต็อก: {book.stock} เล่ม {book.stock <= 3 && '⚠️'}
                       </div>
@@ -275,7 +277,7 @@ export default function CoursesPage() {
                           <td className="text-sm">{(s.book as any)?.name ?? '—'}</td>
                           <td className="text-sm">{(s.student as any)?.nickname || (s.student as any)?.full_name || '—'}</td>
                           <td className="text-center text-sm">{s.quantity}</td>
-                          <td className="text-sm text-brand-600 font-semibold">{formatThaiMoney(s.total_amount)}</td>
+                          <td className="text-sm font-semibold" style={{ color: '#4ADE80' }}>{formatThaiMoney(s.total_amount)}</td>
                           <td><span className="badge badge-gray text-xs">{s.payment_method}</span></td>
                         </tr>
                       ))}
@@ -400,7 +402,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <label className="label">รวม</label>
-                  <div className="input bg-gray-50 dark:bg-[#1e2533] text-brand-600 font-semibold">
+                  <div className="input bg-gray-50 dark:bg-[#1e2533] font-semibold" style={{ color: '#4ADE80' }}>
                     {formatThaiMoney(showSaleModal.price * saleForm.quantity)}
                   </div>
                 </div>
