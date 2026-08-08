@@ -14,10 +14,10 @@ const COURSE_TYPES = [
 ]
 
 const SUBJECT_GROUPS = [
-  { key: 'chinese',  label: '🇨🇳 ภาษาจีน',     keywords: ['จีน', 'chinese', 'hsk', 'yct', 'แมนดาริน'] },
-  { key: 'math',     label: '📐 คณิตศาสตร์',   keywords: ['คณิต', 'math', 'maths', 'iq'] },
-  { key: 'english',  label: '🇬🇧 ภาษาอังกฤษ',  keywords: ['อังกฤษ', 'english', 'phonics', 'conversation', 'basic eng'] },
-  { key: 'other',    label: '📌 อื่นๆ',          keywords: [] },
+  { key: 'chinese',  label: 'ภาษาจีน',     keywords: ['จีน', 'chinese', 'hsk', 'yct', 'แมนดาริน'] },
+  { key: 'math',     label: 'คณิตศาสตร์',   keywords: ['คณิต', 'math', 'maths', 'iq'] },
+  { key: 'english',  label: 'ภาษาอังกฤษ',  keywords: ['อังกฤษ', 'english', 'phonics', 'conversation', 'basic eng'] },
+  { key: 'other',    label: 'อื่นๆ',          keywords: [] },
 ]
 
 function getSubjectKey(name: string): string {
