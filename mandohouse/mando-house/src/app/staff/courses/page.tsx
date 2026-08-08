@@ -13,6 +13,21 @@ const COURSE_TYPES = [
   { value: 'hsk',        label: 'HSK Prep' },
 ]
 
+const SUBJECT_GROUPS = [
+  { key: 'chinese',  label: '🇨🇳 ภาษาจีน',     keywords: ['จีน', 'chinese', 'hsk', 'yct', 'แมนดาริน'] },
+  { key: 'math',     label: '📐 คณิตศาสตร์',   keywords: ['คณิต', 'math', 'maths', 'iq'] },
+  { key: 'english',  label: '🇬🇧 ภาษาอังกฤษ',  keywords: ['อังกฤษ', 'english', 'phonics', 'conversation', 'basic eng'] },
+  { key: 'other',    label: '📌 อื่นๆ',          keywords: [] },
+]
+
+function getSubjectKey(name: string): string {
+  const lower = name.toLowerCase()
+  for (const g of SUBJECT_GROUPS) {
+    if (g.keywords.some(k => lower.includes(k))) return g.key
+  }
+  return 'other'
+}
+
 export default function CoursesPage() {
   const supabase = createClient()
   const [tab, setTab] = useState<'courses' | 'books'>('courses')
@@ -149,6 +164,12 @@ export default function CoursesPage() {
   const tabClass = (t: string) =>
     `px-5 py-2.5 text-sm font-medium rounded-xl transition-all ${tab === t ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2a3245]'}`
 
+  // จัดกลุ่มคอร์สตามวิชา
+  const groupedCourses = SUBJECT_GROUPS.map(g => ({
+    ...g,
+    courses: courses.filter(c => getSubjectKey(c.name) === g.key),
+  })).filter(g => g.courses.length > 0)
+
   return (
     <div className="p-4 md:p-6">
       {/* Header */}
@@ -175,29 +196,42 @@ export default function CoursesPage() {
 
       {/* ═══ TAB: COURSES ═══ */}
       {tab === 'courses' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {courses.map(c => (
-            <div key={c.id} className={`card p-4 md:p-5 ${!c.is_active ? 'opacity-60' : ''}`}>
-              <div className="flex items-start justify-between mb-3">
-                <span className={`badge ${getCourseTypeClass(c.type)}`}>{getCourseTypeLabel(c.type)}</span>
-                <span className={`badge ${c.is_active ? 'badge-green' : 'badge-gray'}`}>{c.is_active ? 'เปิดรับ' : 'ปิด'}</span>
+        <div className="space-y-8">
+          {groupedCourses.map(group => (
+            <div key={group.key}>
+              {/* หัวกลุ่มวิชา */}
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">{group.label}</h2>
+                <span className="badge badge-gray">{group.courses.length} คอร์ส</span>
+                <div className="flex-1 h-px bg-gray-100 dark:bg-[#2a3245]" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm md:text-base">{c.name}</h3>
-              {c.description && <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{c.description}</p>}
-              <div className="text-xl md:text-2xl font-semibold mb-0.5" style={{ color: '#4ADE80' }}>
-                {formatThaiMoney(c.price)}
-              </div>
-              <div className="text-xs text-gray-400 mb-3">/ {c.total_lessons} ครั้ง</div>
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-50 dark:border-[#2a3245] pt-3 flex-wrap">
-                <span>👥 สูงสุด {c.max_students} คน</span>
-                <span>⏱ {c.duration_minutes} นาที/ครั้ง</span>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => openEditCourse(c)} className="btn-outline btn-sm flex-1 justify-center">แก้ไข</button>
-                <button onClick={() => supabase.from('courses').update({ is_active: !c.is_active }).eq('id', c.id).then(loadCourses)} className="btn-outline btn-sm flex-1 justify-center text-gray-500">
-                  {c.is_active ? 'ปิด' : 'เปิด'}
-                </button>
-                <button onClick={() => { if (confirm(`ปิดคอร์ส "${c.name}"?`)) supabase.from('courses').update({ is_active: false }).eq('id', c.id).then(loadCourses) }} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">🗑</button>
+              {/* การ์ดคอร์ส */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {group.courses.map(c => (
+                  <div key={c.id} className={`card p-4 md:p-5 ${!c.is_active ? 'opacity-60' : ''}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <span className={`badge ${getCourseTypeClass(c.type)}`}>{getCourseTypeLabel(c.type)}</span>
+                      <span className={`badge ${c.is_active ? 'badge-green' : 'badge-gray'}`}>{c.is_active ? 'เปิดรับ' : 'ปิด'}</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm md:text-base">{c.name}</h3>
+                    {c.description && <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{c.description}</p>}
+                    <div className="text-xl md:text-2xl font-semibold mb-0.5" style={{ color: '#4ADE80' }}>
+                      {formatThaiMoney(c.price)}
+                    </div>
+                    <div className="text-xs text-gray-400 mb-3">/ {c.total_lessons} ครั้ง</div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-50 dark:border-[#2a3245] pt-3 flex-wrap">
+                      <span>👥 สูงสุด {c.max_students} คน</span>
+                      <span>⏱ {c.duration_minutes} นาที/ครั้ง</span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => openEditCourse(c)} className="btn-outline btn-sm flex-1 justify-center">แก้ไข</button>
+                      <button onClick={() => supabase.from('courses').update({ is_active: !c.is_active }).eq('id', c.id).then(loadCourses)} className="btn-outline btn-sm flex-1 justify-center text-gray-500">
+                        {c.is_active ? 'ปิด' : 'เปิด'}
+                      </button>
+                      <button onClick={() => { if (confirm(`ปิดคอร์ส "${c.name}"?`)) supabase.from('courses').update({ is_active: false }).eq('id', c.id).then(loadCourses) }} className="btn-outline btn-sm px-2 text-red-400 hover:bg-red-50">🗑</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
