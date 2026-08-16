@@ -77,6 +77,19 @@
   }
 }
 
+/* แก้ dark mode: ตัวอักษรสีแบรนด์เข้ม (600-900) จมบนพื้น dark
+   สลับเป็นเขียวสว่างเฉพาะโหมด dark — badge ที่มี dark variant ของตัวเองไม่กระทบ
+   เพราะกำหนดสีผ่าน .badge-* ซึ่ง specificity เท่ากันแต่ประกาศทีหลังไม่ได้ ใช้ :not() กันไว้ */
+.dark .text-brand-600:not([class*="badge"]),
+.dark .text-brand-700:not([class*="badge"]),
+.dark .text-brand-800:not([class*="badge"]) {
+  color: #7DC09A; /* brand-300 อ่านชัดบนพื้น navy */
+}
+.dark .text-yellow-700:not([class*="badge"]),
+.dark .text-amber-700:not([class*="badge"]) {
+  color: #FCD34D; /* amber-300 */
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
