@@ -892,7 +892,7 @@ export default function CheckinPage() {
                 </button>
               )}
             </div>
-            <span className="badge badge-green">{presentCount} คน</span>
+            <span className="badge badge-green dark:!text-green-300">{presentCount} คน</span>
           </div>
 
           <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-gray-100 dark:border-[#2a3245]">
@@ -927,7 +927,7 @@ export default function CheckinPage() {
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-brand-500 inline-block"></span>
                     <span className="text-gray-600 dark:text-gray-300">มาเรียน</span>
-                    <span className="font-semibold text-brand-700">{presentCount} คน</span>
+                    <span className="font-semibold text-brand-700 dark:text-white">{presentCount} คน</span>
                   </div>
                   {checkedOutCount > 0 && (
                     <div className="flex items-center gap-1.5">
@@ -940,7 +940,7 @@ export default function CheckinPage() {
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
                       <span className="text-gray-600 dark:text-gray-300">ยังอยู่</span>
-                      <span className="font-semibold text-yellow-700">{stillInCount} คน</span>
+                      <span className="font-semibold text-yellow-700 dark:text-yellow-300">{stillInCount} คน</span>
                     </div>
                   )}
                 </div>
