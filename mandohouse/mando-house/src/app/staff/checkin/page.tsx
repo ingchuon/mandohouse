@@ -90,10 +90,13 @@ export default function CheckinPage() {
       courseName: string
       lessonsUsed: number
       lessonsTotal: number
+      status: string
       history: { lesson_number: number; lesson_date: string; topic?: string }[]
     }[]
   } | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [copyIncluded, setCopyIncluded] = useState<Record<number, boolean>>({})
+  const [previewMsg, setPreviewMsg] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   const [editCheckin, setEditCheckin] = useState<any>(null)
   const [editForm, setEditForm] = useState({ check_in_at: '', check_out_at: '', lesson_note: '' })
@@ -423,14 +426,21 @@ export default function CheckinPage() {
   async function loadStudentSummaryById(studentId: string, name: string) {
     setLoadingSummary(true); setStudentSummary(null)
     const { data: enrolls } = await supabase
-      .from('enrollments').select('id, lessons_used, lessons_total, course:courses(name)')
-      .eq('student_id', studentId).eq('status', 'active').order('created_at', { ascending: true })
+      .from('enrollments').select('id, lessons_used, lessons_total, status, created_at, course:courses(name)')
+      .eq('student_id', studentId).in('status', ['active', 'completed'])
+      .order('created_at', { ascending: false })
 
     if (!enrolls || enrolls.length === 0) {
-      toast.error('ไม่พบคอร์สที่กำลังเรียนอยู่'); setLoadingSummary(false); return
+      toast.error('ไม่พบคอร์สของนักเรียนคนนี้'); setLoadingSummary(false); return
     }
 
-    const courses = await Promise.all(enrolls.map(async (en: any) => {
+    // เรียง: คอร์สที่กำลังเรียน (active) ขึ้นก่อน แล้วตามด้วยคอร์สที่จบแล้ว (completed) ล่าสุด
+    const sorted = [...enrolls].sort((a: any, b: any) => {
+      if (a.status !== b.status) return a.status === 'active' ? -1 : 1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+
+    const courses = await Promise.all(sorted.map(async (en: any) => {
       const { data: hist } = await supabase
         .from('lesson_logs').select('lesson_number, lesson_date, topic')
         .eq('enrollment_id', en.id).order('lesson_number', { ascending: true })
@@ -438,10 +448,13 @@ export default function CheckinPage() {
         courseName: (en.course as any)?.name || '—',
         lessonsUsed: en.lessons_used ?? 0,
         lessonsTotal: en.lessons_total ?? 0,
+        status: en.status,
         history: hist ?? [],
       }
     }))
-    setStudentSummary({ name, courses }); setLoadingSummary(false)
+    setStudentSummary({ name, courses })
+    setCopyIncluded(Object.fromEntries(courses.map((c, i) => [i, c.status === 'active'])))
+    setLoadingSummary(false)
   }
 
   async function loadStudentSummary(c: any) {
@@ -618,14 +631,36 @@ export default function CheckinPage() {
               <>
                 <div className="text-center mb-4">
                   <h3 className="font-semibold text-lg">{studentSummary.name}</h3>
-                  <p className="text-xs text-gray-400">{studentSummary.courses.length} คอร์สที่กำลังเรียน</p>
+                  <p className="text-xs text-gray-400">
+                    {(() => {
+                      const act = studentSummary.courses.filter(c => c.status === 'active').length
+                      const done = studentSummary.courses.filter(c => c.status !== 'active').length
+                      return [act > 0 ? `${act} คอร์สที่กำลังเรียน` : '', done > 0 ? `${done} คอร์สที่จบแล้ว` : ''].filter(Boolean).join(' · ')
+                    })()}
+                  </p>
                 </div>
                 {studentSummary.courses.map((course, ci) => {
                   const remaining = course.lessonsTotal - course.lessonsUsed
                   const pct = course.lessonsTotal > 0 ? Math.round((course.lessonsUsed / course.lessonsTotal) * 100) : 0
                   return (
                     <div key={ci} className="mb-4 border border-gray-100 dark:border-gray-700 rounded-xl p-3">
-                      <div className="font-medium text-sm text-brand-700 dark:text-brand-300 mb-2">{course.courseName}</div>
+                      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm text-brand-700 dark:text-brand-300">{course.courseName}</span>
+                          {course.status !== 'active' && (
+                            <span className="badge badge-gray text-[10px]">จบคอร์สแล้ว</span>
+                          )}
+                        </div>
+                        <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer select-none shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={copyIncluded[ci] ?? true}
+                            onChange={e => setCopyIncluded(prev => ({ ...prev, [ci]: e.target.checked }))}
+                            className="w-3.5 h-3.5 accent-brand-500"
+                          />
+                          ส่งอันนี้ด้วย
+                        </label>
+                      </div>
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-gray-500">เรียนไปแล้ว</span>
                         <span className="font-semibold">{course.lessonsUsed} / {course.lessonsTotal} ครั้ง</span>
@@ -670,8 +705,12 @@ export default function CheckinPage() {
                 })}
                 <button
                   className="btn-outline w-full mb-2"
-                  onClick={async () => {
-                    const blocks = studentSummary.courses.map(course => {
+                  onClick={() => {
+                    const selected = studentSummary.courses.filter((_, ci) => copyIncluded[ci] ?? true)
+                    if (selected.length === 0) {
+                      alert('เลือกอย่างน้อย 1 คอร์สก่อนคัดลอกนะครับ'); return
+                    }
+                    const blocks = selected.map(course => {
                       const remaining = course.lessonsTotal - course.lessonsUsed
                       const historyLines = course.history.map(h => {
                         const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
@@ -685,13 +724,44 @@ export default function CheckinPage() {
                       ].filter(Boolean).join('\n')
                     }).join('\n\n')
                     const msg = [`สรุปการเรียน ${schoolName}`, `น้อง${studentSummary.name}`, ``, blocks, ``, `ขอบคุณที่ไว้วางใจ ${schoolName} นะคะ`].join('\n')
-                    await navigator.clipboard.writeText(msg)
-                    alert('คัดลอกข้อความแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
+                    setPreviewMsg(msg)
                   }}
-                >คัดลอกส่งผู้ปกครอง</button>
+                >คัดลอกส่งผู้ปกครอง{(() => {
+                  const n = studentSummary.courses.filter((_, ci) => copyIncluded[ci] ?? true).length
+                  const total = studentSummary.courses.length
+                  return total > 1 ? ` (${n}/${total} คอร์ส)` : ''
+                })()}</button>
                 <button className="btn-brand w-full" onClick={() => setStudentSummary(null)}>ปิด</button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* โมดัลพรีวิวข้อความ — ทวนวันที่เรียนก่อนคัดลอกจริง */}
+      {previewMsg && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]" onClick={() => setPreviewMsg(null)}>
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col shadow-xl" onClick={ev => ev.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="font-semibold text-gray-900 dark:text-white">ตรวจข้อความก่อนส่ง</div>
+              <div className="text-xs text-gray-400 mt-0.5">เช็กวันที่เรียนให้ถูกต้อง แล้วคัดลอกไปวางใน LINE</div>
+            </div>
+            <div className="flex-1 overflow-auto p-5">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 font-sans leading-relaxed bg-gray-50 dark:bg-[#1a2030] rounded-xl p-4 border border-gray-100 dark:border-gray-700">{previewMsg}</pre>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+              <button
+                className="btn-brand flex-1"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(previewMsg)
+                  toast.success('คัดลอกแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
+                  setPreviewMsg(null)
+                }}
+              >
+                📋 คัดลอกข้อความ
+              </button>
+              <button className="btn-outline flex-1" onClick={() => setPreviewMsg(null)}>กลับไปแก้</button>
+            </div>
           </div>
         </div>
       )}
