@@ -941,6 +941,47 @@ export default function CheckinPage() {
               {loading ? 'กำลังบันทึก...' : isBackdate ? 'บันทึกย้อนหลัง' : 'เช็กอิน'}
             </button>
           </div>
+
+          {/* ใกล้หมดคอร์ส — เห็นตั้งแต่ตอนเช็กชื่อ */}
+          {(() => {
+            const nearEnd = enrollments
+              .filter(e => e.lessons_total > 0 && (e.lessons_total - e.lessons_used) <= 3)
+              .map(e => ({ e, rem: e.lessons_total - e.lessons_used, stu: students.find(s => s.id === e.student_id) }))
+              .filter(x => x.stu)
+              .sort((a, b) => a.rem - b.rem)
+            if (nearEnd.length === 0) return null
+            return (
+              <div className="card mt-4">
+                <div className="card-header gap-2">
+                  <h3 className="font-medium">ใกล้หมดคอร์ส</h3>
+                  <span className="badge badge-red">{nearEnd.length} คน</span>
+                </div>
+                <div className="divide-y divide-gray-50 dark:divide-gray-700 max-h-72 overflow-auto">
+                  {nearEnd.map(({ e, rem, stu }) => {
+                    const name = stu!.nickname || stu!.full_name
+                    return (
+                      <button
+                        key={e.id}
+                        onClick={() => loadStudentSummaryById(e.student_id, stu!.nickname || stu!.full_name)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-[#2a3245]/60 transition-colors"
+                      >
+                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${rem <= 1 ? 'bg-red-50 dark:bg-red-500/15' : 'bg-amber-50 dark:bg-amber-500/15'}`}>
+                          {rem <= 1 ? '🚨' : '⚠️'}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-medium text-gray-900 dark:text-white truncate">น้อง{name}</span>
+                          <span className="block text-xs text-gray-400 truncate">{(e as any).course?.name || ''}</span>
+                        </span>
+                        <span className={`text-sm font-bold flex-shrink-0 ${rem <= 1 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                          เหลือ {rem}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* รายชื่อผู้เข้าเรียน */}
