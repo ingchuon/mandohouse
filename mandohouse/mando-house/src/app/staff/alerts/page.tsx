@@ -2,7 +2,7 @@
 // src/app/staff/alerts/page.tsx
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { simulateLineNotify, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useSchool } from '@/lib/school-context'
 
@@ -14,6 +14,7 @@ export default function AlertsPage() {
   const [settings, setSettings] = useState({ warn_at_lessons_remaining: 3, notify_via_line: true, notify_parent: true, notify_teacher: true })
   const [sending, setSending] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [preview, setPreview] = useState<{ name: string; message: string } | null>(null)
 
   async function loadData() {
     const [{ data: enr }, { data: alrt }, { data: cfg }] = await Promise.all([
@@ -42,38 +43,42 @@ export default function AlertsPage() {
 
   useEffect(() => { loadData() }, [])
 
-  async function sendAlert(enrollment: any) {
+  // เปิดพรีวิวสรุป — ดึงทุกครั้งที่เรียนพร้อมวันที่ ให้ทวนก่อนคัดลอก
+  async function openPreview(enrollment: any) {
     setSending(enrollment.id)
     const student = enrollment.student
-    const remaining = enrollment.lessons_total - enrollment.lessons_used
     const name = student?.nickname || student?.full_name
+    const remaining = enrollment.lessons_total - enrollment.lessons_used
 
-    const message = `🏫 ${school.name}\n\nสวัสดีครับคุณ${student?.parent_name || 'ผู้ปกครอง'}\n\n⚠️ น้อง${name} เหลือ ${remaining} ครั้ง\nจาก ${enrollment.course?.name}\n\nกรุณาต่อคอร์สก่อนหมด 📚\nสอบถาม: 081-000-1234`
+    const { data: hist } = await supabase
+      .from('lesson_logs').select('lesson_number, lesson_date, topic')
+      .eq('enrollment_id', enrollment.id).order('lesson_number', { ascending: true })
 
-    // Simulate LINE notify
-    await simulateLineNotify(message)
+    const historyLines = (hist ?? []).map((h: any) => {
+      const d = new Date(h.lesson_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+      return `  ครั้งที่ ${h.lesson_number} — ${d}${h.topic ? ` (${h.topic})` : ''}`
+    }).join('\n')
 
-    // Save alert record
-    await supabase.from('alerts').insert({
-      enrollment_id: enrollment.id,
-      student_id: enrollment.student_id,
-      alert_type: 'course_ending',
-      message,
-      lessons_remaining: remaining,
-      is_sent: true,
-      sent_at: new Date().toISOString(),
-      sent_via: 'line',
-    })
+    const note = remaining <= 0
+      ? 'หมดคอร์สแล้ว กรุณาต่อคอร์สนะคะ 📚'
+      : `เหลืออีก ${remaining} ครั้ง แนะนำต่อคอร์สก่อนหมดนะคะ 📚`
 
-    toast.success(`จำลองส่ง LINE ให้ผู้ปกครองน้อง${name} แล้ว`)
+    const message = [
+      `สรุปการเรียน ${school.name}`,
+      `น้อง${name} — ${enrollment.course?.name || ''}`,
+      ``,
+      historyLines || '  (ยังไม่มีประวัติการเรียน)',
+      ``,
+      `เรียนไปแล้ว ${enrollment.lessons_used}/${enrollment.lessons_total} ครั้ง`,
+      note,
+      ``,
+      `ขอบคุณที่ไว้วางใจ ${school.name} นะคะ`,
+    ].join('\n')
+
+    setPreview({ name, message })
     setSending(null)
-    loadData()
   }
 
-  async function sendAllAlerts() {
-    for (const e of expiring) { await sendAlert(e) }
-    toast.success('จำลองส่งแจ้งเตือนทั้งหมดแล้ว')
-  }
 
   async function saveSettings() {
     await supabase.from('alert_settings').update(settings).eq('id', (await supabase.from('alert_settings').select('id').single()).data?.id)
@@ -89,9 +94,7 @@ export default function AlertsPage() {
           <p className="text-sm text-gray-500 mt-0.5">จัดการแจ้งเตือนใกล้หมดคอร์ส</p>
         </div>
         {expiring.length > 0 && (
-          <button onClick={sendAllAlerts} className="btn-brand">
-            📨 ส่งทั้งหมด ({expiring.length} คน)
-          </button>
+          <span className="text-sm text-gray-500">{expiring.length} คนใกล้หมดคอร์ส</span>
         )}
       </div>
 
@@ -133,11 +136,11 @@ export default function AlertsPage() {
                         <div className="text-xs text-gray-400">คงเหลือ</div>
                       </div>
                       <button
-                        onClick={() => sendAlert(e)}
+                        onClick={() => openPreview(e)}
                         disabled={sending === e.id}
                         className="btn-brand btn-sm flex-shrink-0"
                       >
-                        {sending === e.id ? '...' : '📲 แจ้ง LINE'}
+                        {sending === e.id ? '...' : '📋 สรุปส่งผู้ปกครอง'}
                       </button>
                     </div>
                   )
@@ -226,6 +229,42 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
+      {/* โมดัลพรีวิว — ทวนก่อนคัดลอกส่งผู้ปกครอง */}
+      {preview && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="bg-white dark:bg-[#242d3f] rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col shadow-xl"
+            onClick={ev => ev.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="font-semibold text-gray-900 dark:text-white">สรุปการเรียนน้อง{preview.name}</div>
+              <div className="text-xs text-gray-400 mt-0.5">ตรวจดูวันที่เรียนให้ถูกต้องก่อนคัดลอก</div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-5">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 font-sans leading-relaxed bg-gray-50 dark:bg-[#1a2030] rounded-xl p-4 border border-gray-100 dark:border-gray-700">{preview.message}</pre>
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+              <button
+                className="btn-brand flex-1"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(preview.message)
+                  toast.success('คัดลอกแล้ว นำไปวางใน LINE ผู้ปกครองได้เลย')
+                  setPreview(null)
+                }}
+              >
+                📋 คัดลอกข้อความ
+              </button>
+              <button className="btn-outline flex-1" onClick={() => setPreview(null)}>ปิด</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
