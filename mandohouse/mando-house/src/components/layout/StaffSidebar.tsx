@@ -36,6 +36,7 @@ const navItems = [
     group: 'การเงิน',
     items: [
       { href: '/staff/receipts', label: 'รายรับ' },
+      { href: '/staff/company-receipts', label: 'ใบเสร็จบริษัท' },
       { href: '/staff/expenses', label: 'รายจ่าย' },
       { href: '/staff/settings', label: 'Finance' },
       { href: '/staff/import', label: 'Download file' },
