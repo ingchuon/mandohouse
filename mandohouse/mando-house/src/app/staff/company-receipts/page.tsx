@@ -74,7 +74,7 @@ const PAYMENT_LABEL: Record<string, string> = {
 
 /* ────────────────── types ────────────────── */
 
-type Item = { description: string; quantity: number; unit_price: number }
+type Item = { course_id?: string; description: string; quantity: number; unit_price: number }
 
 type Profile = {
   school_id: string
@@ -127,7 +127,7 @@ function blankForm(vatDefault: boolean, vatRate: number) {
     vat_enabled: vatDefault,
     vat_rate: vatRate,
     price_includes_vat: false,
-    items: [{ description: '', quantity: 1, unit_price: 0 }] as Item[],
+    items: [{ course_id: '', description: '', quantity: 1, unit_price: 0 }] as Item[],
   }
 }
 
@@ -140,6 +140,7 @@ export default function CompanyReceiptsPage() {
   const [profileDraft, setProfileDraft] = useState<Profile>(EMPTY_PROFILE)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [students, setStudents] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
   const [receipts, setReceipts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -165,11 +166,12 @@ export default function CompanyReceiptsPage() {
       if (p?.school_id) schoolId = p.school_id
     }
 
-    const [{ data: prof }, { data: cus }, { data: rec }, { data: stu }] = await Promise.all([
+    const [{ data: prof }, { data: cus }, { data: rec }, { data: stu }, { data: crs }] = await Promise.all([
       supabase.from('company_profiles').select('*').eq('school_id', schoolId).maybeSingle(),
       supabase.from('company_customers').select('*').order('last_used_at', { ascending: false, nullsFirst: false }),
       supabase.from('company_receipts').select('*').order('issued_at', { ascending: false }).limit(200),
       supabase.from('students').select('id, full_name, nickname').eq('is_active', true).order('nickname'),
+      supabase.from('courses').select('id, name, type, total_lessons, price').eq('is_active', true).order('name'),
     ])
 
     let finalProfile: Profile
@@ -187,6 +189,7 @@ export default function CompanyReceiptsPage() {
     setCustomers((cus ?? []) as Customer[])
     setReceipts(rec ?? [])
     setStudents(stu ?? [])
+    setCourses(crs ?? [])
     setLoading(false)
   }
 
@@ -245,8 +248,25 @@ export default function CompanyReceiptsPage() {
   function setItem(idx: number, patch: Partial<Item>) {
     setForm(f => ({ ...f, items: f.items.map((it, i) => i === idx ? { ...it, ...patch } : it) }))
   }
+  function setItemCourse(idx: number, courseId: string) {
+    // "" = ยังไม่เลือก, "__other__" = อื่นๆ (พิมพ์เอง), อื่นๆ = id คอร์สจริง
+    if (courseId === '' || courseId === '__other__') {
+      setItem(idx, { course_id: courseId })
+      return
+    }
+    const c = courses.find(x => x.id === courseId)
+    if (!c) { setItem(idx, { course_id: courseId }); return }
+    const name = (c.name ?? '').trim()
+    const desc = c.total_lessons ? `${name} (${c.total_lessons} ครั้ง)` : name
+    setItem(idx, {
+      course_id: courseId,
+      description: desc,
+      unit_price: Number(c.price) || 0,   // ราคาจากตารางคอร์สเสมอ (กันค่า 0 จาก state async)
+      quantity: 1,
+    })
+  }
   function addItem() {
-    setForm(f => ({ ...f, items: [...f.items, { description: '', quantity: 1, unit_price: 0 }] }))
+    setForm(f => ({ ...f, items: [...f.items, { course_id: '', description: '', quantity: 1, unit_price: 0 }] }))
   }
   function removeItem(idx: number) {
     setForm(f => ({ ...f, items: f.items.length <= 1 ? f.items : f.items.filter((_, i) => i !== idx) }))
@@ -263,11 +283,12 @@ export default function CompanyReceiptsPage() {
     setEditId(r.id)
     const items: Item[] = Array.isArray(r.items) && r.items.length
       ? r.items.map((it: any) => ({
+          course_id: it.course_id ?? '',
           description: it.description ?? '',
           quantity: Number(it.quantity ?? 1),
           unit_price: Number(it.unit_price ?? 0),
         }))
-      : [{ description: '', quantity: 1, unit_price: 0 }]
+      : [{ course_id: '', description: '', quantity: 1, unit_price: 0 }]
     setForm({
       customer_id: r.customer_id ?? '',
       customer_name: r.customer_name ?? '',
@@ -296,6 +317,7 @@ export default function CompanyReceiptsPage() {
     const cleanItems = form.items
       .filter(it => it.description.trim() !== '' || Number(it.unit_price) > 0)
       .map(it => ({
+        course_id: it.course_id && it.course_id !== '__other__' ? it.course_id : null,
         description: it.description.trim(),
         quantity: Number(it.quantity) || 0,
         unit_price: Number(it.unit_price) || 0,
@@ -825,31 +847,50 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                   <div className="text-sm font-medium">รายการ</div>
                   <button type="button" onClick={addItem} className="btn-outline btn-sm">+ เพิ่มรายการ</button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {form.items.map((it, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-12 md:col-span-6">
-                        {i === 0 && <label className="label">รายละเอียด</label>}
-                        <input className="input" placeholder="เช่น คอร์สภาษาจีน 20 ครั้ง"
-                          value={it.description}
-                          onChange={e => setItem(i, { description: e.target.value })} />
-                      </div>
-                      <div className="col-span-3 md:col-span-2">
-                        {i === 0 && <label className="label">จำนวน</label>}
-                        <input className="input" type="number" min={0} step="any" value={it.quantity}
-                          onChange={e => setItem(i, { quantity: Number(e.target.value) })} />
-                      </div>
-                      <div className="col-span-5 md:col-span-2">
-                        {i === 0 && <label className="label">ราคา/หน่วย</label>}
-                        <input className="input" type="number" min={0} step="any" value={it.unit_price}
-                          onChange={e => setItem(i, { unit_price: Number(e.target.value) })} />
-                      </div>
-                      <div className="col-span-3 md:col-span-1 text-right text-sm pb-2 font-medium">
-                        {money((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))}
-                      </div>
-                      <div className="col-span-1 pb-1">
+                    <div key={i} className="rounded-xl border border-gray-100 dark:border-[#3a4560] p-3">
+                      <div className="flex items-end gap-2 mb-2">
+                        <div className="flex-1">
+                          <label className="label">คอร์ส</label>
+                          <select className="input" value={it.course_id ?? ''}
+                            onChange={e => setItemCourse(i, e.target.value)}>
+                            <option value="">— เลือกคอร์สจากระบบ —</option>
+                            {courses.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}{c.total_lessons ? ` (${c.total_lessons} ครั้ง)` : ''} · {money(Number(c.price))} ฿
+                              </option>
+                            ))}
+                            <option value="__other__">อื่นๆ (ระบุรายละเอียดเอง)</option>
+                          </select>
+                        </div>
                         <button type="button" onClick={() => removeItem(i)}
-                          className="text-gray-300 hover:text-red-500 px-1" title="ลบรายการ">✕</button>
+                          className="text-gray-300 hover:text-red-500 px-2 pb-2" title="ลบรายการ">✕</button>
+                      </div>
+                      <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-12 md:col-span-6">
+                          <label className="label">รายละเอียด{it.course_id === '__other__' ? ' *' : ''}</label>
+                          <input className="input"
+                            placeholder={it.course_id === '__other__' ? 'พิมพ์รายการที่ต้องการ เช่น ค่าหนังสือ, ค่าสอบ HSK' : 'เพิ่ม/แก้รายละเอียดได้'}
+                            value={it.description}
+                            onChange={e => setItem(i, { description: e.target.value })} />
+                        </div>
+                        <div className="col-span-4 md:col-span-2">
+                          <label className="label">จำนวน</label>
+                          <input className="input" type="number" min={0} step="any" value={it.quantity}
+                            onChange={e => setItem(i, { quantity: Number(e.target.value) })} />
+                        </div>
+                        <div className="col-span-4 md:col-span-2">
+                          <label className="label">ราคา/หน่วย</label>
+                          <input className="input" type="number" min={0} step="any" value={it.unit_price}
+                            onChange={e => setItem(i, { unit_price: Number(e.target.value) })} />
+                        </div>
+                        <div className="col-span-4 md:col-span-2 text-right">
+                          <label className="label">รวม</label>
+                          <div className="text-sm font-medium py-2">
+                            {money((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
