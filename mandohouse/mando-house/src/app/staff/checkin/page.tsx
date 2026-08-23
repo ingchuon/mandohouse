@@ -199,7 +199,9 @@ export default function CheckinPage() {
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
 
-    if (enrollmentId && (teacher || topic || homework)) {
+    // สร้าง lesson_logs ทุกครั้งที่เช็กอิน (ครู/หัวข้อ/การบ้าน เป็นข้อมูลเสริมที่ไม่บังคับ)
+    // — กันเลขครั้งกระโดด: เดิมสร้าง log เฉพาะตอนเลือกครู ทำให้ประวัติขาดช่วง
+    if (enrollmentId) {
       const { data: existing } = await supabase
         .from('lesson_logs').select('id, teacher_name, duration_minutes, subject_name')
         .eq('enrollment_id', enrollmentId).eq('lesson_date', lessonDate)
