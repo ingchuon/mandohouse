@@ -24,6 +24,7 @@ export default function ExpensesPage() {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
+  const [filterPaidBy, setFilterPaidBy] = useState<'all' | 'บริษัท' | 'ส่วนตัว'>('all')
   const [form, setForm] = useState({
     category_id: '', title: '', amount: '',
     expense_date: new Date().toISOString().split('T')[0],
@@ -138,7 +139,14 @@ export default function ExpensesPage() {
     loadData()
   }
 
-  const totalExpense = expenses.reduce((s, e) => s + Number(e.amount), 0)
+  // กรองตาม paid_by (ทั้งหมด / บริษัท / ส่วนตัว)
+  const filteredExpenses = filterPaidBy === 'all'
+    ? expenses
+    : expenses.filter(e => (e.paid_by ?? '').trim() === filterPaidBy)
+  const totalExpenseBiz = expenses.filter(e => (e.paid_by ?? '').trim() === 'บริษัท').reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpensePersonal = expenses.filter(e => (e.paid_by ?? '').trim() === 'ส่วนตัว').reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpenseUnknown = expenses.filter(e => !(e.paid_by ?? '').trim()).reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpense = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0)
   const [firstOfMonth, lastOfMonth] = getMonthRange(filterMonth)
   const totalIncome = receipts
     .filter(r => r.issued_at >= firstOfMonth && r.issued_at <= lastOfMonth)
@@ -172,6 +180,23 @@ export default function ExpensesPage() {
           <select className="input w-auto text-sm" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
             {monthOptions.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
+          {/* toggle บริษัท / ส่วนตัว */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-[#3a4560] overflow-hidden text-sm">
+            {(['all', 'บริษัท', 'ส่วนตัว'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setFilterPaidBy(v)}
+                className={`px-3 py-1.5 whitespace-nowrap transition-colors ${
+                  filterPaidBy === v
+                    ? 'bg-brand-700 text-white font-semibold'
+                    : 'text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a3245]'
+                }`}
+                style={filterPaidBy === v ? { backgroundColor: '#1C3A2A' } : {}}
+              >
+                {v === 'all' ? 'ทั้งหมด' : v}
+              </button>
+            ))}
+          </div>
           <button onClick={() => { setEditExpense(null); resetForm(); setShowForm(true) }} className="btn-brand whitespace-nowrap">
             + บันทึกรายจ่าย
           </button>
@@ -200,6 +225,38 @@ export default function ExpensesPage() {
           </div>
         </div>
       </div>
+
+      {/* paid_by breakdown — แสดงเสมอไม่ว่าจะกรองแบบไหน */}
+      {(totalExpenseBiz > 0 || totalExpensePersonal > 0 || totalExpenseUnknown > 0) && (
+        <div className="card p-4 mb-5">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">รายจ่ายแยกตามผู้จ่าย (ทั้งเดือน)</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className={`rounded-xl p-3 border-2 cursor-pointer transition-all ${filterPaidBy==='บริษัท' ? 'border-brand-600' : 'border-transparent bg-gray-50 dark:bg-[#1e2738]'}`}
+              onClick={() => setFilterPaidBy(filterPaidBy==='บริษัท' ? 'all' : 'บริษัท')}>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">🏢 บริษัท</div>
+              <div className="font-semibold text-sm text-red-500">{formatThaiMoney(totalExpenseBiz)}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">
+                {expenses.filter(e=>(e.paid_by??'').trim()==='บริษัท').length} รายการ
+              </div>
+            </div>
+            <div className={`rounded-xl p-3 border-2 cursor-pointer transition-all ${filterPaidBy==='ส่วนตัว' ? 'border-brand-600' : 'border-transparent bg-gray-50 dark:bg-[#1e2738]'}`}
+              onClick={() => setFilterPaidBy(filterPaidBy==='ส่วนตัว' ? 'all' : 'ส่วนตัว')}>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">👤 ส่วนตัว</div>
+              <div className="font-semibold text-sm text-orange-500">{formatThaiMoney(totalExpensePersonal)}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">
+                {expenses.filter(e=>(e.paid_by??'').trim()==='ส่วนตัว').length} รายการ
+              </div>
+            </div>
+            <div className={`rounded-xl p-3 border-2 border-transparent bg-gray-50 dark:bg-[#1e2738]`}>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">❓ ไม่ระบุ</div>
+              <div className="font-semibold text-sm text-gray-400">{formatThaiMoney(totalExpenseUnknown)}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">
+                {expenses.filter(e=>!(e.paid_by??'').trim()).length} รายการ
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 6-month chart */}
       <div className="card p-5 mb-5">
@@ -260,12 +317,13 @@ export default function ExpensesPage() {
                     <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">วันที่</th>
                     <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">รายการ</th>
                     <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">หมวด</th>
+                    <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">จ่ายโดย</th>
                     <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">จำนวน</th>
                     <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map(exp => (
+                  {filteredExpenses.map(exp => (
                     <tr key={exp.id} className="table-row-hover border-t border-gray-50 dark:border-[#2a3245]">
                       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {formatDate(exp.expense_date, 'd MMM')}
@@ -284,6 +342,17 @@ export default function ExpensesPage() {
                           <span className="text-xs flex items-center gap-1 whitespace-nowrap">
                             <span>{exp.category.icon}</span>
                             <span style={{ color: exp.category.color }}>{exp.category.name}</span>
+                          </span>
+                        ) : <span className="text-xs text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {exp.paid_by ? (
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                            exp.paid_by.trim() === 'บริษัท'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                          }`}>
+                            {exp.paid_by.trim() === 'บริษัท' ? '🏢 บริษัท' : '👤 ส่วนตัว'}
                           </span>
                         ) : <span className="text-xs text-gray-300">—</span>}
                       </td>
