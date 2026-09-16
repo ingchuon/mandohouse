@@ -5,6 +5,15 @@ import type { Student, Enrollment } from '@/types'
 import toast from 'react-hot-toast'
 import { useSchool } from '@/lib/school-context'
 
+function roundNowHHMM() {
+  const d = new Date(Date.now() + 7 * 60 * 60 * 1000) // Bangkok
+  let h = d.getUTCHours()
+  const min = d.getUTCMinutes()
+  const m = min < 15 ? 0 : min < 45 ? 30 : 0
+  if (min >= 45) h = (h + 1) % 24
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 interface Teacher {
   id: string
   full_name: string
@@ -104,6 +113,8 @@ export default function CheckinPage() {
   const [noteText, setNoteText] = useState('')
 
   const [durationMinutes, setDurationMinutes] = useState(60)
+  const [mode, setMode] = useState<'onsite' | 'online'>('onsite')
+  const [sessionStart, setSessionStart] = useState(() => roundNowHHMM())
   const [subjectName, setSubjectName] = useState('')
   const [topic, setTopic] = useState('')
   const [homework, setHomework] = useState('')
@@ -196,6 +207,8 @@ export default function CheckinPage() {
       student_id: selectedStudent,
       enrollment_id: enrollmentId,
       check_in_at: checkinTime,
+      mode: mode,
+      session_start: sessionStart || null,
     })
     if (error) { toast.error('เช็กอินไม่สำเร็จ'); setLoading(false); return }
 
@@ -867,6 +880,27 @@ export default function CheckinPage() {
                       <option key={t.id} value={t.id}>{t.full_name}{t.subject ? ` (${t.subject})` : ''}</option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="label">รูปแบบเรียน</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['onsite', 'online'] as const).map(mo => (
+                      <button key={mo} onClick={() => setMode(mo)}
+                        className={`py-2 rounded-lg text-xs font-medium border transition-all ${
+                          mode === mo
+                            ? 'bg-brand-500 text-white border-brand-500'
+                            : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
+                        }`}
+                      >{mo === 'onsite' ? 'ที่ร้าน' : 'ออนไลน์'}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">เวลาเริ่มคาบ</label>
+                  <input type="time" step="1800" className="input"
+                    value={sessionStart} onChange={e => setSessionStart(e.target.value)} />
                 </div>
 
                 <div>
