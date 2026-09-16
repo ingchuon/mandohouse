@@ -156,27 +156,30 @@ export default function TeacherPayrollPage() {
     }
 
     // 5) จับกลุ่มเป็นคาบ
-    const groups = new Map<string, Row[]>()
+    const groups: Record<string, Row[]> = {}
     for (const r of rows) {
       const isGroupCourse = r.courseType === 'group' || r.courseType === 'pair'
       let key: string
       if (r.groupCode) key = `${r.date}|G|${r.groupCode}`
       else if (isGroupCourse) key = `${r.date}|T|${r.time}`
       else key = `${r.date}|S|${r.cid}` // เดี่ยว = แยกคาบเสมอ
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key)!.push(r)
+      if (!groups[key]) groups[key] = []
+      groups[key].push(r)
     }
 
     // 6) คำนวณเงินต่อคาบ
     const out: Session[] = []
-    for (const [, rs] of groups) {
+    for (const key of Object.keys(groups)) {
+      const rs = groups[key]
       const first = rs[0]
-      const distinct = new Map(rs.map(r => [r.studentId, r]))
-      const heads = Array.from(distinct.values()).reduce((sum, r) => sum + (r.heads || 1), 0)
+      const distinct: Record<string, Row> = {}
+      rs.forEach(r => { distinct[r.studentId] = r })
+      const distinctRows = Object.values(distinct)
+      const heads = distinctRows.reduce((sum, r) => sum + (r.heads || 1), 0)
       const hours = (first.duration || 60) / 60
       const rate = first.mode === 'online' ? t.rate_online : t.rate_onsite
       const extraFee = t.extra_person_fee ?? 50
-      const names = Array.from(distinct.values()).map(r => r.name).join(' + ')
+      const names = distinctRows.map(r => r.name).join(' + ')
       const total = rate == null ? null : hours * rate + Math.max(0, heads - 1) * extraFee * hours
       out.push({
         date: first.date,
