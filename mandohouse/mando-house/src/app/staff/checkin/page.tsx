@@ -892,7 +892,7 @@ export default function CheckinPage() {
                             ? 'bg-brand-500 text-white border-brand-500'
                             : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
                         }`}
-                      >{mo === 'onsite' ? 'ที่ร้าน' : 'ออนไลน์'}</button>
+                      >{mo}</button>
                     ))}
                   </div>
                 </div>
