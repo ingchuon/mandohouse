@@ -899,8 +899,13 @@ export default function CheckinPage() {
 
                 <div>
                   <label className="label">เวลาเริ่มคาบ</label>
-                  <input type="time" step="1800" className="input"
-                    value={sessionStart} onChange={e => setSessionStart(e.target.value)} />
+                  <select className="input"
+                    value={sessionStart} onChange={e => setSessionStart(e.target.value)}>
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const v = `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`
+                      return <option key={v} value={v}>{v}</option>
+                    })}
+                  </select>
                 </div>
 
                 <div>
