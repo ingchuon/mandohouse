@@ -27,6 +27,7 @@ const navItems = [
     group: 'การสอน',
     items: [
       { href: '/staff/teaching-report', label: 'ชั่วโมงสอน' },
+      { href: '/staff/teacher-payroll', label: 'รายงานค่าสอนครู' },
       { href: '/staff/teachers', label: 'ครูผู้สอน' },
       { href: '/staff/teacher-rates', label: 'เรตค่าสอนครู' },
       { href: '/staff/schedule', label: 'ตารางสอน' },
