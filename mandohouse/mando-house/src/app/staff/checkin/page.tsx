@@ -113,7 +113,7 @@ export default function CheckinPage() {
   const [noteText, setNoteText] = useState('')
 
   const [durationMinutes, setDurationMinutes] = useState(60)
-  const [mode, setMode] = useState<'onsite' | 'online'>('onsite')
+  const [mode, setMode] = useState<'' | 'onsite' | 'online'>('')
   const [sessionStart, setSessionStart] = useState(() => roundNowHHMM())
   const [subjectName, setSubjectName] = useState('')
   const [topic, setTopic] = useState('')
@@ -176,6 +176,7 @@ export default function CheckinPage() {
     setSelectedStudent(''); setSelectedEnrollmentId(''); setSelectedTeacherId('')
     setStudentSearch(''); setCustomDate(''); setDurationMinutes(60)
     setSubjectName(''); setTopic(''); setHomework('')
+    setMode(''); setSessionStart(roundNowHHMM())
   }
 
   async function handleCheckin() {
@@ -505,7 +506,7 @@ export default function CheckinPage() {
   const isEnrollFull = selectedEnroll && selectedEnroll.lessons_total > 0
     && selectedEnroll.lessons_used >= selectedEnroll.lessons_total
 
-  const checkinDisabled = loading || !selectedStudent || !selectedTeacherId
+  const checkinDisabled = loading || !selectedStudent || !selectedTeacherId || !mode
     || (hasMultipleCourses && !selectedEnrollmentId) || (isBackdate && !customDate)
     || !!isEnrollFull
 
