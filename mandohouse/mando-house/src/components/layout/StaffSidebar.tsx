@@ -50,6 +50,7 @@ const navItems = [
       { href: '/staff/team', label: 'จัดการทีม' },
       { href: '/staff/school-settings', label: 'Setting' },
       { href: '/staff/subscriptions', label: 'Subscription' },
+      { href: '/staff/system-health', label: 'สุขภาพระบบ' },
       { href: '/staff/help', label: 'คู่มือการใช้งาน' },
     ],
   },
@@ -123,7 +124,7 @@ export default function StaffSidebar() {
   const filteredNavItems = navItems.map(group => ({
     ...group,
     items: group.items.filter(item => {
-      if (item.href === '/staff/subscriptions') return schoolId === 'mando'
+      if (item.href === '/staff/subscriptions' || item.href === '/staff/system-health') return schoolId === 'mando'
       return true
     }),
   })).filter(group => group.items.length > 0)
