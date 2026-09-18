@@ -158,11 +158,10 @@ export default function TeacherPayrollPage() {
     // 5) จับกลุ่มเป็นคาบ
     const groups: Record<string, Row[]> = {}
     for (const r of rows) {
-      const isGroupCourse = r.courseType === 'group' || r.courseType === 'pair'
+      // จับกลุ่มเฉพาะ "รหัสกลุ่ม" ที่ตั้งไว้เท่านั้น — ไม่มีรหัส = เดี่ยวเสมอ
       let key: string
       if (r.groupCode) key = `${r.date}|G|${r.groupCode}`
-      else if (isGroupCourse) key = `${r.date}|T|${r.time}`
-      else key = `${r.date}|S|${r.cid}` // เดี่ยว = แยกคาบเสมอ
+      else key = `${r.date}|S|${r.cid}`
       if (!groups[key]) groups[key] = []
       groups[key].push(r)
     }
@@ -200,10 +199,13 @@ export default function TeacherPayrollPage() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
       <style dangerouslySetInnerHTML={{ __html: `
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
           body * { visibility: hidden !important; }
           #payroll-print, #payroll-print * { visibility: visible !important; }
-          #payroll-print { position: absolute; left: 0; top: 0; width: 100%; padding: 12px; }
+          #payroll-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0; border: none; }
+          #payroll-print table { font-size: 10px; }
+          #payroll-print th, #payroll-print td { padding: 3px 5px; }
           .no-print { display: none !important; }
         }
       `}} />
@@ -268,14 +270,14 @@ export default function TeacherPayrollPage() {
                   <tr className="bg-gray-100 dark:bg-[#232838] text-gray-600 dark:text-gray-300">
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">วัน</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">วันที่</th>
-                    <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">เวลา</th>
+                    <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 whitespace-nowrap">เวลา</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-left">ชื่อนักเรียน</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">โหมด</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">ชม.</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">บาท/ชม.</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">คน</th>
                     <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">รวม (บาท)</th>
-                    <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">หมายเหตุ</th>
+                    <th className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 whitespace-nowrap">หมายเหตุ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,7 +287,7 @@ export default function TeacherPayrollPage() {
                       <tr key={i} className={s.heads > 1 ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}>
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center">{d.dow}</td>
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center">{d.label}</td>
-                        <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center">{s.timeText}</td>
+                        <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center whitespace-nowrap">{s.timeText}</td>
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5">{s.names}</td>
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center">{s.mode}</td>
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center">{s.hours}</td>
@@ -294,7 +296,7 @@ export default function TeacherPayrollPage() {
                         <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center font-semibold">
                           {s.total == null ? '—' : s.total.toLocaleString()}
                         </td>
-                        <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center text-gray-500">{s.note}</td>
+                        <td className="border border-gray-300 dark:border-[#3a4560] px-2 py-1.5 text-center text-gray-500 whitespace-nowrap">{s.note}</td>
                       </tr>
                     )
                   })}
