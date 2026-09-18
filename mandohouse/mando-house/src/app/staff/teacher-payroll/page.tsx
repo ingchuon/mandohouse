@@ -158,9 +158,9 @@ export default function TeacherPayrollPage() {
     // 5) จับกลุ่มเป็นคาบ
     const groups: Record<string, Row[]> = {}
     for (const r of rows) {
-      // จับกลุ่มเฉพาะ "รหัสกลุ่ม" ที่ตั้งไว้เท่านั้น — ไม่มีรหัส = เดี่ยวเสมอ
+      // จับกลุ่มเฉพาะ "รหัสกลุ่ม" ที่ตั้งไว้ + ต้องเป็นคาบเวลาเดียวกัน — ไม่มีรหัส = เดี่ยวเสมอ
       let key: string
-      if (r.groupCode) key = `${r.date}|G|${r.groupCode}`
+      if (r.groupCode) key = `${r.date}|G|${r.groupCode}|${r.time}`
       else key = `${r.date}|S|${r.cid}`
       if (!groups[key]) groups[key] = []
       groups[key].push(r)
