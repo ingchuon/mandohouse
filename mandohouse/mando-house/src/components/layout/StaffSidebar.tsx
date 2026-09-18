@@ -30,6 +30,7 @@ const navItems = [
       { href: '/staff/teacher-payroll', label: 'รายงานค่าสอนครู' },
       { href: '/staff/teachers', label: 'ครูผู้สอน' },
       { href: '/staff/teacher-rates', label: 'เรตค่าสอนครู' },
+      { href: '/staff/student-groups', label: 'จัดกลุ่มเรียน' },
       { href: '/staff/schedule', label: 'ตารางสอน' },
       { href: '/staff/courses', label: 'คอร์สและราคา' },
     ],
