@@ -13,48 +13,48 @@ import { SCHOOL_CONFIG } from '@/lib/config'
 // ---------- nav structure ----------
 const navItems = [
   {
-    group: 'Overview',
+    group: 'ภาพรวม',
       items: [
       { href: '/staff', label: 'Dashboard' },
     ],
   },
   {
-    group: 'Students',
+    group: 'นักเรียน',
       items: [
-      { href: '/staff/students',      label: 'Student Records' },
+      { href: '/staff/students',      label: 'ทะเบียนนักเรียน' },
       { href: '/staff/checkin',       label: 'Check-in / Check-out' },
-      { href: '/staff/student-groups',label: 'Study Groups' },
+      { href: '/staff/student-groups',label: 'กลุ่มเรียน' },
     ],
   },
   {
-    group: 'Teaching',
+    group: 'งานสอน',
       items: [
-      { href: '/staff/schedule',         label: 'Schedule' },
-      { href: '/staff/teaching-report',  label: 'Teaching Hours' },
-      { href: '/staff/teacher-payroll',  label: 'Payroll Report' },
-      { href: '/staff/teachers',         label: 'Instructors' },
-      { href: '/staff/courses',          label: 'Courses' },
+      { href: '/staff/schedule',         label: 'ตารางสอน' },
+      { href: '/staff/teaching-report',  label: 'ชั่วโมงการสอน' },
+      { href: '/staff/teacher-payroll',  label: 'รายงานค่าสอน' },
+      { href: '/staff/teachers',         label: 'ครูผู้สอน' },
+      { href: '/staff/courses',          label: 'คอร์สเรียน' },
     ],
   },
   {
-    group: 'Finance',
+    group: 'การเงิน',
       items: [
-      { href: '/staff/receipts',         label: 'Revenue' },
-      { href: '/staff/expenses',         label: 'Expenses' },
-      { href: '/staff/company-receipts', label: 'Invoices' },
-      { href: '/staff/settings',         label: 'Finance Settings' },
-      { href: '/staff/import',           label: 'Export Data' },
+      { href: '/staff/receipts',         label: 'รายรับ' },
+      { href: '/staff/expenses',         label: 'รายจ่าย' },
+      { href: '/staff/company-receipts', label: 'ใบเสร็จบริษัท' },
+      { href: '/staff/settings',         label: 'Finance' },
+      { href: '/staff/import',           label: 'Data Hub' },
     ],
   },
   {
-    group: 'System',
+    group: 'จัดการระบบ',
       items: [
-      { href: '/staff/teacher-rates',    label: 'Pay Rates' },
-      { href: '/staff/team',             label: 'Team Management' },
-      { href: '/staff/school-settings',  label: 'Settings' },
+      { href: '/staff/teacher-rates',    label: 'เรตค่าสอน' },
+      { href: '/staff/team',             label: 'จัดการทีมงาน' },
+      { href: '/staff/school-settings',  label: 'ตั้งค่าสถาบัน' },
       { href: '/staff/subscriptions',    label: 'Subscription' },
       { href: '/staff/system-health',    label: 'System Health' },
-      { href: '/staff/help',             label: 'Help & Guide' },
+      { href: '/staff/help',             label: 'คู่มือการใช้งาน' },
     ],
   },
 ]
@@ -152,7 +152,7 @@ function SidebarInner({
           </div>
           <div className="min-w-0">
             <div className="text-white font-semibold text-sm tracking-wide truncate">{schoolName}</div>
-            <div className="text-white/50 text-[10px] uppercase tracking-widest">Management</div>
+            <div className="text-white/50 text-[10px] tracking-wide">ระบบหลังบ้าน</div>
           </div>
         </div>
       </div>
@@ -164,7 +164,7 @@ function SidebarInner({
         </div>
         <div className="min-w-0">
           <div className="text-white text-xs font-medium truncate">{name || '—'}</div>
-          <div className="text-white/50 text-[10px]">Staff</div>
+          <div className="text-white/50 text-[10px]">เจ้าหน้าที่</div>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ function SidebarInner({
           onClick={onLogout}
           className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
         >
-          <span>Sign Out</span>
+          <span>ออกจากระบบ</span>
         </button>
       </div>
     </>
@@ -239,7 +239,7 @@ export default function StaffSidebar() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    toast.success('Signed out')
+    toast.success('ออกจากระบบแล้ว')
     router.push('/login')
   }
 
@@ -262,7 +262,7 @@ export default function StaffSidebar() {
           </div>
           <span className="text-white font-semibold text-sm truncate">{schoolName}</span>
         </div>
-        <button onClick={() => setDrawerOpen(true)} aria-label="Open menu"
+        <button onClick={() => setDrawerOpen(true)} aria-label="เปิดเมนู"
           className="text-white/90 hover:text-white p-2 -mr-2 text-lg flex-shrink-0">☰</button>
       </header>
 
@@ -275,7 +275,7 @@ export default function StaffSidebar() {
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}>
           <div className="flex justify-end px-3 pt-3">
-            <button onClick={() => setDrawerOpen(false)} aria-label="Close" className="text-white/80 hover:text-white p-1 text-lg">✕</button>
+            <button onClick={() => setDrawerOpen(false)} aria-label="ปิดเมนู" className="text-white/80 hover:text-white p-1 text-lg">✕</button>
           </div>
           <SidebarInner {...sidebarProps} />
         </aside>
