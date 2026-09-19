@@ -21,13 +21,13 @@ const navItems = [
   {
     group: 'นักเรียน',
       items: [
-      { href: '/staff/students',      label: 'ทะเบียนนักเรียน' },
+      { href: '/staff/students',      label: 'ข้อมูลนักเรียน' },
       { href: '/staff/checkin',       label: 'Check-in / Check-out' },
       { href: '/staff/student-groups',label: 'กลุ่มเรียน' },
     ],
   },
   {
-    group: 'งานสอน',
+    group: 'ครู',
       items: [
       { href: '/staff/schedule',         label: 'ตารางสอน' },
       { href: '/staff/teaching-report',  label: 'ชั่วโมงการสอน' },
