@@ -193,7 +193,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px', background: C.bg, colorScheme: 'dark' }}>
+    <div style={{ minHeight: '100vh', padding: '16px', background: C.bg, colorScheme: 'dark' }}>
       <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
 
         {/* Header */}
@@ -289,7 +289,7 @@ export default function SchedulePage() {
 
         {/* WEEK VIEW */}
         {!loading && view === 'week' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(130px, 1fr))', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
             {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i)).map((day, i) => {
               const key = ymd(day)
               const list = byDay[key] ?? []
@@ -327,68 +327,70 @@ export default function SchedulePage() {
 
         {/* MONTH VIEW */}
         {!loading && view === 'month' && (
-          <div style={{ borderRadius: '12px', padding: '12px', background: C.surface, border: '1px solid ' + C.border }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
-              {DAYS_SHORT.map(d => (
-                <div key={d} style={{ textAlign: 'center', fontSize: '11px', fontWeight: 600, padding: '4px 0', color: C.green }}>
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-              {Array.from({ length: 42 }, (_, i) => addDays(startOfWeek(startOfMonth(cursor)), i)).map(day => {
-                const key = ymd(day)
-                const list = byDay[key] ?? []
-                const inMonth = day.getMonth() === cursor.getMonth()
-                const isToday = key === todayKey
-                return (
-                  <button
-                    key={key}
-                    onClick={() => openDay(day)}
-                    style={{
-                      borderRadius: '8px',
-                      padding: '6px',
-                      minHeight: '80px',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      opacity: inMonth ? 1 : 0.25,
-                      background: isToday ? C.todayBg : C.surface2,
-                      border: '1px solid ' + (isToday ? C.todayBorder : C.border),
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 500, marginBottom: '4px', color: isToday ? C.green : C.text }}>
-                      {day.getDate()}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      {list.slice(0, 2).map(e => {
-                        const m = metaOf(e.account)
-                        return (
-                          <div
-                            key={e.id}
-                            style={{
-                              fontSize: '9px',
-                              borderRadius: '4px',
-                              padding: '1px 4px',
-                              background: hexAlpha(m.color, 0.2),
-                              color: m.color,
-                              textDecoration: e.cancelled ? 'line-through' : undefined,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {e.allDay ? '' : fmtTime(e.start) + ' '}
-                            {e.title}
-                          </div>
-                        )
-                      })}
-                      {list.length > 2 && (
-                        <div style={{ fontSize: '9px', color: C.textDim, padding: '0 2px' }}>+{list.length - 2} คลาส</div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
+          <div style={{ borderRadius: '12px', padding: '12px', background: C.surface, border: '1px solid ' + C.border, overflowX: 'auto' }}>
+            <div style={{ minWidth: '560px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
+                {DAYS_SHORT.map(d => (
+                  <div key={d} style={{ textAlign: 'center', fontSize: '11px', fontWeight: 600, padding: '4px 0', color: C.green }}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                {Array.from({ length: 42 }, (_, i) => addDays(startOfWeek(startOfMonth(cursor)), i)).map(day => {
+                  const key = ymd(day)
+                  const list = byDay[key] ?? []
+                  const inMonth = day.getMonth() === cursor.getMonth()
+                  const isToday = key === todayKey
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => openDay(day)}
+                      style={{
+                        borderRadius: '8px',
+                        padding: '6px',
+                        minHeight: '80px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        opacity: inMonth ? 1 : 0.25,
+                        background: isToday ? C.todayBg : C.surface2,
+                        border: '1px solid ' + (isToday ? C.todayBorder : C.border),
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', fontWeight: 500, marginBottom: '4px', color: isToday ? C.green : C.text }}>
+                        {day.getDate()}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {list.slice(0, 2).map(e => {
+                          const m = metaOf(e.account)
+                          return (
+                            <div
+                              key={e.id}
+                              style={{
+                                fontSize: '9px',
+                                borderRadius: '4px',
+                                padding: '1px 4px',
+                                background: hexAlpha(m.color, 0.2),
+                                color: m.color,
+                                textDecoration: e.cancelled ? 'line-through' : undefined,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {e.allDay ? '' : fmtTime(e.start) + ' '}
+                              {e.title}
+                            </div>
+                          )
+                        })}
+                        {list.length > 2 && (
+                          <div style={{ fontSize: '9px', color: C.textDim, padding: '0 2px' }}>+{list.length - 2} คลาส</div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
