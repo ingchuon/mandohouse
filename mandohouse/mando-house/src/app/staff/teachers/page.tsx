@@ -12,6 +12,9 @@ interface Teacher {
   subject: string | null
   pin: string | null
   is_active: boolean
+  rate_onsite: number | null
+  rate_online: number | null
+  extra_person_fee: number | null
 }
 
 function randomPin() {
@@ -27,7 +30,7 @@ export default function TeachersPage() {
 
   const [showForm, setShowForm] = useState(false)
   const [editTeacher, setEditTeacher] = useState<Teacher | null>(null)
-  const [form, setForm] = useState({ full_name: '', subject: '', pin: '' })
+  const [form, setForm] = useState({ full_name: '', subject: '', pin: '', rate_onsite: '', rate_online: '', extra_person_fee: '50' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { loadTeachers() }, [])
@@ -36,7 +39,7 @@ export default function TeachersPage() {
     setLoading(true)
     const { data } = await supabase
       .from('teachers')
-      .select('id, full_name, subject, pin, is_active')
+      .select('id, full_name, subject, pin, is_active, rate_onsite, rate_online, extra_person_fee')
       .order('full_name')
     setTeachers((data as Teacher[]) ?? [])
     setLoading(false)
@@ -44,13 +47,13 @@ export default function TeachersPage() {
 
   function openAdd() {
     setEditTeacher(null)
-    setForm({ full_name: '', subject: '', pin: randomPin() })
+    setForm({ full_name: '', subject: '', pin: randomPin(), rate_onsite: '', rate_online: '', extra_person_fee: '50' })
     setShowForm(true)
   }
 
   function openEdit(t: Teacher) {
     setEditTeacher(t)
-    setForm({ full_name: t.full_name, subject: t.subject ?? '', pin: t.pin ?? randomPin() })
+    setForm({ full_name: t.full_name, subject: t.subject ?? '', pin: t.pin ?? randomPin(), rate_onsite: t.rate_onsite?.toString() ?? '', rate_online: t.rate_online?.toString() ?? '', extra_person_fee: t.extra_person_fee?.toString() ?? '50' })
     setShowForm(true)
   }
 
@@ -66,6 +69,9 @@ export default function TeachersPage() {
         full_name: form.full_name.trim(),
         subject: form.subject.trim() || null,
         pin: form.pin,
+        rate_onsite: form.rate_onsite.trim() === '' ? null : Number(form.rate_onsite),
+        rate_online: form.rate_online.trim() === '' ? null : Number(form.rate_online),
+        extra_person_fee: form.extra_person_fee.trim() === '' ? 50 : Number(form.extra_person_fee),
       }).eq('id', editTeacher.id)
 
       if (error) { toast.error('แก้ไขไม่สำเร็จ: ' + error.message); setSaving(false); return }
@@ -76,6 +82,9 @@ export default function TeachersPage() {
         subject: form.subject.trim() || null,
         pin: form.pin,
         is_active: true,
+        rate_onsite: form.rate_onsite.trim() === '' ? null : Number(form.rate_onsite),
+        rate_online: form.rate_online.trim() === '' ? null : Number(form.rate_online),
+        extra_person_fee: form.extra_person_fee.trim() === '' ? 50 : Number(form.extra_person_fee),
       }])
 
       if (error) { toast.error('เพิ่มไม่สำเร็จ: ' + error.message); setSaving(false); return }
@@ -95,7 +104,7 @@ export default function TeachersPage() {
   }
 
   function resetPin(t: Teacher) {
-    setForm({ full_name: t.full_name, subject: t.subject ?? '', pin: randomPin() })
+    setForm({ full_name: t.full_name, subject: t.subject ?? '', pin: randomPin(), rate_onsite: t.rate_onsite?.toString() ?? '', rate_online: t.rate_online?.toString() ?? '', extra_person_fee: t.extra_person_fee?.toString() ?? '50' })
     setEditTeacher(t)
     setShowForm(true)
   }
@@ -248,6 +257,27 @@ export default function TeachersPage() {
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
                   ครูใช้ PIN นี้เข้าหน้า /teach ครั้งแรก (เปลี่ยนเองได้ทีหลัง)
+                </p>
+              </div>
+              <div>
+                <label className="label">ค่าสอน (บาท/ชม.)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input className="input text-sm" type="number" min="0" inputMode="numeric" placeholder="ที่ร้าน เช่น 200"
+                    value={form.rate_onsite}
+                    onChange={e => setForm({ ...form, rate_onsite: e.target.value })} />
+                  <input className="input text-sm" type="number" min="0" inputMode="numeric" placeholder="ออนไลน์ เช่น 150"
+                    value={form.rate_online}
+                    onChange={e => setForm({ ...form, rate_online: e.target.value })} />
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">ซ้าย = ที่ร้าน · ขวา = ออนไลน์</p>
+              </div>
+              <div>
+                <label className="label">ค่าคนเกิน 1 (บาท/คน/ชม.)</label>
+                <input className="input text-sm" type="number" min="0" inputMode="numeric" placeholder="50"
+                  value={form.extra_person_fee}
+                  onChange={e => setForm({ ...form, extra_person_fee: e.target.value })} />
+                <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
+                  ใช้คำนวณในรายงานค่าสอน — เว้นว่างช่องเรตได้ถ้ายังไม่กำหนด
                 </p>
               </div>
               <div className="flex gap-2 pt-1">
