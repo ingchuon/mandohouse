@@ -77,6 +77,8 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
     subject_name: '',
     topic: '',
     homework: '',
+    class_mode: 'onsite',
+    session_start: '',
   })
   const [studentSearch, setStudentSearch] = useState('')
 
@@ -235,6 +237,8 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         p_subject: form.subject_name || '',
         p_topic: form.topic || '',
         p_homework: form.homework || '',
+        p_class_mode: form.class_mode,
+        p_session_start: form.session_start || null,
         p_mode: mode,
       })
     }
@@ -275,7 +279,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
     else if (status === 'saved_special') toast.success('บันทึกชั่วโมงสอนวิชาเพิ่มแล้ว ✅ (ไม่หักครั้งเรียนซ้ำ)')
     else toast.success('บันทึกชั่วโมงสอนสำเร็จ ✅ หักครั้งเรียน 1 ครั้ง')
 
-    setForm({ enrollment_id: '', lesson_date: todayStr, duration_minutes: 60, subject_name: '', topic: '', homework: '' })
+    setForm({ enrollment_id: '', lesson_date: todayStr, duration_minutes: 60, subject_name: '', topic: '', homework: '', class_mode: 'onsite', session_start: '' })
     setStudentSearch('')
     setSaving(false)
     loadAll()
@@ -552,11 +556,49 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">วันที่สอน</label>
           <input
             type="date"
-            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-[#1a2030] text-gray-900 dark:text-gray-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-brand-400"
             value={form.lesson_date}
             max={todayStr}
             onChange={e => setForm(f => ({ ...f, lesson_date: e.target.value }))}
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">รูปแบบเรียน</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['onsite', 'online'] as const).map(mo => (
+              <button
+                key={mo}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, class_mode: mo }))}
+                className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                  form.class_mode === mo
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:border-brand-400'
+                }`}
+              >
+                {mo}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">เวลาเริ่มคาบ</label>
+          <select
+            className="w-full border border-gray-200 dark:border-[#3a4560] rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-[#1a2030] text-gray-900 dark:text-gray-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={form.session_start}
+            onChange={e => setForm(f => ({ ...f, session_start: e.target.value }))}
+          >
+            <option value="">— เลือกเวลา —</option>
+            {Array.from({ length: 48 }, (_, i) => {
+              const v = `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`
+              return <option key={v} value={v}>{v}</option>
+            })}
+          </select>
+          <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">
+            ใส่ให้ตรงคาบจริง โดยเฉพาะคาบกลุ่ม (ใช้จับกลุ่มในรายงานค่าสอน)
+          </p>
         </div>
 
         <div className="mb-4">
