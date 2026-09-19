@@ -107,7 +107,7 @@ export default function TeacherRatesPage() {
                   <td className="px-3 py-2.5">
                     <input
                       type="number" min="0" inputMode="numeric"
-                      className="input text-center text-sm py-1.5"
+                      className="input text-center text-sm py-1.5 px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       placeholder="200"
                       value={t.rate_onsite ?? ''}
                       onChange={e => setField(t.id, 'rate_onsite', e.target.value)}
@@ -116,7 +116,7 @@ export default function TeacherRatesPage() {
                   <td className="px-3 py-2.5">
                     <input
                       type="number" min="0" inputMode="numeric"
-                      className="input text-center text-sm py-1.5"
+                      className="input text-center text-sm py-1.5 px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       placeholder="150"
                       value={t.rate_online ?? ''}
                       onChange={e => setField(t.id, 'rate_online', e.target.value)}
@@ -125,7 +125,7 @@ export default function TeacherRatesPage() {
                   <td className="px-3 py-2.5">
                     <input
                       type="number" min="0" inputMode="numeric"
-                      className="input text-center text-sm py-1.5"
+                      className="input text-center text-sm py-1.5 px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       placeholder="50"
                       value={t.extra_person_fee ?? ''}
                       onChange={e => setField(t.id, 'extra_person_fee', e.target.value)}
