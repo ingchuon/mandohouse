@@ -23,8 +23,11 @@ export default function TeamPage() {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUserId(user?.id ?? null)
 
-    // รหัสเชิญของสถาบันนี้ (ใช้ให้ครูสมัครเข้าร่วมทีมเอง)
-    const { data: schoolRow } = await supabase.from('schools').select('invite_code').single()
+    // รหัสเชิญของสถาบันนี้ (ใช้ให้ครูสมัครเข้าร่วมทีมเอง) — กรองตามสถาบันของผู้ใช้ กัน .single() พังตอนเห็นหลายสถาบัน
+    const { data: myProfile } = await supabase
+      .from('profiles').select('school_id').eq('id', user?.id ?? '').single()
+    const { data: schoolRow } = await supabase
+      .from('schools').select('invite_code').eq('id', myProfile?.school_id ?? '').single()
     setInviteCode(schoolRow?.invite_code ?? null)
 
     const [{ data: profiles }, { data: enrollments }, { data: reviews }, { data: checkins }] = await Promise.all([
@@ -84,12 +87,27 @@ export default function TeamPage() {
     ? `${window.location.origin}/join?code=${inviteCode}` : ''
 
   async function copyInvite() {
-    if (!inviteLink) return
+    if (!inviteLink) { toast.error('ยังโหลดลิงก์เชิญไม่ได้ ลองรีเฟรชหน้าอีกครั้ง'); return }
+    // 1) clipboard API (ต้องเป็น HTTPS)
     try {
-      await navigator.clipboard.writeText(inviteLink)
-      toast.success('คัดลอกลิงก์เชิญแล้ว — ส่งให้ทีมงานได้เลย')
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(inviteLink)
+        toast.success('คัดลอกลิงก์เชิญแล้ว — ส่งให้ทีมงานได้เลย')
+        return
+      }
+    } catch { /* fall through */ }
+    // 2) fallback: textarea + execCommand
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = inviteLink
+      ta.style.position = 'fixed'; ta.style.opacity = '0'
+      document.body.appendChild(ta); ta.focus(); ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (ok) toast.success('คัดลอกลิงก์เชิญแล้ว — ส่งให้ทีมงานได้เลย')
+      else toast.error('คัดลอกไม่สำเร็จ กดค้างที่ลิงก์เพื่อคัดลอกเองได้')
     } catch {
-      toast.error('คัดลอกไม่สำเร็จ กรุณาคัดลอกด้วยตัวเอง')
+      toast.error('คัดลอกไม่สำเร็จ กดค้างที่ลิงก์เพื่อคัดลอกเองได้')
     }
   }
 
