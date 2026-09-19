@@ -28,7 +28,8 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     <SchoolProvider>
       <div className="flex min-h-screen">
         <StaffSidebar />
-        <main className="flex-1 overflow-auto bg-surface dark:bg-[#1a2030] pt-14 md:pt-0">
+        {/* min-w-0 = ห้าม main ขยายเกินจอ → หน้ากว้าง (เช่นตารางสอน) เลื่อนอยู่ใน main ไม่ดันทั้งแอป */}
+        <main className="flex-1 min-w-0 overflow-auto bg-surface dark:bg-[#1a2030] pt-14 md:pt-0">
           {children}
         </main>
       </div>
