@@ -103,6 +103,28 @@ export default function TeachersPage() {
     loadTeachers()
   }
 
+  async function copyTeachLink(t: Teacher) {
+    if (!t.pin) { toast.error('ครูคนนี้ยังไม่มี PIN — กด 🔑 PIN ก่อน'); return }
+    const url = `${window.location.origin}/teach`
+    const msg = `บันทึกชั่วโมงสอน — ครู${t.full_name}\n${url}\nPIN: ${t.pin}`
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(msg)
+        toast.success('คัดลอกลิงก์ + PIN แล้ว — ส่งให้ครูได้เลย')
+        return
+      }
+    } catch { /* fall through */ }
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = msg; ta.style.position = 'fixed'; ta.style.opacity = '0'
+      document.body.appendChild(ta); ta.focus(); ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (ok) toast.success('คัดลอกลิงก์ + PIN แล้ว — ส่งให้ครูได้เลย')
+      else toast.error('คัดลอกไม่สำเร็จ')
+    } catch { toast.error('คัดลอกไม่สำเร็จ') }
+  }
+
   function resetPin(t: Teacher) {
     setForm({ full_name: t.full_name, subject: t.subject ?? '', pin: randomPin(), rate_onsite: t.rate_onsite?.toString() ?? '', rate_online: t.rate_online?.toString() ?? '', extra_person_fee: t.extra_person_fee?.toString() ?? '50' })
     setEditTeacher(t)
@@ -199,6 +221,7 @@ export default function TeachersPage() {
                   </td>
                   <td>
                     <div className="flex gap-1.5 justify-end">
+                      <button onClick={() => copyTeachLink(t)} className="btn-outline btn-sm px-2" title="คัดลอกลิงก์ /teach + PIN">🔗</button>
                       <button onClick={() => resetPin(t)} className="btn-outline btn-sm" title="สุ่ม PIN ใหม่">🔑 PIN</button>
                       <button onClick={() => openEdit(t)} className="btn-outline btn-sm px-2">✎</button>
                       <button
