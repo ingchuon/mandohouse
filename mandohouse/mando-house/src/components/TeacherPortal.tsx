@@ -428,7 +428,11 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
 
   /* ─── Step 3: Main page ─── */
   return (
-    <div className="min-h-screen bg-[#F5F4F0] p-4 pb-10">
+    <div className="min-h-screen bg-[#F5F4F0] dark:bg-[#1a2030] p-4 pb-10">
+      <a href="/staff"
+        className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white mb-3">
+        &larr; กลับหน้าระบบหลังบ้าน
+      </a>
       {/* Header */}
       <div className="bg-white dark:bg-[#242d3f] rounded-2xl shadow-sm border border-gray-100 dark:border-[#3a4560] p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
