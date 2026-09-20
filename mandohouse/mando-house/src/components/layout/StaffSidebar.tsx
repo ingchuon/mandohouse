@@ -21,13 +21,13 @@ const navItems = [
   {
     group: 'นักเรียน',
       items: [
-      { href: '/staff/students',      label: 'ข้อมูลนักเรียน' },
+      { href: '/staff/students',      label: 'ทะเบียนนักเรียน' },
       { href: '/staff/checkin',       label: 'Check-in / Check-out' },
       { href: '/staff/student-groups',label: 'กลุ่มเรียน' },
     ],
   },
   {
-    group: 'ครู',
+    group: 'งานสอน',
       items: [
       { href: '/staff/schedule',         label: 'ตารางสอน' },
       { href: '/staff/teaching-report',  label: 'ชั่วโมงการสอน' },
@@ -254,7 +254,11 @@ export default function StaffSidebar() {
 
       {/* Mobile top bar */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-brand-500 dark:bg-[#141b2d] flex items-center justify-between px-4 border-b border-white/15 dark:border-[#2a3245]">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {pathname !== '/staff' && (
+            <button onClick={() => router.back()} aria-label="ย้อนกลับ"
+              className="text-white/90 hover:text-white px-1 -ml-1 text-xl flex-shrink-0 leading-none">&#8592;</button>
+          )}
           <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
             {logoUrl
               ? <img src={logoUrl} alt={schoolName} className="w-full h-full object-cover" />
