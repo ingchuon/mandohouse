@@ -287,8 +287,8 @@ export default function ReceiptsPage() {
         .sign{display:flex;justify-content:space-around;margin-top:44px;text-align:center}
         .sign .signname{min-height:18px;margin-bottom:4px}
         .sign .line{width:190px;border-bottom:1px dotted #666;height:1px;margin-bottom:6px}
-        @media print{@page{size:A4;margin:14mm}body{padding:0}}
-      </style></head><body>
+        @media print{@page{size:A4;margin:14mm}body{padding:0}.no-print{display:none!important}}
+      </style></head><body><button class="no-print" onclick="window.close()" style="position:fixed;top:10px;left:10px;z-index:999;padding:9px 16px;border:none;border-radius:9px;background:#1f3d2b;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)">&larr; ปิด</button>
 
       <div class="title-row">
         <span class="title">ใบเสร็จรับเงิน (Receipt)</span>
