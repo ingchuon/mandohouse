@@ -447,14 +447,14 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
         </div>
         <button
           onClick={() => setShowChangePin(true)}
-          className="text-xs text-brand-500 hover:text-brand-600 font-medium mb-3"
+          className="text-xs text-brand-500 dark:text-brand-300 hover:text-brand-600 font-medium mb-3"
         >
           🔑 เปลี่ยน PIN
         </button>
         <div className="grid grid-cols-2 gap-3 text-center">
-          <div className="bg-brand-50 rounded-xl py-3">
-            <div className="text-2xl font-bold text-brand-700">{totalHours}</div>
-            <div className="text-xs text-brand-500 mt-0.5">ชั่วโมงเดือนนี้</div>
+          <div className="bg-brand-50 dark:bg-brand-500/10 rounded-xl py-3">
+            <div className="text-2xl font-bold text-brand-700 dark:text-brand-300">{totalHours}</div>
+            <div className="text-xs text-brand-500 dark:text-brand-400 mt-0.5">ชั่วโมงเดือนนี้</div>
           </div>
           <div className="bg-gray-50 dark:bg-[#1e2533] rounded-xl py-3">
             <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">{totalSessions}</div>
@@ -480,10 +480,10 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
               const course = l.enrollments?.courses?.name ?? ''
               const hasTopic = !!(l.topic || l.homework)
               return (
-                <div key={l.id} className={`rounded-xl px-3 py-2.5 border ${hasTopic ? 'bg-brand-50 border-brand-100' : 'bg-amber-50 border-amber-100'}`}>
+                <div key={l.id} className={`rounded-xl px-3 py-2.5 border ${hasTopic ? 'bg-brand-50 dark:bg-brand-500/10 border-brand-100 dark:border-brand-500/30' : 'bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/30'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-brand-200 flex items-center justify-center text-brand-700 text-[10px] font-bold flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-brand-200 dark:bg-brand-500/30 flex items-center justify-center text-brand-700 dark:text-brand-200 text-[10px] font-bold flex-shrink-0">
                         {name.slice(0, 2)}
                       </div>
                       <div>
@@ -491,7 +491,7 @@ export default function TeacherPortal({ initialTeacherId }: { initialTeacherId?:
                         <div className="text-xs text-gray-400 dark:text-gray-300">{course}</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${hasTopic ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${hasTopic ? 'bg-brand-100 dark:bg-brand-500/20 text-brand-700 dark:text-brand-200' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'}`}>
                       {hasTopic ? '✓ กรอกแล้ว' : '⚠️ ยังไม่กรอก'}
                     </span>
                   </div>
