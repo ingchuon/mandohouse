@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { PLANS, LINE_ID, LINE_URL, LINE_QR, isTrial } from '@/lib/plans'
+import { LINE_ID, LINE_URL, LINE_QR, isTrial } from '@/lib/plans'
+import RenewalForm from '@/components/RenewalForm'
 
 const C = {
   cream: '#F5F0E8',
@@ -47,7 +48,8 @@ export default async function StatusPage() {
     message = 'เราได้รับแจ้งการชำระเงินของคุณแล้ว ทีมงานกำลังตรวจสอบ ระบบจะเปิดใช้งานภายใน 24 ชั่วโมง'
   }
 
-  const showPlans = school?.status !== 'pending'
+  // แสดงฟอร์มต่ออายุ/แพ็กเกจเฉพาะกรณีที่ยังไม่ได้ส่งสลิปรออนุมัติ และยังไม่ถูกระงับ
+  const showRenewal = school?.status !== 'pending' && school?.status !== 'rejected'
 
   return (
     <div style={{
@@ -60,7 +62,7 @@ export default async function StatusPage() {
           Tutor<em style={{ fontStyle: 'italic', color: C.green }}>cloud</em>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '32px 28px', textAlign: 'center', marginBottom: showPlans ? 20 : 0 }}>
+        <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '32px 28px', textAlign: 'center', marginBottom: showRenewal ? 20 : 0 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>{title}</h1>
           {school?.name && (
@@ -71,44 +73,16 @@ export default async function StatusPage() {
           </p>
         </div>
 
-        {showPlans && (
+        {showRenewal && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 20 }}>
-              {PLANS.map(p => (
-                <div key={p.id} style={{
-                  background: p.popular ? C.green : '#fff',
-                  border: `1.5px solid ${p.popular ? C.green : C.border}`,
-                  borderRadius: 14, padding: '22px 18px', textAlign: 'center', position: 'relative',
-                }}>
-                  {p.popular && (
-                    <div style={{ position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)', background: C.gold, color: C.green, fontSize: 11, fontWeight: 700, padding: '3px 12px', borderRadius: 99, whiteSpace: 'nowrap' }}>
-                      ★ คุ้มที่สุด
-                    </div>
-                  )}
-                  <div style={{ fontSize: 13, fontWeight: 600, color: p.popular ? 'rgba(255,255,255,.75)' : C.textMid, marginBottom: 6 }}>
-                    {p.name}
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 700, color: p.popular ? '#fff' : C.text }}>
-                    ฿{p.total.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 12, color: p.popular ? C.gold : C.textMid, marginTop: 4 }}>
-                    เฉลี่ย ฿{p.perMonth.toLocaleString()}/เดือน
-                  </div>
-                  {p.save > 0 && (
-                    <div style={{ fontSize: 11, color: p.popular ? 'rgba(255,255,255,.7)' : '#8a8478', marginTop: 6 }}>
-                      ประหยัด ฿{p.save.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <RenewalForm schoolId={schoolId ?? ''} />
 
             <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '26px 24px', textAlign: 'center' }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-                สั่งซื้อหรือสอบถามได้ทาง LINE
+                ไม่สะดวกอัปโหลดเอง? ทักทาง LINE
               </h2>
               <p style={{ fontSize: 13, color: C.textMid, lineHeight: 1.8, marginBottom: 18 }}>
-                ทักมาบอกแพ็กเกจที่ต้องการ ทีมงานจะส่งช่องทางชำระเงินให้<br />
+                ทักมาบอกแพ็กเกจที่ต้องการ ทีมงานจะช่วยดำเนินการให้<br />
                 เปิดใช้งานต่อทันทีหลังยืนยันการชำระเงิน
               </p>
               <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
@@ -130,7 +104,7 @@ export default async function StatusPage() {
           </>
         )}
 
-        {!showPlans && (
+        {!showRenewal && (
           <p style={{ textAlign: 'center', marginTop: 18 }}>
             <Link href="/login" style={{ fontSize: 13, color: C.textMid, textDecoration: 'none' }}>
               ← กลับหน้าเข้าสู่ระบบ
