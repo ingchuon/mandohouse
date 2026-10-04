@@ -122,8 +122,9 @@ export default function TeacherPayrollPage() {
 
     // 3) students (ชื่อ + head_count) และ enrollments (group_code + ประเภทคอร์ส)
     const [{ data: studs }, { data: enrs }] = await Promise.all([
-      supabase.from('students').select('id, nickname, full_name, head_count').in('id', studentIds),
-      supabase.from('enrollments').select('id, group_code, course:courses(type)').in('id', enrollIds),
+      // รหัสกลุ่มเก็บที่ตัวนักเรียนแล้ว (students.group_code) — คิดกลุ่มตามชื่อในกลุ่ม ไม่ผูกกับ enrollment
+      supabase.from('students').select('id, nickname, full_name, head_count, group_code').in('id', studentIds),
+      supabase.from('enrollments').select('id, course:courses(type)').in('id', enrollIds),
     ])
     const sMap = new Map((studs ?? []).map(s => [s.id, s]))
     const eMap = new Map((enrs ?? []).map(e => [e.id, e]))
@@ -150,7 +151,7 @@ export default function TeacherPayrollPage() {
         studentId: c.student_id,
         name: s?.nickname || s?.full_name || '(ไม่ระบุ)',
         heads: s?.head_count ?? 1,
-        groupCode: e?.group_code ?? null,
+        groupCode: s?.group_code ?? null,
         courseType: e?.course?.type ?? null,
       })
     }
