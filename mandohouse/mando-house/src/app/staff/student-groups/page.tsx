@@ -25,16 +25,16 @@ export default function StudentGroupsPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: studs }, { data: enrs }] = await Promise.all([
-      supabase.from('students').select('id, nickname, full_name').eq('is_active', true).order('nickname'),
-      supabase.from('enrollments').select('student_id, group_code').not('group_code', 'is', null),
-    ])
-    const codeMap = new Map<string, string>()
-    ;(enrs ?? []).forEach((e: any) => { if (e.group_code) codeMap.set(e.student_id, e.group_code) })
+    // รหัสกลุ่มเก็บที่ตัวนักเรียนแล้ว (students.group_code) — ไม่ต้องอ่านจาก enrollments อีก
+    const { data: studs } = await supabase
+      .from('students')
+      .select('id, nickname, full_name, group_code')
+      .eq('is_active', true)
+      .order('nickname')
     setStudents((studs ?? []).map((s: any) => ({
       id: s.id,
       name: s.nickname || s.full_name || '(ไม่ระบุ)',
-      group_code: codeMap.get(s.id) ?? null,
+      group_code: s.group_code ?? null,
     })))
     setLoading(false)
   }
@@ -61,8 +61,8 @@ export default function StudentGroupsPage() {
     if (!c) { toast.error('ใส่ชื่อ/รหัสกลุ่มก่อน'); return }
     if (selected.size < 2) { toast.error('เลือกอย่างน้อย 2 คน'); return }
     setSaving(true)
-    const { error } = await supabase.from('enrollments')
-      .update({ group_code: c }).in('student_id', Array.from(selected))
+    const { error } = await supabase.from('students')
+      .update({ group_code: c }).in('id', Array.from(selected))
     setSaving(false)
     if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
     toast.success(`บันทึกกลุ่ม "${c}" แล้ว`)
@@ -70,8 +70,8 @@ export default function StudentGroupsPage() {
   }
 
   async function removeStudent(s: Student) {
-    const { error } = await supabase.from('enrollments')
-      .update({ group_code: null }).eq('student_id', s.id)
+    const { error } = await supabase.from('students')
+      .update({ group_code: null }).eq('id', s.id)
     if (error) { toast.error('เอาออกไม่สำเร็จ'); return }
     toast.success(`เอา ${s.name} ออกจากกลุ่มแล้ว`)
     load()
