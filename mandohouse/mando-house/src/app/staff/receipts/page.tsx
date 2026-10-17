@@ -356,156 +356,9 @@ export default function ReceiptsPage() {
     loadData()
   }
 
-  /* ── print ── */
+  /* ── print ── (ทุกใบใช้สไตล์บริษัทเหมือนกันทั้งหมด) */
   function printReceipt(r: any) {
-    const isCompany = r.paid_by === 'company' || r.paid_by === 'reserve'
-    if (isCompany) printCompanyStyleReceipt(r)
-    else printPersonalReceipt(r)
-  }
-
-  function printPersonalReceipt(r: any) {
-    const win = window.open('', '_blank')
-    if (!win) return
-
-    const BIZ = {
-      brand:    school?.name_th || school?.name || 'สถาบันของคุณ',
-      subtitle: school?.receipt_subtitle || 'สถาบันสอนพิเศษ',
-      address:  school?.receipt_address || '',
-      tel:      school?.receipt_tel || '',
-      receiver: school?.receipt_receiver || '',
-      logo:     school?.logo_url || 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png',
-    }
-
-    const courseName = r.enrollment?.course?.name ?? '—'
-    const enrollmentLessons = r.enrollment?.lessons_total ?? r.enrollment?.course?.total_lessons ?? null
-    const rawItems: any[] = Array.isArray(r.items) && r.items.length > 0
-      ? r.items
-      : courseName !== '—' ? [{ description: courseName, total: r.amount }] : []
-
-    const itemRows = rawItems.map((it: any, idx: number) => {
-      const amount = Number(it.total ?? it.amount ?? 0)
-      let desc = it.description ?? '—'
-      if (!/ครั้ง/.test(desc)) {
-        const sessions = it.quantity != null ? Number(it.quantity) : (rawItems.length === 1 ? enrollmentLessons : null)
-        if (sessions != null) desc = `${desc} ( ${sessions} ครั้ง )`
-      }
-      return { no: idx + 1, desc, courses: 1, amount, amountText: formatThaiMoney(amount) }
-    })
-
-    const total = Number(r.amount || 0)
-    const MIN_ROWS = 6
-    const emptyCount = Math.max(0, MIN_ROWS - itemRows.length)
-    const pm = r.payment_method
-    const chk = (on: boolean) => `<span class="box">${on ? '✓' : ''}</span>`
-    const customer = `${r.student?.full_name ?? ''}${r.student?.nickname ? ` (${r.student.nickname})` : ''}`.trim() || '—'
-
-    const bodyRows = itemRows.map(row => `
-        <tr class="itemrow">
-          <td class="c-no">${row.no}</td>
-          <td class="c-desc">${row.desc}</td>
-          <td class="c-qty">${row.courses}</td>
-          <td class="c-amt">${row.amountText}</td>
-        </tr>`).join('')
-      + Array.from({ length: emptyCount }).map(() =>
-        `<tr class="itemrow"><td class="c-no">&nbsp;</td><td></td><td></td><td></td></tr>`).join('')
-
-    const html = `<!DOCTYPE html><html lang="th"><head>
-      <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number ?? ''}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-      <style>
-        *{box-sizing:border-box}
-        body{font-family:'Sarabun','Noto Sans Thai',sans-serif;color:#000;margin:0 auto;padding:28px 32px;max-width:720px;font-size:13px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        .title-row{text-align:center;margin-bottom:12px}
-        .title-row .title{font-size:17px;font-weight:700}
-        .biz{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:10px}
-        .biz .name{color:#1d4ed8;font-size:18px;font-weight:700;margin-bottom:2px}
-        .biz .subtitle{font-weight:600;margin-bottom:3px}
-        .biz .info{line-height:1.75}
-        .biz .logo{width:112px;height:96px;object-fit:contain;flex:none}
-        .cust{border-top:1px solid #000;padding-top:8px;display:flex;justify-content:space-between;gap:24px;line-height:2.1}
-        .label{color:#000}
-        .blue{color:#1d4ed8;font-weight:600}
-        .uline{display:inline-block;min-width:150px;border-bottom:1px dotted #666;padding:0 6px}
-        .uline.sm{min-width:90px}
-        table.items{width:100%;border-collapse:collapse;margin-top:14px}
-        table.items th,table.items td{border:1px solid #000;padding:6px 8px}
-        table.items thead th{text-align:center;font-weight:700;line-height:1.25}
-        table.items thead .en{font-weight:400;font-size:11px;color:#333}
-        .c-no{width:9%;text-align:center}
-        .c-desc{width:55%}
-        .c-qty{width:17%;text-align:center}
-        .c-amt{width:19%;text-align:right}
-        .itemrow td{height:26px}
-        table.totals{width:100%;border-collapse:collapse;border:1px solid #000;border-top:none}
-        table.totals td{border:1px solid #000;padding:8px;vertical-align:middle}
-        table.totals td:first-child{border-left:none}
-        table.totals tr:last-child td{border-bottom:none}
-        .t-left{width:60%}.t-lbl{width:23%;line-height:1.2}.t-lbl .en{font-size:10px;color:#333}.t-num{width:17%;text-align:right;white-space:nowrap}
-        .words{font-weight:500}
-        .chk{display:inline-flex;align-items:center;gap:6px;margin-right:18px}
-        .box{width:15px;height:15px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#1d4ed8}
-        .sign{display:flex;justify-content:space-around;margin-top:44px;text-align:center}
-        .sign .signname{min-height:18px;margin-bottom:4px}
-        .sign .line{width:190px;border-bottom:1px dotted #666;height:1px;margin-bottom:6px}
-        @media print{@page{size:A4;margin:14mm}body{padding:0}.no-print{display:none!important}}
-      </style></head><body>
-      <button class="no-print" onclick="window.close()" style="position:fixed;top:10px;left:10px;z-index:999;padding:9px 16px;border:none;border-radius:9px;background:#1f3d2b;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)">&larr; ปิด</button>
-      <div class="title-row"><span class="title">ใบเสร็จรับเงิน (Receipt)</span></div>
-      <div class="biz">
-        <div>
-          <div class="name">${BIZ.brand}</div>
-          <div class="subtitle">${BIZ.subtitle}</div>
-          <div class="info">${BIZ.address}<br>${BIZ.tel}</div>
-        </div>
-        <img class="logo" src="${BIZ.logo}" alt="${BIZ.brand}" />
-      </div>
-      <div class="cust">
-        <div style="flex:1">
-          <div><span class="label">ชื่อผู้รับบริการ/Customer :</span> <span class="blue">${customer}</span></div>
-          <div><span class="label">ที่อยู่/Address :</span> <span class="uline"></span></div>
-          <div><span class="label">เลขประจำตัวผู้เสียภาษี/Tax ID :</span> <span class="uline"></span></div>
-        </div>
-        <div style="text-align:right;white-space:nowrap">
-          <div><span class="label">วันที่/Date :</span> <span class="blue">${thaiDateShort(r.issued_at)}</span></div>
-          <div><span class="label">เลขที่/No. :</span> <span class="blue">${r.receipt_number ?? '—'}</span></div>
-        </div>
-      </div>
-      <table class="items">
-        <thead><tr>
-          <th class="c-no">ลำดับที่<br><span class="en">Items</span></th>
-          <th class="c-desc">รายละเอียดคอร์ส<br><span class="en">Description</span></th>
-          <th class="c-qty">จำนวนคอร์ส<br><span class="en">No.of Course</span></th>
-          <th class="c-amt">จำนวนเงิน<br><span class="en">Amount</span></th>
-        </tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-      <table class="totals">
-        <tr>
-          <td class="t-left words">ตัวอักษร . ${bahtText(total)}</td>
-          <td class="t-lbl">จำนวนเงินรวม<br><span class="en">Total Amount</span></td>
-          <td class="t-num">${formatThaiMoney(total)}</td>
-        </tr>
-        <tr>
-          <td class="t-left">
-            <span class="chk">${chk(pm === 'cash')} เงินสด</span>
-            <span class="chk">${chk(pm === 'transfer')} เงินโอน</span>
-            <span class="chk">${chk(pm === 'promptpay')} พร้อมเพย์</span>
-            ธนาคาร <span class="uline sm"></span>
-            ${r.notes ? `<div style="font-size:11px;color:#666;margin-top:4px">หมายเหตุ: ${r.notes}</div>` : ''}
-          </td>
-          <td class="t-lbl">จำนวนเงินสุทธิ<br><span class="en">Total net</span></td>
-          <td class="t-num" style="font-weight:700">${formatThaiMoney(total)}</td>
-        </tr>
-      </table>
-      <div class="sign">
-        <div><div class="signname">${BIZ.receiver}</div><div class="line"></div>ผู้รับเงิน</div>
-        <div><div class="signname">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่</div>
-      </div>
-      <script>(function(){function go(){try{window.focus();window.print();}catch(e){}}var img=document.querySelector('img');if(img&&!img.complete){img.addEventListener('load',go);img.addEventListener('error',go);setTimeout(go,3000);}else{setTimeout(go,300);}})();</script>
-      </body></html>`
-
-    win.document.write(html)
-    win.document.close()
+    printCompanyStyleReceipt(r)
   }
 
   function printCompanyStyleReceipt(r: any) {
@@ -513,7 +366,6 @@ export default function ReceiptsPage() {
     if (!win) { toast.error('เบราว์เซอร์บล็อกป๊อปอัพ'); return }
 
     const cp = companyProfile
-    const isReserve = r.paid_by === 'reserve'
 
     const sellerLines = [
       cp?.address,
@@ -551,7 +403,8 @@ export default function ReceiptsPage() {
         : '',
     ].filter(Boolean).join('')
 
-    const paidByLabel = isReserve ? 'บัญชีเงินสำรองจ่าย' : 'บัญชีบริษัท'
+    const paidByLabel = r.paid_by === 'reserve' ? 'บัญชีเงินสำรองจ่าย'
+      : r.paid_by === 'company' ? 'บัญชีบริษัท' : ''
 
     const page = (copyTh: string, copyEn: string) => `
 <div class="page">
@@ -569,7 +422,7 @@ export default function ReceiptsPage() {
   </div>
   <div class="doctitle">
     <span class="t">ใบเสร็จรับเงิน<br><span class="en">Receipt</span></span>
-    <span class="paid-by-tag">${esc(paidByLabel)}</span>
+    ${paidByLabel ? `<span class="paid-by-tag">${esc(paidByLabel)}</span>` : ''}
   </div>
   <div class="cust">
     <div style="flex:1">
