@@ -615,7 +615,7 @@ export default function StudentsPage() {
                     <td>
                       <div className="flex gap-1.5">
                         <button onClick={() => openEdit(s)} className="btn-outline btn-sm">แก้ไข</button>
-                        <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
+                        <button onClick={() => { setShowEnrollModal(s); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0], paid_by: 'reserve', company_customer_id: '', company_customer_name: '', company_customer_tax_id: '', company_customer_branch: '', company_customer_address: '', company_customer_phone: '', company_customer_email: '' }) }} className="btn-outline btn-sm">ซื้อคอร์ส</button>
                         <button onClick={() => { setShowBookSaleModal(s); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline btn-sm">ซื้อหนังสือ</button>
                       </div>
                     </td>
@@ -843,7 +843,7 @@ export default function StudentsPage() {
               </div>
             </div>
             <div className="p-4 border-t border-gray-100 dark:border-[#3a4560] flex gap-2 flex-shrink-0">
-              <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
+              <button onClick={() => { setShowEnrollModal(detailStudent); setEnrollForm({ course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0, payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0], paid_by: 'reserve', company_customer_id: '', company_customer_name: '', company_customer_tax_id: '', company_customer_branch: '', company_customer_address: '', company_customer_phone: '', company_customer_email: '' }) }} className="btn-outline flex-1 justify-center text-sm">+ ซื้อคอร์ส</button>
               <button onClick={() => { setShowBookSaleModal(detailStudent); setBookSaleForm({ book_id: '', quantity: 1, payment_method: 'cash', notes: '', sold_at: new Date().toISOString().split('T')[0] }) }} className="btn-outline flex-1 justify-center text-sm">📚 ซื้อหนังสือ</button>
               <button onClick={() => { setDetailStudent(null); openEdit(detailStudent) }} className="btn-outline flex-1 justify-center">✎ แก้ไขข้อมูล</button>
               <button onClick={() => setDetailStudent(null)} className="btn-brand flex-1 justify-center">ปิด</button>
