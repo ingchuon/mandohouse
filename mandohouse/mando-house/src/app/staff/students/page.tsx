@@ -39,8 +39,15 @@ export default function StudentsPage() {
   const [enrollForm, setEnrollForm] = useState({
     course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0, price: 0,
     payment_method: 'transfer', notes: '', purchased_at: new Date().toISOString().split('T')[0],
+    paid_by: 'reserve' as 'reserve' | 'company',
+    company_customer_id: '', company_customer_name: '', company_customer_tax_id: '',
+    company_customer_branch: '', company_customer_address: '',
+    company_customer_phone: '', company_customer_email: '',
   })
   const [enrollSaving, setEnrollSaving] = useState(false)
+  const [companyCustomers, setCompanyCustomers] = useState<any[]>([])
+  const [schoolId, setSchoolId] = useState<string>('mando')
+  const [custSuggestOpen, setCustSuggestOpen] = useState(false)
   const [form, setForm] = useState({
     full_name: '', nickname: '', date_of_birth: '', gender: 'female',
     parent_name: '', parent_phone: '', parent_line_id: '', notes: '',
@@ -73,7 +80,22 @@ export default function StudentsPage() {
     setBooks(data ?? [])
   }
 
+  async function loadCompanyData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    let sid = 'mando'
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('school_id').eq('id', user.id).single()
+      if (profile?.school_id) sid = profile.school_id
+    }
+    setSchoolId(sid)
+    const { data: cus } = await supabase
+      .from('company_customers').select('*')
+      .order('last_used_at', { ascending: false, nullsFirst: false })
+    setCompanyCustomers(cus ?? [])
+  }
+
   useEffect(() => { loadStudents(); loadCourses(); loadTeachers(); loadBooks() }, [filterStatus])
+  useEffect(() => { loadCompanyData() }, [])
 
   async function openDetail(s: StudentWithEnrollment) {
     setDetailStudent(s)
@@ -217,19 +239,73 @@ export default function StudentsPage() {
     let receiptId: string | null = null
 
     if (finalPrice > 0) {
+      // เลขใบเสร็จแยกซีรีส์ตามบัญชีรับเงิน (MHR = สำรองจ่าย, MDH = บริษัท)
+      let companyReceiptNumber: string | null = null
+      try {
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('next_company_receipt_number', {
+          p_school_id: schoolId,
+          p_type: enrollForm.paid_by === 'company' ? 'company' : 'reserve',
+        })
+        if (rpcErr) throw rpcErr
+        companyReceiptNumber = rpcData as string
+      } catch (err: any) {
+        toast.error('ออกเลขใบเสร็จไม่สำเร็จ: ' + (err?.message ?? ''))
+      }
+
+      // บันทึก/อัปเดตข้อมูลลูกค้าไว้ใช้ autocomplete ครั้งหน้า
+      if (enrollForm.company_customer_name.trim()) {
+        const name = enrollForm.company_customer_name.trim()
+        const matched = companyCustomers.find(c => (c.name ?? '').trim().toLowerCase() === name.toLowerCase())
+        const custPayload = {
+          name,
+          tax_id: enrollForm.company_customer_tax_id.trim() || null,
+          branch: enrollForm.company_customer_branch.trim() || null,
+          address: enrollForm.company_customer_address.trim() || null,
+          phone: enrollForm.company_customer_phone.trim() || null,
+          email: enrollForm.company_customer_email.trim() || null,
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        const cid = matched?.id ?? (enrollForm.company_customer_id || null)
+        if (cid) {
+          await supabase.from('company_customers')
+            .update({ ...custPayload, use_count: (matched?.use_count ?? 0) + 1 }).eq('id', cid)
+        } else {
+          await supabase.from('company_customers').insert({ ...custPayload, use_count: 1 })
+        }
+      }
+
+      const receiptInsert: any = {
+        student_id: showEnrollModal.id,
+        enrollment_id: enroll.id,
+        amount: finalPrice,
+        payment_method: enrollForm.payment_method,
+        issued_at: enrollForm.purchased_at, // ส่ง "YYYY-MM-DD" ตรงๆ ไม่ผ่าน new Date()
+        paid_by: enrollForm.paid_by,
+        total: finalPrice,
+        subtotal: finalPrice,
+        vat_amount: 0,
+        vat_enabled: false,
+        items: [{
+          description: selectedCourse?.name ?? 'คอร์สเรียน',
+          quantity: enrollForm.lessons_total,
+          unit_price: enrollForm.lessons_total ? finalPrice / enrollForm.lessons_total : finalPrice,
+          amount: finalPrice,
+          total: finalPrice,
+        }],
+      }
+      if (companyReceiptNumber) receiptInsert.receipt_number = companyReceiptNumber
+      if (enrollForm.company_customer_name.trim()) {
+        receiptInsert.company_customer_name = enrollForm.company_customer_name.trim()
+        receiptInsert.company_customer_tax_id = enrollForm.company_customer_tax_id.trim() || null
+        receiptInsert.company_customer_branch = enrollForm.company_customer_branch.trim() || null
+        receiptInsert.company_customer_address = enrollForm.company_customer_address.trim() || null
+        receiptInsert.company_customer_id = enrollForm.company_customer_id || null
+      }
+
       const { data: receipt, error: receiptError } = await supabase
         .from('receipts')
-        .insert([{
-          student_id: showEnrollModal.id,
-          enrollment_id: enroll.id,
-          amount: finalPrice,
-          payment_method: enrollForm.payment_method,
-          issued_at: enrollForm.purchased_at, // ✅ ส่ง "YYYY-MM-DD" ตรงๆ ไม่ผ่าน new Date()
-          items: [{
-            description: selectedCourse?.name ?? 'คอร์สเรียน',
-            amount: finalPrice,
-          }],
-        }])
+        .insert([receiptInsert])
         .select('id, receipt_number')
         .single()
 
@@ -263,9 +339,13 @@ export default function StudentsPage() {
       course_id: '', teacher_id: '', lessons_total: 10, lessons_used: 0,
       price: 0, payment_method: 'transfer', notes: '',
       purchased_at: new Date().toISOString().split('T')[0],
+      paid_by: 'reserve', company_customer_id: '', company_customer_name: '',
+      company_customer_tax_id: '', company_customer_branch: '', company_customer_address: '',
+      company_customer_phone: '', company_customer_email: '',
     })
     setEnrollSaving(false)
     loadStudents()
+    loadCompanyData()
 
     // ✅ ถามว่าจะไปดูใบเสร็จเลยไหม
     if (receiptId) {
@@ -842,6 +922,80 @@ export default function StudentsPage() {
                   <option value="promptpay">พร้อมเพย์</option>
                 </select>
               </div>
+
+              {/* บัญชีรับเงิน + ข้อมูลลูกค้า (เฉพาะเมื่อมีราคา = ออกใบเสร็จ) */}
+              {enrollForm.price > 0 && (
+                <div className="rounded-xl border border-purple-200 dark:border-purple-800/40 bg-purple-50/50 dark:bg-purple-900/10 p-3.5 space-y-3">
+                  <div>
+                    <label className="label">บัญชีรับเงิน</label>
+                    <div className="flex gap-2">
+                      {(['reserve', 'company'] as const).map(opt => (
+                        <button key={opt} type="button"
+                          onClick={() => setEnrollForm({ ...enrollForm, paid_by: opt })}
+                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                            enrollForm.paid_by === opt
+                              ? opt === 'reserve' ? 'bg-orange-500 text-white border-orange-500' : 'bg-purple-600 text-white border-purple-600'
+                              : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#1e2637]'
+                          }`}>
+                          {opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                      {enrollForm.paid_by === 'reserve'
+                        ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย)'
+                        : '📋 ออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท)'}
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <label className="label text-xs">ชื่อผู้ซื้อ / บริษัท (สำหรับหัวใบเสร็จ)</label>
+                    <input className="input"
+                      placeholder="พิมพ์ชื่อหรือเลขผู้เสียภาษีเพื่อค้นหา (ไม่บังคับ)"
+                      value={enrollForm.company_customer_name}
+                      onChange={e => { setEnrollForm({ ...enrollForm, company_customer_name: e.target.value, company_customer_id: '' }); setCustSuggestOpen(true) }}
+                      onFocus={() => setCustSuggestOpen(true)}
+                      onBlur={() => setTimeout(() => setCustSuggestOpen(false), 150)} />
+                    {custSuggestOpen && enrollForm.company_customer_name.trim() && (() => {
+                      const q = enrollForm.company_customer_name.trim().toLowerCase()
+                      const list = companyCustomers
+                        .filter(c => (c.name ?? '').toLowerCase().includes(q) || (c.tax_id ?? '').includes(q))
+                        .slice(0, 6)
+                      return list.length > 0 ? (
+                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-[#1e2637] border border-gray-200 dark:border-[#3a4560] rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                          {list.map(c => (
+                            <button key={c.id} type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#2a3550] text-sm"
+                              onClick={() => { setEnrollForm({ ...enrollForm, company_customer_id: c.id, company_customer_name: c.name, company_customer_tax_id: c.tax_id ?? '', company_customer_branch: c.branch ?? '', company_customer_address: c.address ?? '', company_customer_phone: c.phone ?? '', company_customer_email: c.email ?? '' }); setCustSuggestOpen(false) }}>
+                              <div className="font-medium">{c.name}</div>
+                              {c.tax_id && <div className="text-xs text-gray-400">{c.tax_id}{c.branch ? ` · ${c.branch}` : ''}</div>}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null
+                    })()}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs">เลขผู้เสียภาษี</label>
+                      <input className="input" placeholder="(ไม่บังคับ)" value={enrollForm.company_customer_tax_id}
+                        onChange={e => setEnrollForm({ ...enrollForm, company_customer_tax_id: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="label text-xs">สาขา</label>
+                      <input className="input" placeholder="สำนักงานใหญ่" value={enrollForm.company_customer_branch}
+                        onChange={e => setEnrollForm({ ...enrollForm, company_customer_branch: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label text-xs">ที่อยู่</label>
+                    <input className="input" placeholder="(ไม่บังคับ)" value={enrollForm.company_customer_address}
+                      onChange={e => setEnrollForm({ ...enrollForm, company_customer_address: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="label">หมายเหตุ</label>
                 <input className="input" placeholder="เช่น ต่อคอร์ส, โปรโมชัน..."
