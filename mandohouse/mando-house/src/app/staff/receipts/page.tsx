@@ -1,11 +1,12 @@
 'use client'
 // src/app/staff/receipts/page.tsx
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatThaiMoney } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
+/* ────────── helpers ────────── */
 const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
 function thaiDateShort(iso: string | null | undefined, sep = ' '): string {
@@ -18,7 +19,10 @@ function thaiDateShort(iso: string | null | undefined, sep = ' '): string {
   return `${day}${sep}${mon}${sep}${be}`
 }
 
-// แปลงจำนวนเงินเป็นตัวอักษรภาษาไทย เช่น 4500 -> "สี่พันห้าร้อยบาทถ้วน"
+function money(n: number): string {
+  return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function bahtText(input: number): string {
   const amount = Math.round((Number(input) + Number.EPSILON) * 100) / 100
   const neg = amount < 0
@@ -58,56 +62,131 @@ function bahtText(input: number): string {
   return (neg ? 'ลบ' : '') + out
 }
 
+function esc(s: any): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+type Customer = {
+  id: string
+  name: string
+  tax_id: string | null
+  branch: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  use_count: number
+  last_used_at: string | null
+}
+
+/* ────────── component ────────── */
 export default function ReceiptsPage() {
   const supabase = createClient()
   const router = useRouter()
+
   const [receipts, setReceipts] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<any[]>([])
-  const [students, setStudents] = useState<any[]>([])
+  const [school, setSchool] = useState<any>(null)
+  const [companyProfile, setCompanyProfile] = useState<any>(null)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [schoolId, setSchoolId] = useState<string>('mando')
   const [showForm, setShowForm] = useState(false)
   const [editReceipt, setEditReceipt] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+
   const [form, setForm] = useState({
-    enrollment_id: '', payment_method: 'transfer', notes: '',
+    enrollment_id: '',
+    payment_method: 'transfer',
+    notes: '',
     issued_at: new Date().toISOString().split('T')[0],
-    amount: 0, student_id: '',
+    amount: 0,
+    student_id: '',
+    paid_by: 'personal' as 'personal' | 'reserve' | 'company',
+    company_customer_id: '',
+    company_customer_name: '',
+    company_customer_tax_id: '',
+    company_customer_branch: '',
+    company_customer_address: '',
+    company_customer_phone: '',
+    company_customer_email: '',
   })
   const [preview, setPreview] = useState<any>(null)
-  const [school, setSchool] = useState<any>(null)
+
+  const [showSuggest, setShowSuggest] = useState(false)
+  const suggestRef = useRef<HTMLDivElement | null>(null)
 
   async function loadData() {
-    // ดึง school_id ของ user ปัจจุบัน
     const { data: { user } } = await supabase.auth.getUser()
+    let sid = 'mando'
     let schoolData = null
+    let compProf = null
     if (user) {
       const { data: profile } = await supabase
         .from('profiles').select('school_id').eq('id', user.id).single()
       if (profile?.school_id) {
-        const { data: sc } = await supabase
-          .from('schools')
-          .select('name, name_th, logo_url, receipt_subtitle, receipt_address, receipt_tel, receipt_receiver')
-          .eq('id', profile.school_id)
-          .single()
+        sid = profile.school_id
+        const [{ data: sc }, { data: cp }] = await Promise.all([
+          supabase.from('schools')
+            .select('name, name_th, logo_url, receipt_subtitle, receipt_address, receipt_tel, receipt_receiver')
+            .eq('id', sid).single(),
+          supabase.from('company_profiles').select('*').eq('school_id', sid).maybeSingle(),
+        ])
         schoolData = sc
+        compProf = cp
       }
     }
+    setSchoolId(sid)
     setSchool(schoolData)
+    setCompanyProfile(compProf)
 
-    const [{ data: r }, { data: e }, { data: s }] = await Promise.all([
+    const [{ data: r }, { data: e }, { data: cus }] = await Promise.all([
       supabase.from('receipts')
         .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name, price, total_lessons))')
         .order('issued_at', { ascending: false })
-        .limit(50),
+        .limit(100),
       supabase.from('enrollments')
         .select('*, student:students(full_name, nickname), course:courses(name, price, total_lessons)')
         .in('status', ['active', 'completed']),
-      supabase.from('students').select('id, full_name, nickname').eq('is_active', true).order('nickname'),
+      supabase.from('company_customers').select('*').order('last_used_at', { ascending: false, nullsFirst: false }),
     ])
     setReceipts(r ?? [])
     setEnrollments(e ?? [])
-    setStudents(s ?? [])
+    setCustomers((cus ?? []) as Customer[])
   }
 
   useEffect(() => { loadData() }, [])
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggest(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const suggestions = useMemo(() => {
+    const q = form.company_customer_name.trim().toLowerCase()
+    const list = q
+      ? customers.filter(c => c.name.toLowerCase().includes(q) || (c.tax_id ?? '').includes(q))
+      : customers
+    return list.slice(0, 8)
+  }, [form.company_customer_name, customers])
+
+  function pickCustomer(c: Customer) {
+    setForm(f => ({
+      ...f,
+      company_customer_id: c.id,
+      company_customer_name: c.name,
+      company_customer_tax_id: c.tax_id ?? '',
+      company_customer_branch: c.branch ?? '',
+      company_customer_address: c.address ?? '',
+      company_customer_phone: c.phone ?? '',
+      company_customer_email: c.email ?? '',
+    }))
+    setShowSuggest(false)
+    toast.success(`ดึงข้อมูล "${c.name}" แล้ว`)
+  }
 
   function updatePreview(enrollmentId: string) {
     const en = enrollments.find(e => e.id === enrollmentId)
@@ -121,6 +200,18 @@ export default function ReceiptsPage() {
     }))
   }
 
+  function blankForm() {
+    return {
+      enrollment_id: '', payment_method: 'transfer', notes: '',
+      issued_at: new Date().toISOString().split('T')[0],
+      amount: 0, student_id: '',
+      paid_by: 'personal' as 'personal' | 'reserve' | 'company',
+      company_customer_id: '', company_customer_name: '', company_customer_tax_id: '',
+      company_customer_branch: '', company_customer_address: '',
+      company_customer_phone: '', company_customer_email: '',
+    }
+  }
+
   function openEdit(r: any) {
     setEditReceipt(r)
     setForm({
@@ -130,6 +221,14 @@ export default function ReceiptsPage() {
       issued_at: r.issued_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       amount: r.amount ?? 0,
       student_id: r.student_id ?? '',
+      paid_by: (r.paid_by as any) ?? 'personal',
+      company_customer_id: r.company_customer_id ?? '',
+      company_customer_name: r.company_customer_name ?? '',
+      company_customer_tax_id: r.company_customer_tax_id ?? '',
+      company_customer_branch: r.company_customer_branch ?? '',
+      company_customer_address: r.company_customer_address ?? '',
+      company_customer_phone: '',
+      company_customer_email: '',
     })
     setShowForm(true)
   }
@@ -143,6 +242,12 @@ export default function ReceiptsPage() {
         notes: form.notes || null,
         issued_at: form.issued_at,
         amount: form.amount,
+        paid_by: form.paid_by,
+        company_customer_id: form.paid_by !== 'personal' ? (form.company_customer_id || null) : null,
+        company_customer_name: form.paid_by !== 'personal' ? (form.company_customer_name || null) : null,
+        company_customer_tax_id: form.paid_by !== 'personal' ? (form.company_customer_tax_id || null) : null,
+        company_customer_branch: form.paid_by !== 'personal' ? (form.company_customer_branch || null) : null,
+        company_customer_address: form.paid_by !== 'personal' ? (form.company_customer_address || null) : null,
       }).eq('id', editReceipt.id)
       if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
       toast.success('แก้ไขแล้ว')
@@ -150,32 +255,98 @@ export default function ReceiptsPage() {
       const en = enrollments.find(x => x.id === form.enrollment_id)
       if (!en) { toast.error('กรุณาเลือกนักเรียน'); return }
 
-      const items = [{
-        description: en.course?.name,
-        quantity: en.lessons_total,
-        unit_price: en.course?.price && en.lessons_total ? en.course.price / en.lessons_total : 0,
-        total: en.course?.price ?? 0,
-      }]
+      setSaving(true)
+      try {
+        let companyReceiptNumber: string | null = null
+        if (form.paid_by !== 'personal') {
+          const pType = form.paid_by === 'reserve' ? 'reserve' : 'company'
+          const { data: rpcData, error: rpcErr } = await supabase.rpc('next_company_receipt_number', {
+            p_school_id: schoolId,
+            p_type: pType,
+          })
+          if (rpcErr) throw rpcErr
+          companyReceiptNumber = rpcData as string
 
-      const { error } = await supabase.from('receipts').insert({
-        enrollment_id: en.id,
-        student_id: en.student_id,
-        issued_at: form.issued_at,
-        amount: form.amount > 0 ? form.amount : (en.course?.price ?? 0),
-        payment_method: form.payment_method,
-        items,
-        notes: form.notes || null,
-      })
-      if (error) { toast.error('บันทึกไม่สำเร็จ'); return }
-      toast.success('ออกใบเสร็จแล้ว')
+          if (form.company_customer_name.trim()) {
+            const name = form.company_customer_name.trim()
+            const matched = customers.find(c => c.name.trim().toLowerCase() === name.toLowerCase())
+            const customerPayload = {
+              name,
+              tax_id: form.company_customer_tax_id.trim() || null,
+              branch: form.company_customer_branch.trim() || null,
+              address: form.company_customer_address.trim() || null,
+              phone: form.company_customer_phone.trim() || null,
+              email: form.company_customer_email.trim() || null,
+              last_used_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+            let cid = matched?.id ?? (form.company_customer_id || null)
+            if (cid) {
+              await supabase.from('company_customers')
+                .update({ ...customerPayload, use_count: (matched?.use_count ?? 0) + 1 })
+                .eq('id', cid)
+            } else {
+              const { data: newC } = await supabase.from('company_customers')
+                .insert({ ...customerPayload, use_count: 1 })
+                .select('id').single()
+              cid = newC?.id ?? null
+            }
+          }
+        }
+
+        const items = [{
+          description: en.course?.name,
+          quantity: en.lessons_total ?? en.course?.total_lessons ?? 1,
+          unit_price: en.course?.price && (en.lessons_total ?? en.course?.total_lessons)
+            ? en.course.price / (en.lessons_total ?? en.course?.total_lessons)
+            : (form.amount > 0 ? form.amount : (en.course?.price ?? 0)),
+          total: form.amount > 0 ? form.amount : (en.course?.price ?? 0),
+          amount: form.amount > 0 ? form.amount : (en.course?.price ?? 0),
+        }]
+
+        const insertPayload: any = {
+          enrollment_id: en.id,
+          student_id: en.student_id,
+          issued_at: form.issued_at,
+          amount: form.amount > 0 ? form.amount : (en.course?.price ?? 0),
+          payment_method: form.payment_method,
+          items,
+          notes: form.notes || null,
+          paid_by: form.paid_by,
+        }
+
+        if (form.paid_by !== 'personal' && companyReceiptNumber) {
+          insertPayload.receipt_number = companyReceiptNumber
+          insertPayload.total = insertPayload.amount
+          insertPayload.subtotal = insertPayload.amount
+          insertPayload.vat_amount = 0
+          insertPayload.vat_enabled = false
+          if (form.company_customer_name.trim()) {
+            insertPayload.company_customer_name = form.company_customer_name.trim()
+            insertPayload.company_customer_tax_id = form.company_customer_tax_id.trim() || null
+            insertPayload.company_customer_branch = form.company_customer_branch.trim() || null
+            insertPayload.company_customer_address = form.company_customer_address.trim() || null
+            insertPayload.company_customer_id = form.company_customer_id || null
+          }
+        }
+
+        const { error } = await supabase.from('receipts').insert(insertPayload)
+        if (error) throw error
+        toast.success(form.paid_by !== 'personal'
+          ? `ออกใบเสร็จบริษัท ${companyReceiptNumber} แล้ว`
+          : 'ออกใบเสร็จแล้ว')
+      } catch (err: any) {
+        toast.error(err?.message ? `บันทึกไม่สำเร็จ: ${err.message}` : 'บันทึกไม่สำเร็จ')
+        setSaving(false)
+        return
+      }
+      setSaving(false)
     }
 
-    router.refresh()
-    await fetch('/api/revalidate', { method: 'POST' })
     setShowForm(false)
     setEditReceipt(null)
     setPreview(null)
-    setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' })
+    setForm(blankForm())
     loadData()
   }
 
@@ -187,11 +358,17 @@ export default function ReceiptsPage() {
     loadData()
   }
 
+  /* ── print ── */
   function printReceipt(r: any) {
+    const isCompany = r.paid_by === 'company' || r.paid_by === 'reserve'
+    if (isCompany) printCompanyStyleReceipt(r)
+    else printPersonalReceipt(r)
+  }
+
+  function printPersonalReceipt(r: any) {
     const win = window.open('', '_blank')
     if (!win) return
 
-    // ----- ข้อมูลสถาบัน — ดึงจากตาราง schools ตามสถาบันของผู้ใช้ -----
     const BIZ = {
       brand:    school?.name_th || school?.name || 'สถาบันของคุณ',
       subtitle: school?.receipt_subtitle || 'สถาบันสอนพิเศษ',
@@ -201,35 +378,28 @@ export default function ReceiptsPage() {
       logo:     school?.logo_url || 'https://bebfmbijwezoyhoedgtt.supabase.co/storage/v1/object/public/Mando%20house%20logo/Mando%20house%20logo.png',
     }
 
-    // ----- เตรียมรายการ (รองรับ items ทั้งแบบเก่า {amount,description} และใหม่ {quantity,total}) -----
     const courseName = r.enrollment?.course?.name ?? '—'
-    const enrollmentLessons =
-      r.enrollment?.lessons_total ?? r.enrollment?.course?.total_lessons ?? null
-
-    const rawItems: any[] =
-      Array.isArray(r.items) && r.items.length > 0
-        ? r.items
-        : courseName !== '—'
-          ? [{ description: courseName, total: r.amount }]
-          : []
+    const enrollmentLessons = r.enrollment?.lessons_total ?? r.enrollment?.course?.total_lessons ?? null
+    const rawItems: any[] = Array.isArray(r.items) && r.items.length > 0
+      ? r.items
+      : courseName !== '—' ? [{ description: courseName, total: r.amount }] : []
 
     const itemRows = rawItems.map((it: any, idx: number) => {
       const amount = Number(it.total ?? it.amount ?? 0)
       let desc = it.description ?? '—'
       if (!/ครั้ง/.test(desc)) {
-        const sessions = it.quantity != null
-          ? Number(it.quantity)
-          : (rawItems.length === 1 ? enrollmentLessons : null)
+        const sessions = it.quantity != null ? Number(it.quantity) : (rawItems.length === 1 ? enrollmentLessons : null)
         if (sessions != null) desc = `${desc} ( ${sessions} ครั้ง )`
       }
       return { no: idx + 1, desc, courses: 1, amount, amountText: formatThaiMoney(amount) }
     })
 
     const total = Number(r.amount || 0)
-
-    // เติมแถวว่างให้ตารางสูงพอสวย (อย่างน้อย 6 แถว)
     const MIN_ROWS = 6
     const emptyCount = Math.max(0, MIN_ROWS - itemRows.length)
+    const pm = r.payment_method
+    const chk = (on: boolean) => `<span class="box">${on ? '✓' : ''}</span>`
+    const customer = `${r.student?.full_name ?? ''}${r.student?.nickname ? ` (${r.student.nickname})` : ''}`.trim() || '—'
 
     const bodyRows = itemRows.map(row => `
         <tr class="itemrow">
@@ -238,13 +408,8 @@ export default function ReceiptsPage() {
           <td class="c-qty">${row.courses}</td>
           <td class="c-amt">${row.amountText}</td>
         </tr>`).join('')
-      + Array.from({ length: emptyCount }).map(() => `
-        <tr class="itemrow"><td class="c-no">&nbsp;</td><td></td><td></td><td></td></tr>`).join('')
-
-    const pm = r.payment_method
-    const chk = (on: boolean) => `<span class="box">${on ? '✓' : ''}</span>`
-
-    const customer = `${r.student?.full_name ?? ''}${r.student?.nickname ? ` (${r.student.nickname})` : ''}`.trim() || '—'
+      + Array.from({ length: emptyCount }).map(() =>
+        `<tr class="itemrow"><td class="c-no">&nbsp;</td><td></td><td></td><td></td></tr>`).join('')
 
     const html = `<!DOCTYPE html><html lang="th"><head>
       <meta charset="utf-8"><title>ใบเสร็จ ${r.receipt_number ?? ''}</title>
@@ -277,10 +442,7 @@ export default function ReceiptsPage() {
         table.totals td{border:1px solid #000;padding:8px;vertical-align:middle}
         table.totals td:first-child{border-left:none}
         table.totals tr:last-child td{border-bottom:none}
-        .t-left{width:60%}
-        .t-lbl{width:23%;line-height:1.2}
-        .t-lbl .en{font-size:10px;color:#333}
-        .t-num{width:17%;text-align:right;white-space:nowrap}
+        .t-left{width:60%}.t-lbl{width:23%;line-height:1.2}.t-lbl .en{font-size:10px;color:#333}.t-num{width:17%;text-align:right;white-space:nowrap}
         .words{font-weight:500}
         .chk{display:inline-flex;align-items:center;gap:6px;margin-right:18px}
         .box{width:15px;height:15px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;color:#1d4ed8}
@@ -288,24 +450,17 @@ export default function ReceiptsPage() {
         .sign .signname{min-height:18px;margin-bottom:4px}
         .sign .line{width:190px;border-bottom:1px dotted #666;height:1px;margin-bottom:6px}
         @media print{@page{size:A4;margin:14mm}body{padding:0}.no-print{display:none!important}}
-      </style></head><body><button class="no-print" onclick="window.close()" style="position:fixed;top:10px;left:10px;z-index:999;padding:9px 16px;border:none;border-radius:9px;background:#1f3d2b;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)">&larr; ปิด</button>
-
-      <div class="title-row">
-        <span class="title">ใบเสร็จรับเงิน (Receipt)</span>
-      </div>
-
+      </style></head><body>
+      <button class="no-print" onclick="window.close()" style="position:fixed;top:10px;left:10px;z-index:999;padding:9px 16px;border:none;border-radius:9px;background:#1f3d2b;color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)">&larr; ปิด</button>
+      <div class="title-row"><span class="title">ใบเสร็จรับเงิน (Receipt)</span></div>
       <div class="biz">
         <div>
           <div class="name">${BIZ.brand}</div>
           <div class="subtitle">${BIZ.subtitle}</div>
-          <div class="info">
-            ${BIZ.address}<br>
-            ${BIZ.tel}
-          </div>
+          <div class="info">${BIZ.address}<br>${BIZ.tel}</div>
         </div>
         <img class="logo" src="${BIZ.logo}" alt="${BIZ.brand}" />
       </div>
-
       <div class="cust">
         <div style="flex:1">
           <div><span class="label">ชื่อผู้รับบริการ/Customer :</span> <span class="blue">${customer}</span></div>
@@ -317,19 +472,15 @@ export default function ReceiptsPage() {
           <div><span class="label">เลขที่/No. :</span> <span class="blue">${r.receipt_number ?? '—'}</span></div>
         </div>
       </div>
-
       <table class="items">
-        <thead>
-          <tr>
-            <th class="c-no">ลำดับที่<br><span class="en">Items</span></th>
-            <th class="c-desc">รายละเอียดคอร์ส<br><span class="en">Description</span></th>
-            <th class="c-qty">จำนวนคอร์ส<br><span class="en">No.of Course</span></th>
-            <th class="c-amt">จำนวนเงิน<br><span class="en">Amount</span></th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th class="c-no">ลำดับที่<br><span class="en">Items</span></th>
+          <th class="c-desc">รายละเอียดคอร์ส<br><span class="en">Description</span></th>
+          <th class="c-qty">จำนวนคอร์ส<br><span class="en">No.of Course</span></th>
+          <th class="c-amt">จำนวนเงิน<br><span class="en">Amount</span></th>
+        </tr></thead>
         <tbody>${bodyRows}</tbody>
       </table>
-
       <table class="totals">
         <tr>
           <td class="t-left words">ตัวอักษร . ${bahtText(total)}</td>
@@ -348,39 +499,193 @@ export default function ReceiptsPage() {
           <td class="t-num" style="font-weight:700">${formatThaiMoney(total)}</td>
         </tr>
       </table>
-
       <div class="sign">
         <div><div class="signname">${BIZ.receiver}</div><div class="line"></div>ผู้รับเงิน</div>
         <div><div class="signname">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่</div>
       </div>
-
-      <script>
-        (function(){
-          function go(){ try { window.focus(); window.print(); } catch (e) {} }
-          var img = document.querySelector('img');
-          if (img && !img.complete) {
-            img.addEventListener('load', go);
-            img.addEventListener('error', go);
-            setTimeout(go, 3000);
-          } else {
-            setTimeout(go, 300);
-          }
-        })();
-      </script>
+      <script>(function(){function go(){try{window.focus();window.print();}catch(e){}}var img=document.querySelector('img');if(img&&!img.complete){img.addEventListener('load',go);img.addEventListener('error',go);setTimeout(go,3000);}else{setTimeout(go,300);}})();</script>
       </body></html>`
 
     win.document.write(html)
     win.document.close()
   }
 
+  function printCompanyStyleReceipt(r: any) {
+    const win = window.open('', '_blank')
+    if (!win) { toast.error('เบราว์เซอร์บล็อกป๊อปอัพ'); return }
+
+    const cp = companyProfile
+    const isReserve = r.paid_by === 'reserve'
+
+    const sellerLines = [
+      cp?.address,
+      [cp?.phone ? `โทร. ${cp.phone}` : '', cp?.email].filter(Boolean).join('  ·  '),
+      cp?.tax_id ? `เลขประจำตัวผู้เสียภาษี ${cp.tax_id}${cp?.branch ? `  (${cp.branch})` : ''}` : '',
+    ].filter(Boolean).map(esc).join('<br>')
+
+    const rawItems: any[] = Array.isArray(r.items) && r.items.length > 0
+      ? r.items
+      : [{ description: r.enrollment?.course?.name ?? '—', amount: r.amount, quantity: 1, unit_price: r.amount }]
+
+    const MIN_ROWS = 6
+    const rows = rawItems.map((it: any, i: number) => `
+      <tr class="itemrow">
+        <td class="c-no">${i + 1}</td>
+        <td class="c-desc">${esc(it.description || '—')}</td>
+        <td class="c-qty">${Number(it.quantity ?? 1).toLocaleString('th-TH')}</td>
+        <td class="c-price">${money(Number(it.unit_price ?? it.amount ?? 0))}</td>
+        <td class="c-amt">${money(Number(it.amount ?? it.total ?? 0))}</td>
+      </tr>`).join('')
+      + Array.from({ length: Math.max(0, MIN_ROWS - rawItems.length) }).map(() =>
+        `<tr class="itemrow"><td class="c-no">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`).join('')
+
+    const total = Number(r.amount || r.total || 0)
+    const pm = r.payment_method
+    const chk = (on: boolean) => `<span class="box">${on ? '✓' : ''}</span>`
+
+    const custLines = [
+      r.company_customer_address
+        ? `<div><span class="label">ที่อยู่ / Address :</span> <span class="val">${esc(r.company_customer_address)}</span></div>`
+        : `<div><span class="label">ที่อยู่ / Address :</span> <span class="uline"></span></div>`,
+      `<div><span class="label">เลขประจำตัวผู้เสียภาษี / Tax ID :</span> <span class="val">${esc(r.company_customer_tax_id || '')}</span>${r.company_customer_branch ? ` <span class="val">(${esc(r.company_customer_branch)})</span>` : ''}</div>`,
+      (r.student?.nickname || r.student?.full_name)
+        ? `<div><span class="label">นักเรียน / Student :</span> <span class="val">${esc(r.student?.nickname || r.student?.full_name)}</span></div>`
+        : '',
+    ].filter(Boolean).join('')
+
+    const paidByLabel = isReserve ? 'บัญชีเงินสำรองจ่าย' : 'บัญชีบริษัท'
+
+    const page = (copyTh: string, copyEn: string) => `
+<div class="page">
+  <div class="copy-tag"><span>${esc(copyTh)} <span class="en">(${esc(copyEn)})</span></span></div>
+  <div class="head">
+    <div>
+      <div class="co-name">${esc(cp?.company_name || school?.name_th || school?.name || 'บริษัทของคุณ')}</div>
+      ${cp?.company_name_en ? `<div class="co-name-en">${esc(cp.company_name_en)}</div>` : ''}
+      ${cp?.subtitle ? `<div class="co-sub">${esc(cp.subtitle)}</div>` : ''}
+      <div class="co-info">${sellerLines}</div>
+    </div>
+    ${cp?.logo_url || school?.logo_url
+      ? `<img class="logo" src="${esc(cp?.logo_url || school?.logo_url)}" alt="logo" />`
+      : ''}
+  </div>
+  <div class="doctitle">
+    <span class="t">ใบเสร็จรับเงิน<br><span class="en">Receipt</span></span>
+    <span class="paid-by-tag">${esc(paidByLabel)}</span>
+  </div>
+  <div class="cust">
+    <div style="flex:1">
+      <div><span class="label">ชื่อผู้ซื้อ / Customer :</span> <span class="val">${esc(r.company_customer_name || r.student?.full_name || '—')}</span></div>
+      ${custLines}
+    </div>
+    <div class="meta">
+      <div><span class="label">เลขที่ / No. :</span> <span class="val">${esc(r.receipt_number ?? '—')}</span></div>
+      <div><span class="label">วันที่ / Date :</span> <span class="val">${thaiDateShort(r.issued_at)}</span></div>
+    </div>
+  </div>
+  <table class="items">
+    <thead><tr>
+      <th class="c-no">ลำดับ<br><span class="en">No.</span></th>
+      <th class="c-desc">รายการ<br><span class="en">Description</span></th>
+      <th class="c-qty">จำนวน<br><span class="en">Qty</span></th>
+      <th class="c-price">ราคา/หน่วย<br><span class="en">Unit Price</span></th>
+      <th class="c-amt">จำนวนเงิน<br><span class="en">Amount</span></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <table class="totals">
+    <tr>
+      <td class="t-left">
+        <div class="words">ตัวอักษร&nbsp;&nbsp;( ${esc(bahtText(total))} )</div>
+        <div class="pay">
+          <span class="chk">${chk(pm === 'cash')} เงินสด</span>
+          <span class="chk">${chk(pm === 'transfer')} เงินโอน</span>
+          <span class="chk">${chk(pm === 'promptpay')} พร้อมเพย์</span>
+          <span class="chk">${chk(pm === 'cheque')} เช็ค</span>
+        </div>
+        ${r.notes ? `<div class="note">หมายเหตุ: ${esc(r.notes)}</div>` : ''}
+      </td>
+      <td class="t-lbl strong">จำนวนเงินรวมทั้งสิ้น<br><span class="en">Grand Total</span></td>
+      <td class="t-num strong">${money(total)}</td>
+    </tr>
+  </table>
+  <div class="sign">
+    <div><div class="nm">&nbsp;</div><div class="line"></div>ผู้จ่ายเงิน / Payer</div>
+    <div><div class="nm">${esc(cp?.receiver_name || school?.receipt_receiver || '')}</div><div class="line"></div>ผู้รับเงิน / Received by</div>
+    <div><div class="nm">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่ / Date</div>
+  </div>
+  <div class="foot">เอกสารออกโดยระบบ ${esc(cp?.company_name || school?.name_th || '')}</div>
+</div>`
+
+    const html = `<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><title>ใบเสร็จ ${esc(r.receipt_number ?? '')}</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:'Sarabun',sans-serif;color:#000;margin:0;padding:0;font-size:12.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#e9e9e9}
+  .page{max-width:760px;margin:16px auto;padding:24px 30px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+  .copy-tag{text-align:right;margin-bottom:6px}
+  .copy-tag span{display:inline-block;border:1px solid #1C3A2A;color:#1C3A2A;font-weight:700;font-size:11px;padding:2px 12px;border-radius:3px}
+  .copy-tag .en{font-weight:400;font-size:10px}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+  .head .logo{width:100px;height:86px;object-fit:contain;flex:none}
+  .co-name{color:#1C3A2A;font-size:18px;font-weight:700;line-height:1.3}
+  .co-name-en{font-size:11.5px;color:#444;font-weight:500}
+  .co-sub{font-size:11.5px;color:#000;font-weight:600;margin:2px 0 4px}
+  .co-info{line-height:1.75}
+  .doctitle{text-align:center;margin:10px 0 12px;display:flex;align-items:center;justify-content:center;gap:12px}
+  .doctitle .t{display:inline-block;font-size:16px;font-weight:700;border:1.5px solid #000;padding:5px 26px;border-radius:3px}
+  .doctitle .en{font-size:10.5px;font-weight:400;color:#333}
+  .paid-by-tag{display:inline-block;font-size:10px;font-weight:700;border:1px solid #7c3aed;color:#7c3aed;padding:2px 10px;border-radius:3px}
+  .cust{border-top:1px solid #000;border-bottom:1px solid #000;padding:8px 0;display:flex;justify-content:space-between;gap:22px;line-height:1.95}
+  .label{color:#000}.val{color:#1C3A2A;font-weight:600}.uline{display:inline-block;min-width:180px;border-bottom:1px dotted #666}.meta{text-align:right;white-space:nowrap}
+  table.items{width:100%;border-collapse:collapse;margin-top:12px}
+  table.items th,table.items td{border:1px solid #000;padding:5px 7px}
+  table.items thead th{text-align:center;font-weight:700;line-height:1.25;background:#F5F0E8}
+  table.items thead .en{font-weight:400;font-size:10px;color:#333}
+  .c-no{width:8%;text-align:center}.c-desc{width:44%}.c-qty{width:11%;text-align:center}.c-price{width:17%;text-align:right}.c-amt{width:20%;text-align:right}
+  .itemrow td{height:24px}
+  table.totals{width:100%;border-collapse:collapse;border:1px solid #000;border-top:none}
+  table.totals td{border:1px solid #000;padding:6px 8px;vertical-align:top}
+  table.totals td:first-child{border-left:none}
+  .t-left{width:63%}.t-lbl{width:20%;line-height:1.25}.t-lbl .en{font-size:9.5px;color:#333}.t-num{width:17%;text-align:right;white-space:nowrap}.strong{font-weight:700}
+  .words{font-weight:600;margin-bottom:6px}.pay{margin-top:2px}.note{font-size:10.5px;color:#555;margin-top:5px}
+  .chk{display:inline-flex;align-items:center;gap:5px;margin-right:14px}
+  .box{width:14px;height:14px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;color:#1C3A2A}
+  .sign{display:flex;justify-content:space-around;margin-top:40px;text-align:center}
+  .sign .nm{min-height:18px;margin-bottom:4px;color:#1C3A2A;font-weight:600}
+  .sign .line{width:180px;border-bottom:1px dotted #666;height:1px;margin:0 auto 6px}
+  .foot{margin-top:12px;font-size:10px;color:#777;text-align:center}
+  @media print{
+    @page{size:A4;margin:12mm}
+    body{background:#fff}
+    .page{max-width:none;margin:0;padding:0;box-shadow:none;page-break-after:always;break-after:page}
+    .page:last-child{page-break-after:auto;break-after:auto}
+  }
+</style></head><body>
+${page('ต้นฉบับ — สำหรับลูกค้า', 'Original')}
+${page('สำเนา — เก็บไว้ที่บริษัท', 'Copy')}
+<script>(function(){function go(){try{window.focus();window.print();}catch(e){}}var img=document.querySelector('img');if(img&&!img.complete){img.addEventListener('load',go);img.addEventListener('error',go);setTimeout(go,3000);}else{setTimeout(go,300);}})();</script>
+</body></html>`
+
+    win.document.write(html)
+    win.document.close()
+  }
+
+  const isCompanyMode = form.paid_by !== 'personal'
+
+  /* ── render ── */
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg md:text-xl font-semibold">ใบเสร็จ</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
         </div>
-        <button onClick={() => { setEditReceipt(null); setPreview(null); setForm({ enrollment_id: '', payment_method: 'transfer', notes: '', issued_at: new Date().toISOString().split('T')[0], amount: 0, student_id: '' }); setShowForm(true) }} className="btn-brand">
+        <button
+          onClick={() => { setEditReceipt(null); setPreview(null); setForm(blankForm()); setShowForm(true) }}
+          className="btn-brand"
+        >
           + ออกใบเสร็จ
         </button>
       </div>
@@ -395,6 +700,7 @@ export default function ReceiptsPage() {
               <th>วันที่</th>
               <th>จำนวนเงิน</th>
               <th>ชำระโดย</th>
+              <th>บัญชี</th>
               <th></th>
             </tr>
           </thead>
@@ -403,8 +709,11 @@ export default function ReceiptsPage() {
               <tr key={r.id} className="table-row-hover">
                 <td className="font-mono text-xs text-gray-600 dark:text-gray-300">{r.receipt_number ?? '—'}</td>
                 <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name || '—'}</td>
-                <td className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-300">
+                <td className="text-sm text-gray-500 dark:text-gray-400">
                   {r.enrollment?.course?.name ?? r.items?.[0]?.description ?? r.subject ?? '—'}
+                  {r.company_customer_name && (
+                    <div className="text-xs text-purple-600 dark:text-purple-400">{r.company_customer_name}</div>
+                  )}
                 </td>
                 <td className="text-sm">{formatDate(r.issued_at)}</td>
                 <td className="font-semibold text-brand-600">{formatThaiMoney(r.amount)}</td>
@@ -412,6 +721,14 @@ export default function ReceiptsPage() {
                   <span className="badge badge-blue text-[10px]">
                     {{ transfer: 'โอน', cash: 'เงินสด', promptpay: 'พร้อมเพย์' }[r.payment_method as string] || r.payment_method}
                   </span>
+                </td>
+                <td>
+                  {r.paid_by === 'reserve' && (
+                    <span className="badge text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">สำรองจ่าย</span>
+                  )}
+                  {r.paid_by === 'company' && (
+                    <span className="badge text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">บัญชีบริษัท</span>
+                  )}
                 </td>
                 <td>
                   <div className="flex gap-1">
@@ -423,107 +740,208 @@ export default function ReceiptsPage() {
               </tr>
             ))}
             {receipts.length === 0 && (
-              <tr><td colSpan={7} className="text-center text-gray-400 dark:text-gray-300 py-8">ยังไม่มีใบเสร็จ</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-400 py-8">ยังไม่มีใบเสร็จ</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-2xl shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#242d3f] rounded-2xl w-full max-w-2xl shadow-xl my-6">
             <div className="p-5 border-b border-gray-100 dark:border-[#3a4560] flex items-center justify-between">
               <h2 className="font-semibold">{editReceipt ? 'แก้ไขใบเสร็จ' : 'ออกใบเสร็จใหม่'}</h2>
-              <button onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="text-gray-400 dark:text-gray-300">✕</button>
+              <button onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="text-gray-400">✕</button>
             </div>
-            <div className={editReceipt ? '' : 'grid grid-cols-2 divide-x divide-gray-100'}>
-              <form onSubmit={handleSave} className="p-5 space-y-4">
-                {!editReceipt && (
-                  <div>
-                    <label className="label">นักเรียน *</label>
-                    <select className="input" required value={form.enrollment_id}
-                      onChange={e => updatePreview(e.target.value)}>
-                      <option value="">— เลือกนักเรียน —</option>
-                      {enrollments.map(en => (
-                        <option key={en.id} value={en.id}>
-                          {en.student?.nickname || en.student?.full_name} – {en.course?.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+
+            <form onSubmit={handleSave} className="p-5 space-y-4">
+              {/* จ่ายโดย */}
+              <div>
+                <label className="label mb-2">จ่ายโดย</label>
+                <div className="flex gap-2">
+                  {(['personal', 'reserve', 'company'] as const).map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, paid_by: opt }))}
+                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                        form.paid_by === opt
+                          ? opt === 'personal'
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : opt === 'reserve'
+                            ? 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-purple-600 text-white border-purple-600'
+                          : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1e2637]'
+                      }`}
+                    >
+                      {opt === 'personal' ? 'ส่วนตัว' : opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
+                    </button>
+                  ))}
+                </div>
+                {isCompanyMode && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                    {form.paid_by === 'reserve'
+                      ? '📋 จะออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย) + หัวใบเสร็จบริษัท 2 ใบ'
+                      : '📋 จะออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท) + หัวใบเสร็จบริษัท 2 ใบ'}
+                  </p>
                 )}
-                {editReceipt && (
-                  <div>
-                    <label className="label">จำนวนเงิน (บาท)</label>
-                    <input type="number" min={0} className="input" value={form.amount}
-                      onChange={e => setForm({...form, amount: Number(e.target.value)})} />
-                  </div>
-                )}
-                {!editReceipt && form.enrollment_id && (
-                  <div>
-                    <label className="label">จำนวนเงิน (บาท)</label>
-                    <input type="number" min={0} className="input" value={form.amount}
-                      onChange={e => setForm({...form, amount: Number(e.target.value)})} />
-                  </div>
-                )}
+              </div>
+
+              {/* เลือกนักเรียน */}
+              {!editReceipt && (
+                <div>
+                  <label className="label">นักเรียน *</label>
+                  <select className="input" required value={form.enrollment_id}
+                    onChange={e => updatePreview(e.target.value)}>
+                    <option value="">— เลือกนักเรียน —</option>
+                    {enrollments.map(en => (
+                      <option key={en.id} value={en.id}>
+                        {en.student?.nickname || en.student?.full_name} – {en.course?.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* จำนวนเงิน */}
+              {(editReceipt || form.enrollment_id) && (
+                <div>
+                  <label className="label">จำนวนเงิน (บาท)</label>
+                  <input type="number" min={0} className="input" value={form.amount}
+                    onChange={e => setForm({ ...form, amount: Number(e.target.value) })} />
+                </div>
+              )}
+
+              {/* วันที่ + ชำระโดย */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">วันที่ออกใบเสร็จ</label>
                   <input type="date" className="input" value={form.issued_at}
-                    onChange={e => setForm({...form, issued_at: e.target.value})} />
+                    onChange={e => setForm({ ...form, issued_at: e.target.value })} />
                 </div>
                 <div>
                   <label className="label">ชำระโดย</label>
                   <select className="input" value={form.payment_method}
-                    onChange={e => setForm({...form, payment_method: e.target.value})}>
+                    onChange={e => setForm({ ...form, payment_method: e.target.value })}>
                     <option value="transfer">โอนเงิน</option>
                     <option value="cash">เงินสด</option>
                     <option value="promptpay">พร้อมเพย์</option>
+                    <option value="cheque">เช็ค</option>
                   </select>
                 </div>
-                <div>
-                  <label className="label">หมายเหตุ</label>
-                  <input className="input" placeholder="(ไม่บังคับ)" value={form.notes}
-                    onChange={e => setForm({...form, notes: e.target.value})} />
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button type="submit" className="btn-brand flex-1 justify-center">
-                    {editReceipt ? 'บันทึก' : 'ออกใบเสร็จ'}
-                  </button>
-                  <button type="button" onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }} className="btn-outline flex-1 justify-center">ยกเลิก</button>
-                </div>
-              </form>
+              </div>
 
-              {!editReceipt && (
-                <div className="p-5">
-                  <p className="text-xs text-gray-400 dark:text-gray-300 mb-4 text-center">ตัวอย่างใบเสร็จ</p>
-                  {preview ? (
-                    <div className="border border-gray-100 dark:border-[#3a4560] rounded-xl p-5 font-mono text-sm">
-                      <div className="text-center mb-2">
-                        <div className="text-base font-bold">{school?.name_th || school?.name || 'สถาบันของคุณ'}</div>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400 dark:text-gray-300 leading-relaxed">
-                          {school?.receipt_subtitle || 'สถาบันสอนพิเศษ'}<br/>
-                          {school?.receipt_tel || ''}
-                        </div>
-                        <div className="text-xs text-gray-400 dark:text-gray-300 mt-1">ใบเสร็จรับเงิน</div>
+              {/* ข้อมูลลูกค้าบริษัท */}
+              {isCompanyMode && (
+                <div className="rounded-xl border border-purple-200 dark:border-purple-800/40 bg-purple-50/50 dark:bg-purple-900/10 p-4 space-y-3">
+                  <div className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-1">
+                    ข้อมูลลูกค้า / หัวใบเสร็จบริษัท
+                  </div>
+
+                  <div ref={suggestRef} className="relative">
+                    <label className="label text-xs">ชื่อผู้ซื้อ / บริษัท</label>
+                    <input
+                      className="input"
+                      placeholder="พิมพ์ชื่อหรือเลขผู้เสียภาษีเพื่อค้นหา"
+                      value={form.company_customer_name}
+                      onChange={e => {
+                        setForm(f => ({ ...f, company_customer_name: e.target.value, company_customer_id: '' }))
+                        setShowSuggest(true)
+                      }}
+                      onFocus={() => setShowSuggest(true)}
+                    />
+                    {showSuggest && suggestions.length > 0 && (
+                      <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-[#1e2637] border border-gray-200 dark:border-[#3a4560] rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {suggestions.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#2a3550] text-sm"
+                            onClick={() => pickCustomer(c)}
+                          >
+                            <div className="font-medium">{c.name}</div>
+                            {c.tax_id && <div className="text-xs text-gray-400">{c.tax_id}{c.branch ? ` · ${c.branch}` : ''}</div>}
+                          </button>
+                        ))}
                       </div>
-                      <div className="space-y-1.5 text-xs border-t border-gray-100 dark:border-[#3a4560] pt-3">
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">นักเรียน</span><span>{preview.student?.nickname || preview.student?.full_name}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">คอร์ส</span><span>{preview.course?.name ?? '—'}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400 dark:text-gray-300">จำนวน</span><span>{preview.lessons_total} ครั้ง</span></div>
-                      </div>
-                      <div className="flex justify-between font-bold text-sm mt-3 pt-3 border-t border-gray-200 dark:border-[#3a4560]">
-                        <span>รวม</span>
-                        <span className="text-brand-600">{formatThaiMoney(form.amount > 0 ? form.amount : (preview.course?.price ?? 0))}</span>
-                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs">เลขประจำตัวผู้เสียภาษี</label>
+                      <input className="input" placeholder="0-0000-00000-00-0"
+                        value={form.company_customer_tax_id}
+                        onChange={e => setForm(f => ({ ...f, company_customer_tax_id: e.target.value }))} />
                     </div>
-                  ) : (
-                    <div className="border border-dashed border-gray-200 dark:border-[#3a4560] rounded-xl h-40 flex items-center justify-center text-gray-300 text-sm">
-                      เลือกนักเรียนเพื่อดูตัวอย่าง
+                    <div>
+                      <label className="label text-xs">สาขา</label>
+                      <input className="input" placeholder="สำนักงานใหญ่"
+                        value={form.company_customer_branch}
+                        onChange={e => setForm(f => ({ ...f, company_customer_branch: e.target.value }))} />
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <label className="label text-xs">ที่อยู่</label>
+                    <input className="input" placeholder="ที่อยู่สำหรับออกใบเสร็จ"
+                      value={form.company_customer_address}
+                      onChange={e => setForm(f => ({ ...f, company_customer_address: e.target.value }))} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs">โทรศัพท์</label>
+                      <input className="input" placeholder="(ไม่บังคับ)"
+                        value={form.company_customer_phone}
+                        onChange={e => setForm(f => ({ ...f, company_customer_phone: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="label text-xs">อีเมล</label>
+                      <input className="input" placeholder="(ไม่บังคับ)"
+                        value={form.company_customer_email}
+                        onChange={e => setForm(f => ({ ...f, company_customer_email: e.target.value }))} />
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
+
+              {/* หมายเหตุ */}
+              <div>
+                <label className="label">หมายเหตุ</label>
+                <input className="input" placeholder="(ไม่บังคับ)" value={form.notes}
+                  onChange={e => setForm({ ...form, notes: e.target.value })} />
+              </div>
+
+              {/* Preview เล็กๆ */}
+              {!editReceipt && preview && !isCompanyMode && (
+                <div className="rounded-xl border border-gray-100 dark:border-[#3a4560] p-4 bg-gray-50 dark:bg-[#1e2637]">
+                  <div className="text-xs text-gray-400 mb-2">ตัวอย่าง</div>
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">นักเรียน</span>
+                      <span>{preview.student?.nickname || preview.student?.full_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">คอร์ส</span>
+                      <span>{preview.course?.name ?? '—'}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-[#3a4560] pt-2 mt-2">
+                      <span>รวม</span>
+                      <span className="text-brand-600">{formatThaiMoney(form.amount > 0 ? form.amount : (preview.course?.price ?? 0))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={saving} className="btn-brand flex-1 justify-center">
+                  {saving ? 'กำลังบันทึก...' : editReceipt ? 'บันทึก' : 'ออกใบเสร็จ'}
+                </button>
+                <button type="button" onClick={() => { setShowForm(false); setEditReceipt(null); setPreview(null) }}
+                  className="btn-outline flex-1 justify-center">ยกเลิก</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
