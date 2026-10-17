@@ -341,10 +341,6 @@ export default function ReceiptsPage() {
 
         if (companyReceiptNumber) {
           insertPayload.receipt_number = companyReceiptNumber
-          insertPayload.total = insertPayload.amount
-          insertPayload.subtotal = insertPayload.amount
-          insertPayload.vat_amount = 0
-          insertPayload.vat_enabled = false
           if (form.company_customer_name.trim()) {
             insertPayload.company_customer_name = form.company_customer_name.trim()
             insertPayload.company_customer_tax_id = form.company_customer_tax_id.trim() || null

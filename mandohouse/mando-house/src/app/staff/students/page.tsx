@@ -282,10 +282,6 @@ export default function StudentsPage() {
         payment_method: enrollForm.payment_method,
         issued_at: enrollForm.purchased_at, // ส่ง "YYYY-MM-DD" ตรงๆ ไม่ผ่าน new Date()
         paid_by: enrollForm.paid_by,
-        total: finalPrice,
-        subtotal: finalPrice,
-        vat_amount: 0,
-        vat_enabled: false,
         items: [{
           description: selectedCourse?.name ?? 'คอร์สเรียน',
           quantity: enrollForm.lessons_total,
