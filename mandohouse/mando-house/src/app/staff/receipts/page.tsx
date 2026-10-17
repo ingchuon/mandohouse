@@ -233,6 +233,27 @@ export default function ReceiptsPage() {
     setShowForm(true)
   }
 
+  // รันเลขใบเสร็จบริษัทย้อนหลังให้ใบที่กำลังแก้ไข (MHR = สำรองจ่าย, MDH = บริษัท)
+  async function assignCompanyNumber() {
+    if (!editReceipt) return
+    const current: string = editReceipt.receipt_number ?? ''
+    if (/^(MHR|MDH)-/.test(current)) {
+      if (!confirm(`ใบนี้มีเลข ${current} อยู่แล้ว ต้องการออกเลขใหม่ทับไหม?\n(เลขเดิมจะถูกข้ามไป ใช้ซ้ำไม่ได้)`)) return
+    }
+    const pType = form.paid_by === 'company' ? 'company' : 'reserve'
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('next_company_receipt_number', {
+      p_school_id: schoolId, p_type: pType,
+    })
+    if (rpcErr) { toast.error('ออกเลขไม่สำเร็จ: ' + rpcErr.message); return }
+    const newNo = rpcData as string
+    const { error } = await supabase.from('receipts')
+      .update({ receipt_number: newNo, paid_by: form.paid_by }).eq('id', editReceipt.id)
+    if (error) { toast.error('บันทึกเลขไม่สำเร็จ: ' + error.message); return }
+    setEditReceipt({ ...editReceipt, receipt_number: newNo, paid_by: form.paid_by })
+    toast.success(`รันเลขใบเสร็จ ${newNo} แล้ว`)
+    loadData()
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
 
@@ -633,6 +654,25 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                     : '📋 ออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'}
                 </p>
               </div>
+
+              {/* รันเลขบริษัทย้อนหลัง (เฉพาะตอนแก้ไข) */}
+              {editReceipt && (
+                <div className="rounded-xl border border-gray-200 dark:border-[#3a4560] p-3 flex items-center justify-between gap-3">
+                  <div className="text-sm">
+                    <div className="text-gray-500 dark:text-gray-400 text-xs">เลขใบเสร็จ</div>
+                    <div className="font-mono font-medium">
+                      {editReceipt.receipt_number ?? '—'}
+                      {!/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') && (
+                        <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">ยังไม่ใช่เลขบริษัท</span>
+                      )}
+                    </div>
+                  </div>
+                  <button type="button" onClick={assignCompanyNumber}
+                    className="btn-outline btn-sm whitespace-nowrap">
+                    {/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') ? 'ออกเลขใหม่' : `รันเลข ${form.paid_by === 'reserve' ? 'MHR' : 'MDH'}`}
+                  </button>
+                </div>
+              )}
 
               {/* เลือกนักเรียน */}
               {!editReceipt && (
