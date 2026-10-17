@@ -113,6 +113,9 @@ export default function ReceiptsPage() {
   })
   const [preview, setPreview] = useState<any>(null)
 
+  const [monthFilter, setMonthFilter] = useState('all')
+  const [search, setSearch] = useState('')
+
   const [showSuggest, setShowSuggest] = useState(false)
   const suggestRef = useRef<HTMLDivElement | null>(null)
 
@@ -144,7 +147,7 @@ export default function ReceiptsPage() {
       supabase.from('receipts')
         .select('*, student:students(full_name, nickname, parent_name), enrollment:enrollments(*, course:courses(name, price, total_lessons))')
         .order('issued_at', { ascending: false })
-        .limit(100),
+        .limit(5000),
       supabase.from('enrollments')
         .select('*, student:students(full_name, nickname), course:courses(name, price, total_lessons)')
         .in('status', ['active', 'completed']),
@@ -546,13 +549,45 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
 
   const isCompanyMode = true
 
+  // ตัวเลือกเดือน (YYYY-MM) จากใบเสร็จทั้งหมด
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of receipts) {
+      const k = (r.issued_at ?? '').slice(0, 7)
+      if (k) set.add(k)
+    }
+    return Array.from(set).sort().reverse()
+  }, [receipts])
+
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-')
+    const mi = Number(m) - 1
+    const be = (Number(y) + 543) % 100
+    return `${THAI_MONTHS_ABBR[mi] ?? m} ${be}`
+  }
+
+  const filteredReceipts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return receipts.filter(r => {
+      if (monthFilter !== 'all' && (r.issued_at ?? '').slice(0, 7) !== monthFilter) return false
+      if (!q) return true
+      const hay = [
+        r.receipt_number, r.student?.nickname, r.student?.full_name,
+        r.company_customer_name, r.enrollment?.course?.name, r.items?.[0]?.description,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return hay.includes(q)
+    })
+  }, [receipts, monthFilter, search])
+
   /* ── render ── */
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg md:text-xl font-semibold">ใบเสร็จ</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ออกและจัดการใบเสร็จรับเงิน · {receipts.length} รายการ</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            ออกและจัดการใบเสร็จรับเงิน · แสดง {filteredReceipts.length} / {receipts.length} รายการ
+          </p>
         </div>
         <button
           onClick={() => { setEditReceipt(null); setPreview(null); setForm(blankForm()); setShowForm(true) }}
@@ -560,6 +595,22 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
         >
           + ออกใบเสร็จ
         </button>
+      </div>
+
+      {/* ตัวกรอง เดือน + ค้นหา */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <select className="input sm:w-56" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+          <option value="all">ทุกเดือน ({receipts.length})</option>
+          {monthOptions.map(ym => (
+            <option key={ym} value={ym}>{monthLabel(ym)}</option>
+          ))}
+        </select>
+        <input
+          className="input flex-1"
+          placeholder="ค้นหา เลขที่ / ชื่อนักเรียน / บริษัท / คอร์ส"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="card overflow-x-auto">
@@ -577,7 +628,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
             </tr>
           </thead>
           <tbody>
-            {receipts.map(r => (
+            {filteredReceipts.map(r => (
               <tr key={r.id} className="table-row-hover">
                 <td className="font-mono text-xs text-gray-600 dark:text-gray-300">{r.receipt_number ?? '—'}</td>
                 <td className="font-medium text-sm">{r.student?.nickname || r.student?.full_name || '—'}</td>
@@ -611,8 +662,10 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                 </td>
               </tr>
             ))}
-            {receipts.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-8">ยังไม่มีใบเสร็จ</td></tr>
+            {filteredReceipts.length === 0 && (
+              <tr><td colSpan={8} className="text-center text-gray-400 py-8">
+                {receipts.length === 0 ? 'ยังไม่มีใบเสร็จ' : 'ไม่พบใบเสร็จตามเงื่อนไข'}
+              </td></tr>
             )}
           </tbody>
         </table>
