@@ -102,7 +102,7 @@ export default function ReceiptsPage() {
     issued_at: new Date().toISOString().split('T')[0],
     amount: 0,
     student_id: '',
-    paid_by: 'personal' as 'personal' | 'reserve' | 'company',
+    paid_by: 'reserve' as 'reserve' | 'company',
     company_customer_id: '',
     company_customer_name: '',
     company_customer_tax_id: '',
@@ -205,7 +205,7 @@ export default function ReceiptsPage() {
       enrollment_id: '', payment_method: 'transfer', notes: '',
       issued_at: new Date().toISOString().split('T')[0],
       amount: 0, student_id: '',
-      paid_by: 'personal' as 'personal' | 'reserve' | 'company',
+      paid_by: 'reserve' as 'reserve' | 'company',
       company_customer_id: '', company_customer_name: '', company_customer_tax_id: '',
       company_customer_branch: '', company_customer_address: '',
       company_customer_phone: '', company_customer_email: '',
@@ -221,7 +221,7 @@ export default function ReceiptsPage() {
       issued_at: r.issued_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       amount: r.amount ?? 0,
       student_id: r.student_id ?? '',
-      paid_by: (r.paid_by as any) ?? 'personal',
+      paid_by: (r.paid_by === 'company' ? 'company' : 'reserve') as 'reserve' | 'company',
       company_customer_id: r.company_customer_id ?? '',
       company_customer_name: r.company_customer_name ?? '',
       company_customer_tax_id: r.company_customer_tax_id ?? '',
@@ -243,11 +243,11 @@ export default function ReceiptsPage() {
         issued_at: form.issued_at,
         amount: form.amount,
         paid_by: form.paid_by,
-        company_customer_id: form.paid_by !== 'personal' ? (form.company_customer_id || null) : null,
-        company_customer_name: form.paid_by !== 'personal' ? (form.company_customer_name || null) : null,
-        company_customer_tax_id: form.paid_by !== 'personal' ? (form.company_customer_tax_id || null) : null,
-        company_customer_branch: form.paid_by !== 'personal' ? (form.company_customer_branch || null) : null,
-        company_customer_address: form.paid_by !== 'personal' ? (form.company_customer_address || null) : null,
+        company_customer_id: form.company_customer_id || null,
+        company_customer_name: form.company_customer_name || null,
+        company_customer_tax_id: form.company_customer_tax_id || null,
+        company_customer_branch: form.company_customer_branch || null,
+        company_customer_address: form.company_customer_address || null,
       }).eq('id', editReceipt.id)
       if (error) { toast.error('แก้ไขไม่สำเร็จ'); return }
       toast.success('แก้ไขแล้ว')
@@ -258,7 +258,7 @@ export default function ReceiptsPage() {
       setSaving(true)
       try {
         let companyReceiptNumber: string | null = null
-        if (form.paid_by !== 'personal') {
+        {
           const pType = form.paid_by === 'reserve' ? 'reserve' : 'company'
           const { data: rpcData, error: rpcErr } = await supabase.rpc('next_company_receipt_number', {
             p_school_id: schoolId,
@@ -315,7 +315,7 @@ export default function ReceiptsPage() {
           paid_by: form.paid_by,
         }
 
-        if (form.paid_by !== 'personal' && companyReceiptNumber) {
+        if (companyReceiptNumber) {
           insertPayload.receipt_number = companyReceiptNumber
           insertPayload.total = insertPayload.amount
           insertPayload.subtotal = insertPayload.amount
@@ -332,9 +332,7 @@ export default function ReceiptsPage() {
 
         const { error } = await supabase.from('receipts').insert(insertPayload)
         if (error) throw error
-        toast.success(form.paid_by !== 'personal'
-          ? `ออกใบเสร็จบริษัท ${companyReceiptNumber} แล้ว`
-          : 'ออกใบเสร็จแล้ว')
+        toast.success(`ออกใบเสร็จ ${companyReceiptNumber} แล้ว`)
       } catch (err: any) {
         toast.error(err?.message ? `บันทึกไม่สำเร็จ: ${err.message}` : 'บันทึกไม่สำเร็จ')
         setSaving(false)
@@ -672,7 +670,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
     win.document.close()
   }
 
-  const isCompanyMode = form.paid_by !== 'personal'
+  const isCompanyMode = true
 
   /* ── render ── */
   return (
@@ -755,36 +753,32 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
             </div>
 
             <form onSubmit={handleSave} className="p-5 space-y-4">
-              {/* จ่ายโดย */}
+              {/* บัญชีรับเงิน */}
               <div>
-                <label className="label mb-2">จ่ายโดย</label>
+                <label className="label mb-2">บัญชีรับเงิน</label>
                 <div className="flex gap-2">
-                  {(['personal', 'reserve', 'company'] as const).map(opt => (
+                  {(['reserve', 'company'] as const).map(opt => (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, paid_by: opt }))}
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
                         form.paid_by === opt
-                          ? opt === 'personal'
-                            ? 'bg-brand-600 text-white border-brand-600'
-                            : opt === 'reserve'
+                          ? opt === 'reserve'
                             ? 'bg-orange-500 text-white border-orange-500'
                             : 'bg-purple-600 text-white border-purple-600'
                           : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1e2637]'
                       }`}
                     >
-                      {opt === 'personal' ? 'ส่วนตัว' : opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
+                      {opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
                     </button>
                   ))}
                 </div>
-                {isCompanyMode && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                    {form.paid_by === 'reserve'
-                      ? '📋 จะออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย) + หัวใบเสร็จบริษัท 2 ใบ'
-                      : '📋 จะออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท) + หัวใบเสร็จบริษัท 2 ใบ'}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                  {form.paid_by === 'reserve'
+                    ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'
+                    : '📋 ออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'}
+                </p>
               </div>
 
               {/* เลือกนักเรียน */}
@@ -914,7 +908,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
               </div>
 
               {/* Preview เล็กๆ */}
-              {!editReceipt && preview && !isCompanyMode && (
+              {!editReceipt && preview && (
                 <div className="rounded-xl border border-gray-100 dark:border-[#3a4560] p-4 bg-gray-50 dark:bg-[#1e2637]">
                   <div className="text-xs text-gray-400 mb-2">ตัวอย่าง</div>
                   <div className="text-sm space-y-1">
