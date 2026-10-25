@@ -239,7 +239,7 @@ export default function StudentsPage() {
     let receiptId: string | null = null
 
     if (finalPrice > 0) {
-      // เลขใบเสร็จแยกซีรีส์ตามบัญชีรับเงิน (MHR = สำรองจ่าย, MDH = บริษัท)
+      // เลขใบเสร็จแยกซีรีส์ตามบัญชีรับเงิน (MHR = เงินสดย่อย, MDH = บริษัท)
       let companyReceiptNumber: string | null = null
       try {
         const { data: rpcData, error: rpcErr } = await supabase.rpc('next_company_receipt_number', {
@@ -933,13 +933,13 @@ export default function StudentsPage() {
                               ? opt === 'reserve' ? 'bg-orange-500 text-white border-orange-500' : 'bg-purple-600 text-white border-purple-600'
                               : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-[#1e2637]'
                           }`}>
-                          {opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
+                          {opt === 'reserve' ? 'บัญชีเงินสดย่อย' : 'บัญชีบริษัท'}
                         </button>
                       ))}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
                       {enrollForm.paid_by === 'reserve'
-                        ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย)'
+                        ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (เงินสดย่อย)'
                         : '📋 ออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท)'}
                     </p>
                   </div>

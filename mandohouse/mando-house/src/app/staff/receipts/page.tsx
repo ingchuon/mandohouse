@@ -236,7 +236,7 @@ export default function ReceiptsPage() {
     setShowForm(true)
   }
 
-  // รันเลขใบเสร็จบริษัทย้อนหลังให้ใบที่กำลังแก้ไข (MHR = สำรองจ่าย, MDH = บริษัท)
+  // รันเลขใบเสร็จบริษัทย้อนหลังให้ใบที่กำลังแก้ไข (MHR = เงินสดย่อย, MDH = บริษัท)
   async function assignCompanyNumber() {
     if (!editReceipt) return
     const current: string = editReceipt.receipt_number ?? ''
@@ -423,7 +423,7 @@ export default function ReceiptsPage() {
         : '',
     ].filter(Boolean).join('')
 
-    const paidByLabel = r.paid_by === 'reserve' ? 'บัญชีเงินสำรองจ่าย'
+    const paidByLabel = r.paid_by === 'reserve' ? 'บัญชีเงินสดย่อย'
       : r.paid_by === 'company' ? 'บัญชีบริษัท' : ''
 
     const page = (copyTh: string, copyEn: string) => `
@@ -643,7 +643,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                 </td>
                 <td>
                   {r.paid_by === 'reserve' && (
-                    <span className="badge text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">สำรองจ่าย</span>
+                    <span className="badge text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">เงินสดย่อย</span>
                   )}
                   {r.paid_by === 'company' && (
                     <span className="badge text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">บัญชีบริษัท</span>
@@ -693,13 +693,13 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                           : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1e2637]'
                       }`}
                     >
-                      {opt === 'reserve' ? 'บัญชีสำรองจ่าย' : 'บัญชีบริษัท'}
+                      {opt === 'reserve' ? 'บัญชีเงินสดย่อย' : 'บัญชีบริษัท'}
                     </button>
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
                   {form.paid_by === 'reserve'
-                    ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (สำรองจ่าย) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'
+                    ? '📋 ออกใบเสร็จเลข MHR-YYYY-XXXX (เงินสดย่อย) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'
                     : '📋 ออกใบเสร็จเลข MDH-YYYY-XXXX (บริษัท) · หัวใบเสร็จบริษัท 2 ใบ (ต้นฉบับ/สำเนา)'}
                 </p>
               </div>
