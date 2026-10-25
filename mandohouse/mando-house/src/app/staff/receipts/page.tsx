@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatThaiMoney } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import * as XLSX from 'xlsx'
 
 /* ────────── helpers ────────── */
 const THAI_MONTHS_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
@@ -115,6 +116,7 @@ export default function ReceiptsPage() {
 
   const [monthFilter, setMonthFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [accountFilter, setAccountFilter] = useState<'all' | 'reserve' | 'company'>('all')
 
   const [showSuggest, setShowSuggest] = useState(false)
   const suggestRef = useRef<HTMLDivElement | null>(null)
@@ -565,6 +567,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
   const filteredReceipts = useMemo(() => {
     const q = search.trim().toLowerCase()
     return receipts.filter(r => {
+      if (accountFilter !== 'all' && r.paid_by !== accountFilter) return false
       if (monthFilter !== 'all' && (r.issued_at ?? '').slice(0, 7) !== monthFilter) return false
       if (!q) return true
       const hay = [
@@ -573,7 +576,39 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
       ].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q)
     })
-  }, [receipts, monthFilter, search])
+  }, [receipts, monthFilter, search, accountFilter])
+
+  const filteredTotal = useMemo(
+    () => filteredReceipts.reduce((s, r) => s + Number(r.amount || 0), 0),
+    [filteredReceipts]
+  )
+
+  function downloadExcel() {
+    const acctName = (p: string) => p === 'reserve' ? 'เงินสดย่อย' : p === 'company' ? 'บริษัท' : 'ส่วนตัว/อื่นๆ'
+    const pmName = (p: string) => (({ transfer: 'โอนเงิน', cash: 'เงินสด', promptpay: 'พร้อมเพย์', cheque: 'เช็ค' } as any)[p] || p || '')
+    const rows = filteredReceipts.map(r => ({
+      'เลขที่': r.receipt_number ?? '',
+      'วันที่': r.issued_at ?? '',
+      'นักเรียน': r.student?.nickname || r.student?.full_name || '',
+      'คอร์ส/รายการ': r.enrollment?.course?.name ?? r.items?.[0]?.description ?? '',
+      'ชื่อบริษัท/ลูกค้า': r.company_customer_name ?? '',
+      'เลขผู้เสียภาษี': r.company_customer_tax_id ?? '',
+      'จำนวนเงิน': Number(r.amount || 0),
+      'ชำระโดย': pmName(r.payment_method),
+      'บัญชี': acctName(r.paid_by),
+    }))
+    rows.push({
+      'เลขที่': '', 'วันที่': '', 'นักเรียน': '', 'คอร์ส/รายการ': '',
+      'ชื่อบริษัท/ลูกค้า': '', 'เลขผู้เสียภาษี': 'รวม', 'จำนวนเงิน': filteredTotal,
+      'ชำระโดย': '', 'บัญชี': '',
+    } as any)
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    const label = accountFilter === 'reserve' ? 'เงินสดย่อย' : accountFilter === 'company' ? 'บริษัท' : 'ทั้งหมด'
+    XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
+    const mon = monthFilter === 'all' ? 'ทุกเดือน' : monthFilter
+    XLSX.writeFile(wb, `ใบเสร็จ-${label}-${mon}.xlsx`)
+  }
 
   /* ── render ── */
   return (
@@ -582,7 +617,7 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
         <div>
           <h1 className="text-lg md:text-xl font-semibold">ใบเสร็จ</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            ออกและจัดการใบเสร็จรับเงิน · แสดง {filteredReceipts.length} / {receipts.length} รายการ
+            แสดง {filteredReceipts.length} / {receipts.length} รายการ · รวม {formatThaiMoney(filteredTotal)}
           </p>
         </div>
         <button
@@ -593,20 +628,40 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
         </button>
       </div>
 
-      {/* ตัวกรอง เดือน + ค้นหา */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <select className="input sm:w-56" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
-          <option value="all">ทุกเดือน ({receipts.length})</option>
-          {monthOptions.map(ym => (
-            <option key={ym} value={ym}>{monthLabel(ym)}</option>
+      {/* ตัวกรอง บัญชี + เดือน + ค้นหา + ดาวน์โหลด */}
+      <div className="flex flex-col gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {([['all', 'ทั้งหมด'], ['reserve', 'บัญชีเงินสดย่อย'], ['company', 'บัญชีบริษัท']] as const).map(([v, label]) => (
+            <button key={v} type="button" onClick={() => setAccountFilter(v)}
+              className={`rounded-xl border px-4 py-1.5 text-sm font-medium transition-colors ${
+                accountFilter === v
+                  ? v === 'reserve' ? 'bg-orange-500 text-white border-orange-500'
+                    : v === 'company' ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-brand-600 text-white border-brand-600'
+                  : 'border-gray-200 dark:border-[#3a4560] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1e2637]'
+              }`}>
+              {label}
+            </button>
           ))}
-        </select>
-        <input
-          className="input flex-1"
-          placeholder="ค้นหา เลขที่ / ชื่อนักเรียน / บริษัท / คอร์ส"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+          <button type="button" onClick={downloadExcel} disabled={filteredReceipts.length === 0}
+            className="btn-outline btn-sm ml-auto disabled:opacity-40">
+            ⬇ ดาวน์โหลด Excel
+          </button>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select className="input sm:w-48" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+            <option value="all">ทุกเดือน</option>
+            {monthOptions.map(ym => (
+              <option key={ym} value={ym}>{monthLabel(ym)}</option>
+            ))}
+          </select>
+          <input
+            className="input flex-1"
+            placeholder="ค้นหา เลขที่ / ชื่อนักเรียน / บริษัท / คอร์ส"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="card overflow-x-auto">
