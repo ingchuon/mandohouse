@@ -575,7 +575,10 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
         r.company_customer_name, r.enrollment?.course?.name, r.items?.[0]?.description,
       ].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q)
-    })
+    }).sort((a, b) =>
+      // เรียงเลขใบเสร็จจากน้อยไปมาก (ใบที่ยังไม่มีเลขไว้ท้ายสุด)
+      String(a.receipt_number || '~').localeCompare(String(b.receipt_number || '~'), undefined, { numeric: true })
+    )
   }, [receipts, monthFilter, search, accountFilter])
 
   const filteredTotal = useMemo(
