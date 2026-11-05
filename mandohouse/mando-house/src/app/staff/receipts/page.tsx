@@ -94,6 +94,7 @@ export default function ReceiptsPage() {
   const [schoolId, setSchoolId] = useState<string>('mando')
   const [showForm, setShowForm] = useState(false)
   const [editReceipt, setEditReceipt] = useState<any>(null)
+  const [manualNo, setManualNo] = useState('')
   const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
@@ -219,6 +220,7 @@ export default function ReceiptsPage() {
 
   function openEdit(r: any) {
     setEditReceipt(r)
+    setManualNo(r.receipt_number ?? '')
     setForm({
       enrollment_id: r.enrollment_id ?? '',
       payment_method: r.payment_method ?? 'transfer',
@@ -255,7 +257,29 @@ export default function ReceiptsPage() {
       .update({ receipt_number: newNo, paid_by: form.paid_by }).eq('id', editReceipt.id)
     if (error) { toast.error('บันทึกเลขไม่สำเร็จ: ' + error.message); return }
     setEditReceipt({ ...editReceipt, receipt_number: newNo, paid_by: form.paid_by })
+    setManualNo(newNo)
     toast.success(`รันเลขใบเสร็จ ${newNo} แล้ว`)
+    loadData()
+  }
+
+  // แก้เลขใบเสร็จเอง (พิมพ์เลขที่ต้องการ)
+  async function saveManualNumber() {
+    if (!editReceipt) return
+    const no = manualNo.trim()
+    if (!no) { toast.error('กรุณากรอกเลขใบเสร็จ'); return }
+    if (no === (editReceipt.receipt_number ?? '')) return
+    const { error } = await supabase.from('receipts')
+      .update({ receipt_number: no }).eq('id', editReceipt.id)
+    if (error) {
+      if ((error as any).code === '23505' || /duplicate|unique/i.test(error.message)) {
+        toast.error(`เลข "${no}" ซ้ำกับใบอื่น กรุณาใช้เลขอื่น`)
+      } else {
+        toast.error('บันทึกเลขไม่สำเร็จ: ' + error.message)
+      }
+      return
+    }
+    setEditReceipt({ ...editReceipt, receipt_number: no })
+    toast.success(`บันทึกเลข ${no} แล้ว`)
     loadData()
   }
 
@@ -761,22 +785,25 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                 </p>
               </div>
 
-              {/* รันเลขบริษัทย้อนหลัง (เฉพาะตอนแก้ไข) */}
+              {/* แก้เลขใบเสร็จ / รันเลขบริษัทย้อนหลัง (เฉพาะตอนแก้ไข) */}
               {editReceipt && (
-                <div className="rounded-xl border border-gray-200 dark:border-[#3a4560] p-3 flex items-center justify-between gap-3">
-                  <div className="text-sm">
-                    <div className="text-gray-500 dark:text-gray-400 text-xs">เลขใบเสร็จ</div>
-                    <div className="font-mono font-medium">
-                      {editReceipt.receipt_number ?? '—'}
-                      {!/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') && (
-                        <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">ยังไม่ใช่เลขบริษัท</span>
-                      )}
-                    </div>
+                <div className="rounded-xl border border-gray-200 dark:border-[#3a4560] p-3 space-y-2">
+                  <div className="text-gray-500 dark:text-gray-400 text-xs">เลขใบเสร็จ (แก้ไขได้)</div>
+                  <div className="flex items-center gap-2">
+                    <input className="input font-mono flex-1" value={manualNo}
+                      onChange={e => setManualNo(e.target.value)}
+                      placeholder="เช่น MDH-2569-0034" />
+                    <button type="button" onClick={saveManualNumber}
+                      className="btn-brand btn-sm whitespace-nowrap">บันทึกเลข</button>
+                    <button type="button" onClick={assignCompanyNumber}
+                      className="btn-outline btn-sm whitespace-nowrap">
+                      {/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') ? 'ออกเลขใหม่' : `รันเลข ${form.paid_by === 'reserve' ? 'MHR' : 'MDH'}`}
+                    </button>
                   </div>
-                  <button type="button" onClick={assignCompanyNumber}
-                    className="btn-outline btn-sm whitespace-nowrap">
-                    {/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') ? 'ออกเลขใหม่' : `รันเลข ${form.paid_by === 'reserve' ? 'MHR' : 'MDH'}`}
-                  </button>
+                  {!/^(MHR|MDH)-/.test(editReceipt.receipt_number ?? '') && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400">ยังไม่ใช่เลขบริษัท</p>
+                  )}
+                  <p className="text-[10px] text-gray-400">พิมพ์แก้เลขเองแล้วกด “บันทึกเลข” หรือกดออกเลขอัตโนมัติ · ห้ามซ้ำกับใบอื่น</p>
                 </div>
               )}
 
