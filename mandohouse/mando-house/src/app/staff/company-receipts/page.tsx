@@ -121,6 +121,7 @@ function blankForm(vatDefault: boolean, vatRate: number) {
     customer_phone: '',
     customer_email: '',
     student_id: '',
+    receipt_number: '',
     issued_at: new Date().toISOString().split('T')[0],
     payment_method: 'transfer',
     notes: '',
@@ -298,6 +299,7 @@ export default function CompanyReceiptsPage() {
       customer_phone: r.customer_phone ?? '',
       customer_email: r.customer_email ?? '',
       student_id: r.student_id ?? '',
+      receipt_number: r.receipt_number ?? '',
       issued_at: r.issued_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       payment_method: r.payment_method ?? 'transfer',
       notes: r.notes ?? '',
@@ -377,8 +379,18 @@ export default function CompanyReceiptsPage() {
       }
 
       if (editId) {
-        const { error } = await supabase.from('company_receipts').update(body).eq('id', editId)
-        if (error) throw error
+        const updBody: any = { ...body }
+        const newNo = form.receipt_number.trim()
+        if (newNo) updBody.receipt_number = newNo
+        const { error } = await supabase.from('company_receipts').update(updBody).eq('id', editId)
+        if (error) {
+          if ((error as any).code === '23505' || /duplicate|unique/i.test(error.message)) {
+            toast.error(`เลขที่ "${newNo}" ซ้ำกับใบอื่น กรุณาใช้เลขอื่น`)
+            setSaving(false)
+            return
+          }
+          throw error
+        }
         toast.success('แก้ไขใบเสร็จแล้ว')
       } else {
         const { data: { user } } = await supabase.auth.getUser()
@@ -946,6 +958,15 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
                     ))}
                   </select>
                 </div>
+                {editId && (
+                  <div>
+                    <label className="label">เลขที่ใบเสร็จ</label>
+                    <input className="input font-mono" value={form.receipt_number}
+                      onChange={e => setForm(f => ({ ...f, receipt_number: e.target.value }))}
+                      placeholder="เช่น MDH-2569-0001" />
+                    <p className="text-[10px] text-gray-400 mt-0.5">แก้ได้เฉพาะตอนแก้ไขใบเสร็จ · ห้ามซ้ำกับใบอื่น</p>
+                  </div>
+                )}
                 <div>
                   <label className="label">วันที่ออกใบเสร็จ</label>
                   <input className="input" type="date" value={form.issued_at}
