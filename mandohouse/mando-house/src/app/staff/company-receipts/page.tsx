@@ -652,12 +652,16 @@ ${page('สำเนา — เก็บไว้ที่บริษัท', '
   /* ---------- filtered list ---------- */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return receipts
-    return receipts.filter(r =>
-      (r.customer_name ?? '').toLowerCase().includes(q) ||
-      (r.receipt_number ?? '').toLowerCase().includes(q) ||
-      (r.customer_tax_id ?? '').includes(q) ||
-      (r.student_name ?? '').toLowerCase().includes(q))
+    const list = !q
+      ? receipts
+      : receipts.filter(r =>
+          (r.customer_name ?? '').toLowerCase().includes(q) ||
+          (r.receipt_number ?? '').toLowerCase().includes(q) ||
+          (r.customer_tax_id ?? '').includes(q) ||
+          (r.student_name ?? '').toLowerCase().includes(q))
+    // เรียงเลขที่ใบเสร็จจากน้อยไปมาก (0001 บนสุด)
+    return [...list].sort((a, b) =>
+      String(a.receipt_number ?? '~').localeCompare(String(b.receipt_number ?? '~'), undefined, { numeric: true }))
   }, [receipts, search])
 
   const sumTotal = useMemo(() => filtered.reduce((s, r) => s + Number(r.total || 0), 0), [filtered])
