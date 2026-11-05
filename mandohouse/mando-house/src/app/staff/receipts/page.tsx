@@ -404,8 +404,8 @@ export default function ReceiptsPage() {
       <tr class="itemrow">
         <td class="c-no">${i + 1}</td>
         <td class="c-desc">${esc(it.description || '—')}</td>
-        <td class="c-qty">${Number(it.quantity ?? 1).toLocaleString('th-TH')}</td>
-        <td class="c-price">${money(Number(it.unit_price ?? it.amount ?? 0))}</td>
+        <td class="c-qty">1</td>
+        <td class="c-price">${money(Number(it.amount ?? it.total ?? 0))}</td>
         <td class="c-amt">${money(Number(it.amount ?? it.total ?? 0))}</td>
       </tr>`).join('')
       + Array.from({ length: Math.max(0, MIN_ROWS - rawItems.length) }).map(() =>
@@ -483,7 +483,6 @@ export default function ReceiptsPage() {
     </tr>
   </table>
   <div class="sign">
-    <div><div class="nm">&nbsp;</div><div class="line"></div>ผู้จ่ายเงิน / Payer</div>
     <div><div class="nm">${esc(cp?.receiver_name || school?.receipt_receiver || '')}</div><div class="line"></div>ผู้รับเงิน / Received by</div>
     <div><div class="nm">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่ / Date</div>
   </div>

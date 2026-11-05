@@ -565,7 +565,6 @@ export default function CompanyReceiptsPage() {
   <table class="totals">${totalRows}</table>
 
   <div class="sign">
-    <div><div class="nm">&nbsp;</div><div class="line"></div>ผู้จ่ายเงิน / Payer</div>
     <div><div class="nm">${esc(profile.receiver_name || '')}</div><div class="line"></div>ผู้รับเงิน / Received by</div>
     <div><div class="nm">${thaiDateShort(r.issued_at, '-')}</div><div class="line"></div>วันที่ / Date</div>
   </div>
